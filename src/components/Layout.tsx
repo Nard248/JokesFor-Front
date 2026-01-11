@@ -1,27 +1,54 @@
 import type { ReactNode } from 'react'
+import { useUIStore } from '@/stores/ui.store'
 
 interface LayoutProps {
   children: ReactNode
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { isMobileMenuOpen, toggleMobileMenu } = useUIStore()
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header placeholder - will be built in 11-04 */}
       <header className="border-b border-foreground/10 p-4">
         <nav className="container mx-auto flex items-center justify-between">
           <a href="/" className="text-xl font-display font-bold text-primary">
             Jokes For
           </a>
-          <div className="flex gap-4">
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex gap-4">
             <a href="/daily" className="text-foreground/70 hover:text-foreground">Daily</a>
             <a href="/collections" className="text-foreground/70 hover:text-foreground">Collections</a>
             <a href="/settings" className="text-foreground/70 hover:text-foreground">Settings</a>
           </div>
+
+          {/* Mobile menu button */}
+          <button
+            className="md:hidden p-2"
+            onClick={toggleMobileMenu}
+            aria-label="Toggle menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </nav>
+
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden mt-4 pb-4 space-y-2">
+            <a href="/daily" className="block py-2 text-foreground/70 hover:text-foreground">Daily</a>
+            <a href="/collections" className="block py-2 text-foreground/70 hover:text-foreground">Collections</a>
+            <a href="/settings" className="block py-2 text-foreground/70 hover:text-foreground">Settings</a>
+          </div>
+        )}
       </header>
 
-      {/* Main content */}
       <main className="container mx-auto">
         {children}
       </main>
