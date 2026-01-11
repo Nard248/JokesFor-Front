@@ -9,17 +9,17 @@ test.describe('Homepage', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Perfect Joke')
 
     // Check search input
-    await expect(page.getByPlaceholder('Search for jokes...')).toBeVisible()
+    await expect(page.getByPlaceholder('Search for jokes about...')).toBeVisible()
 
-    // Check quick category buttons
-    await expect(page.getByRole('button', { name: /Dad Jokes/i })).toBeVisible()
+    // Check quick category buttons (without emojis now)
+    await expect(page.getByRole('button', { name: 'Dad Jokes' })).toBeVisible()
   })
 
   test('should show header navigation', async ({ page, isMobile }) => {
     await page.goto('/')
 
     // Check logo in header
-    await expect(page.getByRole('link', { name: '😂 Jokes For' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Jokes For' }).first()).toBeVisible()
 
     if (!isMobile) {
       // Check navigation links (desktop only)

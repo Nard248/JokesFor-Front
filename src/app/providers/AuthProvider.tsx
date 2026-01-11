@@ -1,35 +1,52 @@
 import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/features/auth'
-import { authApi } from '@/lib/api'
-import { setAccessToken } from '@/lib/axios'
+import axios from 'axios'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 interface AuthProviderProps {
   children: ReactNode
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { setAuth, logout } = useAuthStore()
+  const setAuth = useAuthStore((state) => state.setAuth)
+  const setLoading = useAuthStore((state) => state.setLoading)
+  const hasCheckedAuth = useRef(false)
 
   useEffect(() => {
-    // On mount, try to get user (validates if session is still valid via httpOnly cookie)
+    // Prevent double-check in React StrictMode and on re-renders
+    if (hasCheckedAuth.current) return
+    hasCheckedAuth.current = true
+
     async function checkAuth() {
       try {
-        // Try to refresh token first (in case access token expired but refresh is valid)
-        const refreshResponse = await authApi.refreshToken()
-        setAccessToken(refreshResponse.data.access)
+        // Use raw axios to avoid interceptor loops
+        // This attempts to refresh the token using httpOnly cookie
+        const refreshResponse = await axios.post(
+          `${API_URL}/auth/token/refresh/`,
+          {},
+          { withCredentials: true }
+        )
 
-        // Then get user
-        const userResponse = await authApi.getUser()
-        setAuth(userResponse.data, refreshResponse.data.access)
+        const accessToken = refreshResponse.data.access
+
+        // Get user with the new token
+        const userResponse = await axios.get(`${API_URL}/auth/user/`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          withCredentials: true,
+        })
+
+        setAuth(userResponse.data, accessToken)
       } catch {
-        // No valid session
-        logout()
+        // No valid session - this is normal for anonymous users
+        // Just mark loading as done, don't try to refresh again
+        setLoading(false)
       }
     }
 
     checkAuth()
-  }, [setAuth, logout])
+  }, [setAuth, setLoading])
 
   return <>{children}</>
 }
