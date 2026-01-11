@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useUIStore } from '@/stores/ui.store'
+import { useAuth, useLogout } from '@/features/auth'
 
 interface LayoutProps {
   children: ReactNode
@@ -7,6 +8,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { isMobileMenuOpen, toggleMobileMenu } = useUIStore()
+  const { user, isAuthenticated, isLoading } = useAuth()
+  const logoutMutation = useLogout()
 
   return (
     <div className="min-h-screen bg-background">
@@ -17,10 +20,28 @@ export function Layout({ children }: LayoutProps) {
           </a>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex gap-4">
+          <div className="hidden md:flex items-center gap-4">
             <a href="/daily" className="text-foreground/70 hover:text-foreground">Daily</a>
             <a href="/collections" className="text-foreground/70 hover:text-foreground">Collections</a>
             <a href="/settings" className="text-foreground/70 hover:text-foreground">Settings</a>
+
+            {isLoading ? (
+              <span className="text-sm text-foreground/50">Loading...</span>
+            ) : isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-foreground/70">{user?.email}</span>
+                <button
+                  onClick={() => logoutMutation.mutate()}
+                  className="text-sm text-red-500 hover:text-red-600"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <a href="/login" className="text-primary hover:text-primary/80">
+                Login
+              </a>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -45,6 +66,16 @@ export function Layout({ children }: LayoutProps) {
             <a href="/daily" className="block py-2 text-foreground/70 hover:text-foreground">Daily</a>
             <a href="/collections" className="block py-2 text-foreground/70 hover:text-foreground">Collections</a>
             <a href="/settings" className="block py-2 text-foreground/70 hover:text-foreground">Settings</a>
+            {isAuthenticated ? (
+              <button
+                onClick={() => logoutMutation.mutate()}
+                className="block py-2 text-red-500"
+              >
+                Logout ({user?.email})
+              </button>
+            ) : (
+              <a href="/login" className="block py-2 text-primary">Login</a>
+            )}
           </div>
         )}
       </header>
