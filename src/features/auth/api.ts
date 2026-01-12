@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/lib/api'
 import type { LoginCredentials, RegisterCredentials } from '@/lib/api'
 import { useAuthStore } from './store'
+import { setAccessToken } from '@/lib/axios'
 
 export const authKeys = {
   all: ['auth'] as const,
@@ -33,7 +34,9 @@ export function useLogin() {
       return response.data
     },
     onSuccess: async (data) => {
-      // Get user data after login
+      // Set token FIRST so subsequent requests are authenticated
+      setAccessToken(data.access)
+      // Then get user data
       const userResponse = await authApi.getUser()
       setAuth(userResponse.data, data.access)
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
@@ -52,7 +55,9 @@ export function useRegister() {
       return response.data
     },
     onSuccess: async (data) => {
-      // Get user data after registration
+      // Set token FIRST so subsequent requests are authenticated
+      setAccessToken(data.access)
+      // Then get user data
       const userResponse = await authApi.getUser()
       setAuth(userResponse.data, data.access)
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
