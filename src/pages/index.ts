@@ -1,4 +1,5 @@
 export { HomePage } from './HomePage'
 export { SearchPage } from './SearchPage'
+export { DailyJokePage } from './DailyJokePage'
 export { LoginPage } from './LoginPage'
 export { RegisterPage } from './RegisterPage'

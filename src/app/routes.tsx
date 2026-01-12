@@ -1,10 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router'
 import { Layout } from '@/components/Layout'
-import { HomePage, SearchPage, LoginPage, RegisterPage } from '@/pages'
-
-function DailyJokePage() {
-  return <div className="p-4"><h1 className="text-2xl font-display">Daily Joke</h1></div>
-}
+import { HomePage, SearchPage, DailyJokePage, LoginPage, RegisterPage } from '@/pages'
 
 function CollectionsPage() {
   return <div className="p-4"><h1 className="text-2xl font-display">My Collections</h1></div>
