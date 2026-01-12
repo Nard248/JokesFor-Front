@@ -33,12 +33,15 @@ export function useLogin() {
       const response = await authApi.login(credentials)
       return response.data
     },
-    onSuccess: async (data) => {
-      // Set token FIRST so subsequent requests are authenticated
-      setAccessToken(data.access)
-      // Then get user data
-      const userResponse = await authApi.getUser()
-      setAuth(userResponse.data, data.access)
+    onSuccess: (data) => {
+      // User data is included in login response - no extra API call needed
+      if (data.user) {
+        setAuth(data.user, data.access)
+      } else {
+        // Fallback: fetch user if not in response
+        setAccessToken(data.access)
+        authApi.getUser().then((res) => setAuth(res.data, data.access))
+      }
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
     },
   })
@@ -54,12 +57,15 @@ export function useRegister() {
       const response = await authApi.register(credentials)
       return response.data
     },
-    onSuccess: async (data) => {
-      // Set token FIRST so subsequent requests are authenticated
-      setAccessToken(data.access)
-      // Then get user data
-      const userResponse = await authApi.getUser()
-      setAuth(userResponse.data, data.access)
+    onSuccess: (data) => {
+      // User data is included in registration response - no extra API call needed
+      if (data.user) {
+        setAuth(data.user, data.access)
+      } else {
+        // Fallback: fetch user if not in response
+        setAccessToken(data.access)
+        authApi.getUser().then((res) => setAuth(res.data, data.access))
+      }
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
     },
   })
