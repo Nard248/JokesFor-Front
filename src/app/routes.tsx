@@ -1,10 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router'
 import { Layout } from '@/components/Layout'
-import { HomePage, SearchPage, LoginPage } from '@/pages'
-
-function RegisterPage() {
-  return <div className="min-h-screen flex items-center justify-center"><h1>Register</h1></div>
-}
+import { HomePage, SearchPage, LoginPage, RegisterPage } from '@/pages'
 
 function DailyJokePage() {
   return <div className="p-4"><h1 className="text-2xl font-display">Daily Joke</h1></div>
