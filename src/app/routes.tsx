@@ -1,11 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router'
 import { Layout } from '@/components/Layout'
-import { HomePage, SearchPage } from '@/pages'
-
-// Stub pages - will be implemented in future phases
-function LoginPage() {
-  return <div className="min-h-screen flex items-center justify-center"><h1>Login</h1></div>
-}
+import { HomePage, SearchPage, LoginPage } from '@/pages'
 
 function RegisterPage() {
   return <div className="min-h-screen flex items-center justify-center"><h1>Register</h1></div>
