@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router'
 import { useRegister } from '@/features/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Laugh, Loader2, Eye, EyeOff, Sparkles } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Sparkles } from 'lucide-react'
 import type { AxiosError } from 'axios'
 
 interface ApiError {
@@ -86,23 +86,20 @@ export function RegisterPage() {
   const clearError = () => setError(null)
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F6F6] px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 group">
-            <Laugh className="w-10 h-10 text-primary group-hover:rotate-12 transition-transform" />
-            <span className="text-3xl font-display font-bold text-primary">
-              Jokes For
-            </span>
+          <Link to="/" className="inline-block">
+            <img src="/Logos/compact_light.svg" alt="Jokes For" className="h-10 mx-auto" />
           </Link>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-3 text-[#6B7280]">
             Create an account to save your favorite jokes!
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-card rounded-2xl shadow-lg border border-border p-8">
+        <div className="bg-white rounded-[32px] shadow-lg border border-[#E9E8E7] p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
@@ -195,8 +192,9 @@ export function RegisterPage() {
             {/* Submit Button */}
             <Button
               type="submit"
+              variant="pill"
+              size="xl"
               className="w-full"
-              size="lg"
               disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? (

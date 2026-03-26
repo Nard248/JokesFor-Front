@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 160" width="580" height="160">
+<rect width="580" height="160" rx="16" fill="#FFFFFF"/>
+<g>
+  <rect x="25.0" y="8.0" width="120" height="99.0" rx="19.2" fill="#6A1CF6"/>
+  <polygon points="73.0,106.0 55.0,128.0 91.0,106.0" fill="#6A1CF6"/>
+  <path d="M57.400000000000006,56.779999999999994 Q68.2,48.199999999999996 79.0,56.779999999999994" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M91.0,56.779999999999994 Q101.8,48.199999999999996 112.6,56.779999999999994" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M61.0,65.36 Q85,81.2 109.0,65.36" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="136.0" cy="17.0" r="6.6" fill="none" stroke="#FFB800" stroke-width="3.3"/>
+  <line x1="140.6669047558312" y1="21.66690475583121" x2="146.26719046282867" y2="27.26719046282867" stroke="#FFB800" stroke-width="3.3" stroke-linecap="round"/>
+</g><text x="165" y="92" font-family="'Outfit','SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="82" font-weight="700" fill="#1C1C20">Jokes</text><text x="405.26" y="92" font-family="'Outfit','SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="82" font-weight="700" fill="#6A1CF6">For</text><circle cx="541.3799999999999" cy="87.9" r="5.33" fill="#FFB800"/><text x="167" y="128.9" font-family="'Outfit','SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="17.22" font-weight="400" fill="#606060">Find the right joke. For any moment.</text>
+</svg>

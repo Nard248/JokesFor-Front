@@ -19,11 +19,16 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        pill: "rounded-full bg-[#6A1CF6] text-white shadow-[0_10px_15px_-3px_rgba(106,28,246,0.20),0_4px_6px_-4px_rgba(106,28,246,0.20)] hover:bg-[#5D00E4] hover:shadow-[0_14px_20px_-3px_rgba(106,28,246,0.30)]",
+        "pill-lime": "rounded-full bg-[#CAFD00] text-[#3A4A00] font-bold hover:bg-[#b8e500]",
+        "pill-outline": "rounded-full border-2 border-[#E9E8E7] bg-transparent text-[#2E2F2F] hover:bg-[#F7F0FF] hover:border-[#AC8EFF]",
+        "pill-ghost": "rounded-full bg-transparent text-[#6A1CF6] hover:bg-[#F7F0FF]",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        xl: "h-12 rounded-full px-8 text-base font-semibold",
         icon: "size-9",
         "icon-sm": "size-8",
         "icon-lg": "size-10",

@@ -1,21 +1,44 @@
 import type { ReactNode } from 'react'
-import { Header } from './Header'
+import { DesktopHeader } from './layout/DesktopHeader'
+import { MobileHeader } from './layout/MobileHeader'
+import { Sidebar } from './layout/Sidebar'
+import { MobileBottomNav } from './layout/MobileBottomNav'
+import { FloatingActionButton } from './layout/FloatingActionButton'
 import { Footer } from './Footer'
 
 interface LayoutProps {
   children: ReactNode
+  sidebar?: ReactNode
+  hideDefaultSidebar?: boolean
+  hideFAB?: boolean
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, sidebar, hideDefaultSidebar, hideFAB }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+    <div className="min-h-screen bg-[#F8F6F6]">
+      <DesktopHeader />
+      <MobileHeader />
 
-      <main className="flex-1 container mx-auto px-4 py-6">
-        {children}
-      </main>
+      <div className="flex">
+        {/* Sidebar: custom (e.g. search filters) or default nav */}
+        {sidebar || (!hideDefaultSidebar && <Sidebar />)}
 
-      <Footer />
+        {/* Main Content */}
+        <main className="flex-1 min-w-0 pb-24 lg:pb-8">
+          {children}
+        </main>
+      </div>
+
+      {/* Footer (desktop only) */}
+      <div className="hidden lg:block">
+        <Footer />
+      </div>
+
+      {/* Mobile Bottom Nav */}
+      <MobileBottomNav />
+
+      {/* FAB */}
+      {!hideFAB && <FloatingActionButton />}
     </div>
   )
 }
