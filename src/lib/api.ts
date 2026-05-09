@@ -204,3 +204,160 @@ export const savedJokesApi = {
   search: (params: JokeSearchParams) =>
     api.get<PaginatedResponse<SavedJoke>>('/saved-jokes/search/', { params }),
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Endpoint methods below are wired to real backend per the API handoff,
+// but the corresponding adapters in src/lib/api-adapter.ts default to mocks
+// until each feature's response shape is confirmed in production.
+//
+// To opt a feature into real-API mode at build time, set the corresponding
+// VITE_USE_REAL_* env var in the workflow + .env.example. The adapter
+// reads it and routes through these methods instead of the mock.
+//
+// TODO when shapes confirmed:
+//   - Replace the broad `unknown` return types below with proper interfaces.
+//   - Update mock-data.ts shapes to match where they diverge.
+//   - Flip the relevant adapter to real-API by default.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Favorites — backend POST/GET/DELETE under /favorites/, plus stats.
+export interface FavoriteJokeDTO {
+  id: number
+  joke: Joke
+  added_at: string
+}
+
+export const favoritesApi = {
+  list: (params?: { tones?: string; page?: number }) =>
+    api.get<PaginatedResponse<FavoriteJokeDTO>>('/favorites/', { params }),
+
+  add: (jokeId: number) => api.post<FavoriteJokeDTO>('/favorites/', { joke: jokeId }),
+
+  remove: (favoriteId: number) => api.delete(`/favorites/${favoriteId}/`),
+
+  // Per backend handoff: { totalCount, topTone, thisWeekCount } — confirm shape.
+  stats: () =>
+    api.get<{ totalCount: number; topTone: string; thisWeekCount: number }>('/favorites/stats/'),
+}
+
+// Drafts — user's in-progress submissions.
+export interface DraftJokeDTO {
+  id: number
+  text: string
+  setup: string | null
+  punchline: string | null
+  format: { id: number; name: string; slug: string } | null
+  age_rating: { id: number; name: string; slug: string } | null
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  created_at: string
+  updated_at: string
+}
+
+export const draftsApi = {
+  list: () => api.get<PaginatedResponse<DraftJokeDTO>>('/jokes/my-drafts/'),
+
+  get: (id: number) => api.get<DraftJokeDTO>(`/jokes/my-drafts/${id}/`),
+
+  // POST /jokes/submit/ creates a new draft (per handoff). Adjust if backend
+  // adds a separate POST /jokes/my-drafts/ endpoint later.
+  create: (data: Partial<DraftJokeDTO>) => api.post<DraftJokeDTO>('/jokes/submit/', data),
+
+  update: (id: number, data: Partial<DraftJokeDTO>) =>
+    api.patch<DraftJokeDTO>(`/jokes/my-drafts/${id}/`, data),
+
+  submit: (id: number) => api.post<DraftJokeDTO>(`/jokes/my-drafts/${id}/submit/`),
+
+  delete: (id: number) => api.delete(`/jokes/my-drafts/${id}/`),
+}
+
+// User profile — extends the basic User from /auth/user/ with profile fields.
+// TODO: confirm exact shape from /users/me/profile/ — listed activity/achievements
+// shapes are speculative.
+export interface UserProfileDTO {
+  pk: number
+  username: string
+  email: string
+  first_name: string
+  last_name: string
+  bio?: string | null
+  avatar_url?: string | null
+  joined_at?: string
+  streak_days?: number
+}
+
+export interface ActivityItemDTO {
+  id: number
+  type: 'save' | 'submit' | 'rate' | 'share' | 'achievement'
+  description: string
+  created_at: string
+}
+
+export interface AchievementDTO {
+  id: number
+  name: string
+  description: string
+  icon: string | null
+  earned_at: string | null
+}
+
+export const profileApi = {
+  get: () => api.get<UserProfileDTO>('/users/me/profile/'),
+
+  update: (patch: Partial<UserProfileDTO>) =>
+    api.patch<UserProfileDTO>('/users/me/profile/', patch),
+
+  activity: (limit?: number) =>
+    api.get<PaginatedResponse<ActivityItemDTO>>('/users/me/activity/', { params: { limit } }),
+
+  achievements: () => api.get<PaginatedResponse<AchievementDTO>>('/users/me/achievements/'),
+}
+
+// Preferences — separate from /auth/user/ profile fields.
+// Two endpoint paths exist in the handoff: /users/me/preferences/ and
+// /preferences/me/. Both wired here; pick one per backend convention.
+export interface PreferencesDTO {
+  tones?: string[]
+  age_rating?: string
+  languages?: string[]
+  humor_types?: string[]
+  notifications?: {
+    daily_joke?: boolean
+    trending_alerts?: boolean
+    collection_updates?: boolean
+    email_digest?: boolean
+  }
+  privacy?: {
+    public_profile?: boolean
+    show_activity?: boolean
+    share_analytics?: boolean
+  }
+  theme?: 'light' | 'dark' | 'system'
+}
+
+export const preferencesApi = {
+  get: () => api.get<PreferencesDTO>('/users/me/preferences/'),
+
+  update: (patch: Partial<PreferencesDTO>) =>
+    api.patch<PreferencesDTO>('/users/me/preferences/', patch),
+
+  // /preferences/complete-onboarding/ is a one-shot flag; idempotent.
+  completeOnboarding: () => api.post<{ detail: string }>('/preferences/complete-onboarding/'),
+}
+
+// Trending — multiple endpoints per handoff. Shapes are speculative; each
+// returns a list of items. Adapters stay mock-only until backend confirms.
+export const trendingApi = {
+  jokes: (period?: string) =>
+    api.get<unknown>('/jokes/trending/', { params: { period } }),
+
+  collections: () => api.get<unknown>('/collections/trending/'),
+
+  tags: () => api.get<unknown>('/tags/trending/'),
+
+  risingTags: () => api.get<unknown>('/tags/rising/'),
+
+  themes: () => api.get<unknown>('/themes/popular/'),
+
+  jokesters: (limit?: number) =>
+    api.get<unknown>('/users/top-jokesters/', { params: { limit } }),
+}

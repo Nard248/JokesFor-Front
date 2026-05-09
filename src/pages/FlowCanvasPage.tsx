@@ -240,6 +240,18 @@ export function FlowCanvasPage() {
             ))}
           </div>
 
+          {/* ── 7-day archive · newspaper strip ────────────────── */}
+          <SevenDayArchive />
+
+          {/* ── Mixed-format showcase ──────────────────────────── */}
+          <MixedFormatShowcase />
+
+          {/* ── Top jokesters + Weekly special ─────────────────── */}
+          <TopJokestersAndSpecial />
+
+          {/* ── Stats + Themes + Test on a friend ──────────────── */}
+          <StatsRow />
+
           {/* ── Brand pull-quote footer ─────────────────────────── */}
           <BrandQuoteFooter />
         </div>
@@ -405,6 +417,701 @@ function ContinueBanner() {
         <button type="button" className="btn-flow-primary" style={{ height: 42, fontSize: 13 }}>
           Continue <ArrowRight size={14} />
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 7-day archive — newspaper-strip layout. Static mock; would pull from
+// /daily-jokes/history/ when the page transitions to real data.
+// ──────────────────────────────────────────────────────────────────────────
+
+function SevenDayArchive() {
+  const days = [
+    { d: 'Wed', n: '041', t: 'On scientists trusting atoms.', v: 'Nerd', bg: 'transparent' },
+    { d: 'Tue', n: '040', t: 'On eyebrows drawn too high.', v: 'One-liner', bg: 'rgba(202, 253, 0, 0.12)' },
+    { d: 'Mon', n: '039', t: 'On adulthood as email reply chain.', v: 'Observ.', bg: 'transparent' },
+    { d: 'Sun', n: '038', t: 'On hippos vs. Zippos.', v: 'Pun', bg: '#F2E9FF' },
+    { d: 'Sat', n: '037', t: 'On facial hair growing on you.', v: 'Pun', bg: 'transparent' },
+    { d: 'Fri', n: '036', t: 'On the outstanding scarecrow.', v: 'Dad', bg: 'rgba(255, 201, 101, 0.18)' },
+    { d: 'Thu', n: '035', t: 'On the chicken & the road.', v: 'Anti', bg: 'transparent' },
+  ]
+  return (
+    <div style={{ marginTop: 56 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          borderBottom: '2px solid #1A1A1A',
+          paddingBottom: 12,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div>
+          <span className="eyebrow-mono">The Week in Punchlines · Vol. I · Nos. 035–041</span>
+          <h3
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontStyle: 'italic',
+              fontWeight: 600,
+              fontSize: 28,
+              marginTop: 4,
+              color: '#1A1A1A',
+              lineHeight: 1.05,
+            }}
+          >
+            Last seven mornings.
+          </h3>
+        </div>
+        <span className="tag-flow">7-day archive</span>
+      </div>
+      <div
+        style={{
+          marginTop: 18,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          gap: 0,
+          borderTop: '1px solid #E9E8E7',
+        }}
+      >
+        {days.map((d, i) => (
+          <button
+            key={d.n}
+            type="button"
+            style={{
+              padding: '18px 14px',
+              borderRight: i < 6 ? '1px solid #E9E8E7' : '0',
+              background: d.bg,
+              minHeight: 160,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              border: i < 6 ? '0' : '0',
+              borderBottom: 0,
+              borderTop: 0,
+              borderLeft: 0,
+              textAlign: 'left',
+              fontFamily: 'inherit',
+              color: 'inherit',
+            }}
+          >
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
+                {d.d.toUpperCase()} · No. {d.n}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontStyle: 'italic',
+                  fontSize: 15,
+                  marginTop: 10,
+                  lineHeight: 1.3,
+                  color: '#1A1A1A',
+                }}
+              >
+                "{d.t}"
+              </div>
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: '#52525B',
+                marginTop: 14,
+              }}
+            >
+              {d.v}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Mixed-format showcase — "Same library. Different rhythm."
+// One big card + two smaller cards in different formats.
+// ──────────────────────────────────────────────────────────────────────────
+
+function MixedFormatShowcase() {
+  return (
+    <div style={{ marginTop: 56 }}>
+      <span className="eyebrow-mono">By format · Try a different shape today</span>
+      <h3
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 32,
+          marginTop: 6,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.05,
+          color: '#1A1A1A',
+        }}
+      >
+        Same library. <em className="wink">Different rhythm.</em>
+      </h3>
+      <div
+        style={{
+          marginTop: 22,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)',
+          gap: 18,
+          alignItems: 'start',
+        }}
+      >
+        <FlowJokeCard
+          big
+          joke={{
+            id: 'showcase-oneliner',
+            fmt: 'oneliner',
+            text: 'I told my wife she was drawing her eyebrows too high. She seemed surprised.',
+            themeLabel: 'Family',
+            catLabel: 'Dad',
+            saves: '2.8K',
+            laughs: '411',
+          }}
+        />
+        <FlowJokeCard
+          joke={{
+            id: 'showcase-knock',
+            fmt: 'knock',
+            lines: ['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing out here."],
+            themeLabel: 'Weather',
+            catLabel: 'Kid-safe',
+            saves: '1.4K',
+            laughs: '267',
+          }}
+        />
+        <FlowJokeCard
+          joke={{
+            id: 'showcase-anti',
+            fmt: 'anti',
+            setup: 'Why did the chicken cross the road?',
+            punch: 'To get to the other side.',
+            themeLabel: 'Animals',
+            catLabel: 'Surreal',
+            saves: '771',
+            laughs: '189',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Top jokesters (left, 1fr) + Weekly special (right, 1.4fr).
+// ──────────────────────────────────────────────────────────────────────────
+
+function TopJokestersAndSpecial() {
+  const jokesters = [
+    { rank: 1, name: 'Maya Okonkwo',  handle: '@mayatypes', punchlines: '1,204', desc: 'Office · Observ.', avatarBg: '#6A1CF6', avatarFg: '#fff' },
+    { rank: 2, name: 'Dev Patel',     handle: '@devpuns',   punchlines: '982',   desc: 'Pun · Dad',        avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
+    { rank: 3, name: 'Sara Rumi',     handle: '@srumi',     punchlines: '844',   desc: 'Wholesome',        avatarBg: '#FFC965', avatarFg: '#5F4200' },
+    { rank: 4, name: 'Kai Bennett',   handle: '@kaib',      punchlines: '712',   desc: 'Anti · Surreal',   avatarBg: '#1A1A1A', avatarFg: '#fff' },
+    { rank: 5, name: 'Lena Park',     handle: '@lenap',     punchlines: '611',   desc: 'One-liners',       avatarBg: '#1A1A1A', avatarFg: '#fff' },
+  ]
+  const specialJokes = [
+    "Why don't teachers ever get bored?",
+    'I asked my pencil for advice…',
+    'First day of class, the principal said…',
+    'The school clock has only two hands.',
+    "Geometry teacher's favorite season?",
+  ]
+  return (
+    <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 24 }}>
+      {/* Top jokesters */}
+      <div style={{ padding: 28, background: '#fff', border: '1px solid #E9E8E7', borderRadius: 22 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <span className="eyebrow-mono">Top jokesters · This week</span>
+            <h4
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 22,
+                marginTop: 4,
+                letterSpacing: '-0.02em',
+                color: '#1A1A1A',
+              }}
+            >
+              The five carrying us.
+            </h4>
+          </div>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', color: '#52525B' }}>
+            FEB 06 → 12
+          </span>
+        </div>
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column' }}>
+          {jokesters.map((j, i) => (
+            <div
+              key={j.rank}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '12px 0',
+                borderBottom: i < 4 ? '1px solid #E9E8E7' : '0',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 22,
+                  color: i === 0 ? '#6A1CF6' : '#52525B',
+                  width: 32,
+                }}
+              >
+                #{j.rank}
+              </div>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  background: j.avatarBg,
+                  color: j.avatarFg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                {j.name.split(' ').map((s) => s[0]).join('')}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>{j.name}</div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#52525B',
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  {j.handle} · {j.desc}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{j.punchlines}</div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: '#52525B',
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  punchlines
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Weekly special */}
+      <div
+        style={{
+          borderRadius: 22,
+          overflow: 'hidden',
+          background: 'linear-gradient(160deg, #FFE6B5 0%, #FFC965 100%)',
+          color: '#5F4200',
+          position: 'relative',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+        }}
+      >
+        <div
+          style={{
+            padding: 36,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <div>
+            <span className="tag-flow" style={{ background: '#5F4200', color: '#FFC965' }}>
+              Weekly Special · Curated
+            </span>
+            <h3
+              style={{
+                marginTop: 14,
+                color: '#5F4200',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 36,
+                lineHeight: 1.05,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Back-to-school <em className="wink" style={{ color: '#5F4200' }}>survival kit.</em>
+            </h3>
+            <p style={{ marginTop: 10, fontSize: 14, color: '#5F4200', opacity: 0.85, maxWidth: 280 }}>
+              45 jokes engineered to win over a Monday-morning classroom. Tested on actual teenagers.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              style={{
+                height: 44,
+                padding: '0 24px',
+                background: '#5F4200',
+                color: '#FFC965',
+                border: 0,
+                borderRadius: 9999,
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              Read collection <ArrowRight size={14} />
+            </button>
+            <button
+              type="button"
+              style={{
+                height: 44,
+                padding: '0 24px',
+                background: 'transparent',
+                color: '#5F4200',
+                border: '1px solid #5F4200',
+                borderRadius: 9999,
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Bookmark size={14} /> Save list
+            </button>
+          </div>
+        </div>
+        <div
+          style={{
+            position: 'relative',
+            padding: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: -30,
+              right: -30,
+              width: 160,
+              height: 160,
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.25)',
+            }}
+          />
+          {specialJokes.map((t, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'relative',
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.55)',
+                border: '1px solid rgba(95, 66, 0, 0.18)',
+                borderRadius: 12,
+                fontFamily: 'var(--font-serif)',
+                fontStyle: 'italic',
+                fontSize: 13,
+                color: '#5F4200',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <span
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.2em', opacity: 0.6, marginRight: 8 }}
+              >
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              "{t}"
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Stats row — "How you've been laughing" + "Themes you laugh at most" +
+// "Test on a friend"
+// ──────────────────────────────────────────────────────────────────────────
+
+function StatsRow() {
+  const themes: { t: string; s: number; big?: boolean }[] = [
+    { t: 'Office life', s: 42, big: true },
+    { t: 'Puns', s: 38, big: true },
+    { t: 'Wholesome', s: 24 },
+    { t: 'One-liners', s: 21, big: true },
+    { t: 'Dad', s: 18 },
+    { t: 'Surreal', s: 14 },
+    { t: 'Anti-joke', s: 11 },
+    { t: 'Tech', s: 9 },
+    { t: 'Coffee', s: 7 },
+    { t: 'Mondays', s: 6 },
+    { t: 'Email', s: 5 },
+  ]
+  const barHeights = [12, 18, 8, 22, 14, 28, 16, 24, 20, 30, 18, 26, 14, 32, 22, 28, 18, 34, 26, 32, 22, 38, 28, 36, 30, 32, 40, 28]
+
+  return (
+    <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+      {/* How you've been laughing */}
+      <div
+        style={{
+          padding: 28,
+          background: '#1A1A1A',
+          color: '#fff',
+          borderRadius: 22,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <span className="eyebrow-mono" style={{ color: '#CAFD00' }}>
+          How you've been laughing
+        </span>
+        <h4
+          style={{
+            color: '#fff',
+            marginTop: 6,
+            fontSize: 22,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          This month, in numbers.
+        </h4>
+        <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <StatCell value="168" label="JOKES READ" valueColor="#CAFD00" />
+          <StatCell value="42" label="SAVED" valueColor="#fff" />
+          <StatCell value="9 AM" label="PEAK READ" valueColor="#FFC965" />
+          <StatCell value="Pun" label="TOP VIBE" valueColor="#fff" />
+        </div>
+        <div style={{ marginTop: 20, display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
+          {barHeights.map((h, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: `${(h * 100) / 40}%`,
+                background: i >= 21 ? '#CAFD00' : 'rgba(202, 253, 0, 0.3)',
+                borderRadius: 1,
+              }}
+            />
+          ))}
+        </div>
+        <div
+          style={{
+            marginTop: 6,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            color: 'rgba(255, 255, 255, 0.4)',
+          }}
+        >
+          JAN 16 ────────── FEB 12
+        </div>
+      </div>
+
+      {/* Themes you laugh at most */}
+      <div style={{ padding: 28, background: '#fff', border: '1px solid #E9E8E7', borderRadius: 22 }}>
+        <span className="eyebrow-mono">Themes you laugh at most</span>
+        <h4
+          style={{
+            marginTop: 6,
+            fontSize: 22,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: '#1A1A1A',
+          }}
+        >
+          Your taste, in pills.
+        </h4>
+        <div style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {themes.map((p, i) => {
+            const isBig = !!p.big
+            const palette = ['#6A1CF6', '#CAFD00', '#FFC965']
+            const fgPalette = ['#fff', '#3A4A00', '#5F4200']
+            const colorIndex = i % 3
+            const bg = isBig ? palette[colorIndex] : '#FBFAF7'
+            const fg = isBig ? fgPalette[colorIndex] : '#1A1A1A'
+            return (
+              <span
+                key={p.t}
+                style={{
+                  height: isBig ? 38 : 30,
+                  fontSize: isBig ? 14 : 12,
+                  padding: isBig ? '0 16px' : '0 12px',
+                  background: bg,
+                  color: fg,
+                  border: isBig ? 0 : '1px solid #E9E8E7',
+                  borderRadius: 9999,
+                  fontWeight: isBig ? 800 : 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                {p.t}
+                <span style={{ opacity: 0.7, marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 10 }}>{p.s}</span>
+              </span>
+            )
+          })}
+        </div>
+        <button
+          type="button"
+          className="btn-flow-ghost"
+          style={{ marginTop: 18, height: 40, fontSize: 13, width: '100%', justifyContent: 'center' }}
+        >
+          See full taste profile <ArrowRight size={14} />
+        </button>
+      </div>
+
+      {/* Test on a friend */}
+      <div
+        style={{
+          padding: 28,
+          background: '#6A1CF6',
+          color: '#fff',
+          borderRadius: 22,
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            bottom: -60,
+            right: -60,
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            background: 'rgba(202, 253, 0, 0.2)',
+          }}
+        />
+        <div style={{ position: 'relative' }}>
+          <span className="eyebrow-mono" style={{ color: '#CAFD00' }}>
+            Test it on a friend
+          </span>
+          <h4
+            style={{
+              color: '#fff',
+              marginTop: 6,
+              fontSize: 22,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Did today's land?
+          </h4>
+          <p style={{ fontSize: 13, marginTop: 8, color: 'rgba(255, 255, 255, 0.8)', maxWidth: 240 }}>
+            Share the punchline. We'll tell you if they laughed (or lied).
+          </p>
+        </div>
+        <div
+          style={{
+            position: 'relative',
+            marginTop: 18,
+            padding: 14,
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            borderRadius: 14,
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: 'rgba(255, 255, 255, 0.5)' }}>
+            TO · SAM
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, marginTop: 6, lineHeight: 1.4 }}>
+            "Why don't scientists trust atoms? Because they make up everything." 😂
+          </div>
+          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+            <span className="tag-flow" style={{ background: '#CAFD00', color: '#3A4A00' }}>
+              😂 Laughed
+            </span>
+            <span className="tag-flow" style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#fff' }}>
+              🙄 Lied
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{
+            position: 'relative',
+            marginTop: 14,
+            height: 44,
+            padding: '0 20px',
+            background: '#CAFD00',
+            color: '#3A4A00',
+            border: 0,
+            borderRadius: 9999,
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            justifyContent: 'center',
+          }}
+        >
+          <Share2 size={14} /> Share today's joke
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function StatCell({ value, label, valueColor }: { value: string; label: string; valueColor: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 36, color: valueColor, lineHeight: 1 }}>
+        {value}
+      </div>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.18em',
+          color: 'rgba(255, 255, 255, 0.5)',
+          marginTop: 4,
+        }}
+      >
+        {label}
       </div>
     </div>
   )

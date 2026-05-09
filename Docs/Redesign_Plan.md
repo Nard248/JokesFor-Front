@@ -159,41 +159,59 @@ Or open a PR on GitHub — the PR workflow will deploy this branch to a preview 
 
 ## 9. Follow-ups (not in this branch)
 
-### Pages I deliberately deferred to a follow-up PR
+### What's now COMPLETE on this branch (iteration 3)
 
-The full design package at `Docs/JokesFor/` defines 8 screens. Iteration 2 implements 3 (Flow, FlowCanvas/Today, Explore). Three more are designs of pages that already exist on `main` and serve the demo today, so I left them alone in this branch:
+All 8 designed screens are implemented:
 
-- **Login screen** (Docs/JokesFor/parts/flow-screens.jsx::LoginScreen) — split-canvas: gradient brand panel left with "today's joke preview" inside it, sign-in form right with streak nudge "Keep your 14-day streak alive."
-- **Register screen** — 2-step flow (account fields → handle/pronouns/locale + ritual preview pane on the right).
-- **Search screen** — "Sentence Builder" pattern: "Show me {format} jokes about {theme} that feel {category}." — clickable inline pills with dropdown panels.
+- ✅ `/login` — LoginScreen split-canvas with embedded JOTD preview + streak nudge
+- ✅ `/register` — RegisterScreen 2-step + Hooked-loop preview pane
+- ✅ `/auth/google/callback` — OAuth code-exchange landing
+- ✅ `/flow` — 3-step onboarding (Vibes / Formats / Ritual)
+- ✅ `/flow-canvas` — Today hub, FULL: hero JOTD with reveal, streak rail, mystery box, tomorrow teaser, "you stopped mid-sip", 3-up "Three you'll probably save", 7-day archive newspaper strip, mixed-format showcase, top jokesters + weekly special, stats + themes + test-on-a-friend, brand pull-quote countdown footer
+- ✅ `/explore` — 3-axis chip filter + masonry
+- ✅ `/search` — Sentence Builder + masonry
 
-Reasoning: each of these touches a route that's live on `main` and used by the demo. Doing them in this PR risks the demo and bloats the diff. Each deserves its own focused PR.
+Post-auth redirects wired:
+- ✅ Login success → `/flow-canvas`
+- ✅ Register success → `/flow` → (on finish) `/flow-canvas`
 
-### Other follow-ups
+API surface:
+- ✅ Endpoint methods defined in `src/lib/api.ts` for: `favoritesApi`, `draftsApi`, `profileApi`, `preferencesApi`, `trendingApi` (with TODO-marked types)
+- ⏳ Adapter routing stays mock-only until per-feature response shapes are confirmed in production
 
-- Flip auth-success redirect from `/` to `/flow-canvas` (one-line change in LoginPage/RegisterPage `onSuccess`)
-- Decide between `/flow` and `/onboarding` (keep one, retire the other)
-- Wire `useUpdatePreferences` to a real `/preferences/me/` adapter when the backend hook lands
-- Real-API wiring for trending, drafts, profile, preferences (currently mock-only)
-- Build the "Today" sections deferred from this iteration:
-  - 7-day archive newspaper strip
-  - Top jokesters this week
-  - Weekly special collection card
-  - "How you've been laughing" stats card
-  - "Themes you laugh at most" pill cloud
-  - "Test it on a friend" share preview
-- The existing `JokeCard` and `FlowJokeCard` will eventually consolidate. New flow uses `FlowJokeCard` (format-aware); old pages keep `JokeCard`. When confidence is high, retire the old.
+### What's still NOT in this branch
 
-## 10. Iteration 2 — what changed since Iteration 1
+- **Decide between `/flow` and `/onboarding`** — both routes work in parallel; pick a winner. `/onboarding` (legacy `OnboardingPage`) probably should retire once `/flow` is approved.
+- **Real-API wiring for `preferencesAdapter`/`favoritesAdapter`/`draftsAdapter`/`profileAdapter`/`trendingAdapter`** — the methods exist in `api.ts`, but each adapter still routes to mocks. Per-feature flip = one-line change once the corresponding response shape is verified.
+- **Reskin existing pages still on legacy Layout**: HomePage, DailyJokePage, FavoritesPage, DraftsPage, ProfilePage, SettingsPage, SubmitJokePage, TrendingPage, LibraryPage. Each gets its own focused redesign PR; not opportunistically updated to `FlowAppShell` because their internal content is styled for the old design language and would visually clash.
+- **Consolidate `JokeCard` + `FlowJokeCard`** — once the redesign is approved across all consumers, retire the old `JokeCard`. Today they're parallel and that's the right state.
+- **Consolidate `Layout` + `FlowAppShell`** — same as above.
+- **Mobile / tablet adaptive breakpoints** — Flow pages target the design's 1440px desktop baseline. Mobile-down responsiveness is partially handled via `clamp()` but not designed for. Each page needs explicit mobile treatment.
 
-| Aspect | v1 | v2 |
-|---|---|---|
-| Source of truth | brand book + guess | actual designs at `Docs/JokesFor/` |
-| Wink pattern (Fraunces italic in headlines) | missing | applied everywhere via `.wink` |
-| Eyebrow / Mono caps labels | missing | `JetBrains Mono` via `.eyebrow-mono` |
-| FlowCanvas | hub with mood lanes (generic) | "Today" — JOTD reveal hero + streak rail + mystery box + tomorrow teaser + continue-yesterday + 3-up + brand pull-quote |
-| FlowPage | tones / age rating / languages | Vibes (rich color chips, 12 vibes) / Formats (with example demos) / Ritual (slot picker + days + streak forecast) |
-| JokeCard | none | NEW `FlowJokeCard` with 6 format rhythms (setup/oneliner/observ/anti/knock/story) + reveal-on-tap interaction |
-| Explore | not built | NEW page at `/explore` — three-axis filter rail + format-aware masonry |
-| Tokens | reused existing | additive new ones (`--font-serif`, `--font-mono`, `--color-flow-bg`, `--color-flow-ink`, `--color-flow-purple-tint`) |
-| Hooked-loop encoding | missing | trigger (notification preview) + variable reward (blur-lift, mystery box "3 left") + investment (streak chip, "Top 10%") |
+## 10. Iteration history
+
+### Iteration 1 (blind — designs unfetchable)
+v1 used brand book + guess. Built `/flow` (generic 4-step preferences) and `/flow-canvas` (generic mood-lane hub).
+
+### Iteration 2 (designs received)
+v2 rewrote to match `Docs/JokesFor/`:
+- Added `Fraunces` italic (`.wink`) and `JetBrains Mono` (`.eyebrow-mono`) tokens
+- New `FlowJokeCard` with 6 format rhythms + reveal-on-tap interaction
+- `/flow` rewritten as Vibes / Formats / Ritual (12 rich vibe chips, format demos, slot picker)
+- `/flow-canvas` rewritten as Today scoped (hero + right rail + 3-up + footer)
+- New `/explore` (three-axis filter masonry)
+
+### Iteration 3 (current — feature-complete)
+- Login / Register / Search rewrites per design
+- Post-auth redirects wired (Login → `/flow-canvas`, Register → `/flow`)
+- 4 deferred Today sections built (7-day archive, mixed-format showcase, top jokesters + weekly special, stats + themes + test-on-a-friend)
+- Real-API endpoint methods defined for favorites/drafts/profile/preferences/trending in `api.ts` (adapter routing still mock-only)
+- Extracted `FlowAppShell` shared chrome
+- All 8 designed screens implemented end-to-end
+
+### Iteration 4 (post-merge — not in this branch)
+- Per-feature adapter flips to real-API mode as response shapes are confirmed
+- Reskin remaining pages (HomePage, FavoritesPage, etc.) to the new design language
+- Consolidate parallel components (JokeCard, Layout) once approved across all consumers
+- Mobile/tablet breakpoints
+- Retire `/onboarding` legacy route
