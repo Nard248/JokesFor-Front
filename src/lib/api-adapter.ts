@@ -187,10 +187,68 @@ export const profileAdapter = {
 }
 
 // ── Preferences Adapter ──
+//
+// Iteration 4: optionally route through the real /users/me/preferences/
+// endpoint when VITE_USE_REAL_PREFERENCES === 'true'. Mock stays the default
+// until the backend's response shape is confirmed in production.
+//
+// The shape mismatch handled here:
+//   UserPreferences (mock-data.ts, camelCase): { humorTypes, ageRating, tones, languages, ... }
+//   PreferencesDTO  (api.ts, snake_case):      { humor_types, age_rating, tones, languages, ... }
+import { preferencesApi, type PreferencesDTO } from './api'
+
+const USE_REAL_PREFERENCES = import.meta.env.VITE_USE_REAL_PREFERENCES === 'true'
+
+function toDTO(prefs: Partial<UserPreferences>): Partial<PreferencesDTO> {
+  return {
+    tones: prefs.tones,
+    age_rating: prefs.ageRating,
+    languages: prefs.languages,
+    humor_types: prefs.humorTypes,
+    notifications: prefs.notifications && {
+      daily_joke: prefs.notifications.dailyJoke,
+      trending_alerts: prefs.notifications.trendingAlerts,
+      collection_updates: prefs.notifications.collectionUpdates,
+      email_digest: prefs.notifications.emailDigest,
+    },
+    privacy: prefs.privacy && {
+      public_profile: prefs.privacy.publicProfile,
+      show_activity: prefs.privacy.showActivity,
+      share_analytics: prefs.privacy.shareAnalytics,
+    },
+    theme: prefs.theme,
+  }
+}
+
+function fromDTO(dto: PreferencesDTO): UserPreferences {
+  return {
+    humorTypes: dto.humor_types ?? [],
+    notifications: {
+      dailyJoke: dto.notifications?.daily_joke ?? true,
+      trendingAlerts: dto.notifications?.trending_alerts ?? false,
+      collectionUpdates: dto.notifications?.collection_updates ?? true,
+      emailDigest: dto.notifications?.email_digest ?? false,
+    },
+    privacy: {
+      publicProfile: dto.privacy?.public_profile ?? true,
+      showActivity: dto.privacy?.show_activity ?? true,
+      shareAnalytics: dto.privacy?.share_analytics ?? false,
+    },
+    theme: dto.theme ?? 'light',
+    tones: dto.tones,
+    ageRating: dto.age_rating,
+    languages: dto.languages,
+  }
+}
+
 export const preferencesAdapter = {
   get: (): Promise<UserPreferences> =>
-    mockPreferencesApi.get(),
+    USE_REAL_PREFERENCES
+      ? preferencesApi.get().then((r) => fromDTO(r.data))
+      : mockPreferencesApi.get(),
 
   update: (data: Partial<UserPreferences>): Promise<UserPreferences> =>
-    mockPreferencesApi.update(data),
+    USE_REAL_PREFERENCES
+      ? preferencesApi.update(toDTO(data)).then((r) => fromDTO(r.data))
+      : mockPreferencesApi.update(data),
 }

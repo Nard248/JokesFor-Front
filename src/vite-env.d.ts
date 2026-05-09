@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MEASUREMENT_ID: string;
   readonly VITE_GOOGLE_CLIENT_ID: string;
   readonly VITE_GOOGLE_OAUTH_REDIRECT_URI: string;
+  // Iteration 4 feature flags — flip to 'true' when backend response shapes confirmed
+  readonly VITE_USE_REAL_PREFERENCES?: string;
 }
 
 interface ImportMeta {

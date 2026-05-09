@@ -9,7 +9,6 @@ import {
   LoginPage,
   RegisterPage,
   GoogleCallbackPage,
-  OnboardingPage,
   LibraryPage,
   TrendingPage,
   FavoritesPage,
@@ -33,8 +32,6 @@ const router = createBrowserRouter([
     children: [
       // Public — anyone can browse
       { index: true, element: <HomePage /> },
-      { path: 'daily', element: <DailyJokePage /> },
-      { path: 'library', element: <LibraryPage /> },
       { path: 'trending', element: <TrendingPage /> },
       // Authenticated only
       { path: 'favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
@@ -47,13 +44,17 @@ const router = createBrowserRouter([
   },
   // Standalone authenticated pages (no Layout shell)
   { path: '/submit', element: <ProtectedRoute><SubmitJokePage /></ProtectedRoute> },
-  { path: '/onboarding', element: <ProtectedRoute><OnboardingPage /></ProtectedRoute> },
-  // Redesigned user flow (iteration 2 — see Docs/Redesign_Plan.md)
-  // FlowPage / FlowCanvasPage / ExplorePage all provide their own chrome, so
-  // none of them get wrapped in the legacy Layout.
+  // /onboarding kept as alias for backward compat — points at the redesigned /flow.
+  // OnboardingPage (legacy component) stays in code, no longer routed.
+  { path: '/onboarding', element: <Navigate to="/flow" replace /> },
+  // Redesigned user flow — each provides its own FlowAppShell, no legacy Layout.
   { path: '/flow', element: <ProtectedRoute><FlowPage /></ProtectedRoute> },
   { path: '/flow-canvas', element: <ProtectedRoute><FlowCanvasPage /></ProtectedRoute> },
   { path: '/explore', element: <ProtectedRoute><ExplorePage /></ProtectedRoute> },
+  // Library + Daily — reskinned in iteration 4 with FlowAppShell. Hoisted out of
+  // the legacy Layout-wrapped subtree so the chrome doesn't double-stack.
+  { path: '/library', element: <LibraryPage /> },
+  { path: '/daily', element: <DailyJokePage /> },
   // Guest-only — redirect home if already signed in
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
   { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },

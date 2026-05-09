@@ -1,147 +1,396 @@
-import { AlertCircle, RefreshCw, CalendarDays, History } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router'
+import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
-import { DailyJokeCard } from '@/components/DailyJokeCard'
-import { JokeCard } from '@/components/JokeCard'
-import { Button } from '@/components/ui/button'
-import { mockDailyJoke, mockDailyJokeHistory } from '@/lib/mock-data'
 
-function DailyJokeCardSkeleton() {
-  return (
-    <div className="bg-gradient-purple rounded-[32px] p-8 animate-pulse">
-      <div className="h-5 bg-white/20 rounded-full w-32 mb-6" />
-      <div className="space-y-4 mb-8">
-        <div className="h-6 bg-white/20 rounded w-3/4" />
-        <div className="h-6 bg-white/20 rounded w-full" />
-        <div className="h-6 bg-white/20 rounded w-2/3" />
-      </div>
-      <div className="flex gap-3">
-        <div className="h-9 bg-white/20 rounded-full w-32" />
-        <div className="h-9 bg-white/20 rounded-full w-24" />
-      </div>
-    </div>
-  )
-}
-
-function HistoryCardSkeleton() {
-  return (
-    <div className="bg-[#FAFAFA] rounded-[48px] p-6 animate-pulse">
-      <div className="flex gap-2 mb-4">
-        <div className="h-5 bg-[#E9E8E7] rounded-full w-16" />
-      </div>
-      <div className="space-y-3 mb-4">
-        <div className="h-4 bg-[#E9E8E7] rounded w-full" />
-        <div className="h-4 bg-[#E9E8E7] rounded w-3/4" />
-      </div>
-      <hr className="border-[#E9E8E7] my-4" />
-      <div className="flex items-center gap-2">
-        <div className="size-8 bg-[#E9E8E7] rounded-full" />
-        <div className="h-3 bg-[#E9E8E7] rounded w-24" />
-      </div>
-    </div>
-  )
-}
-
+/**
+ * DailyJokePage — reskinned in iteration 4 to match FlowCanvasPage's
+ * Today-hero treatment. Linked from FlowCanvas's "See history" + "Today's
+ * joke" quick action.
+ *
+ * Sections:
+ *   1. Hero JOTD card with reveal-on-tap punchline
+ *   2. History grid — 7-day archive style tiles
+ */
 export function DailyJokePage() {
-  const {
-    data: todayData,
-    isLoading: isTodayLoading,
-    isError: isTodayError,
-    error: todayError,
-    refetch: refetchToday,
-  } = useTodaysJoke()
-
-  const {
-    data: historyData,
-    isLoading: isHistoryLoading,
-    isError: isHistoryError,
-  } = useDailyJokeHistory()
-
-  // Use mock data as fallback
-  const todayJoke = todayData?.joke || mockDailyJoke.joke
-  const history = historyData?.results || mockDailyJokeHistory
+  const { data: today, isLoading: loadingToday } = useTodaysJoke()
+  const { data: history, isLoading: loadingHistory } = useDailyJokeHistory()
 
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-4xl">
-      {/* Page header */}
-      <div className="text-center mb-8 lg:mb-12">
-        <div className="inline-flex items-center gap-2 mb-4">
-          <CalendarDays className="size-8 text-[#6A1CF6]" />
-          <h1 className="text-3xl lg:text-5xl font-display font-black text-[#2E2F2F]">
-            Daily Joke
-          </h1>
-        </div>
-        <p className="text-[#6B7280] text-lg max-w-md mx-auto">
-          Your personalized daily dose of humor
-        </p>
-      </div>
-
-      {/* Today's joke */}
-      <section className="mb-12 lg:mb-16">
-        {isTodayLoading && <DailyJokeCardSkeleton />}
-
-        {isTodayError && (
-          <div className="flex flex-col items-center justify-center py-16 text-center bg-[#FAFAFA] rounded-[32px]">
-            <div className="size-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-              <AlertCircle className="size-8 text-red-500" />
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="today">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+          {/* Hero strip */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <span className="eyebrow-mono">Daily · Vol. I · No. 042</span>
+              <h2
+                style={{
+                  marginTop: 8,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 'clamp(2rem, 4vw, 2.75rem)',
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  lineHeight: 1.05,
+                }}
+              >
+                Today's <em className="wink">joke.</em>
+              </h2>
+              <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
+                One per morning. Fresh. Picked for you.
+              </p>
             </div>
-            <h2 className="text-xl font-semibold text-[#2E2F2F] mb-2">Couldn't load today's joke</h2>
-            <p className="text-[#6B7280] mb-6 max-w-md px-4">
-              {todayError instanceof Error ? todayError.message : 'Something went wrong.'}
-            </p>
-            <Button onClick={() => refetchToday()} variant="pill-outline">
-              <RefreshCw className="size-4 mr-2" /> Try again
-            </Button>
+            <Link
+              to="/flow-canvas"
+              style={{
+                color: '#6A1CF6',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 14,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              Back to Today <ArrowRight size={14} />
+            </Link>
           </div>
-        )}
 
-        {!isTodayLoading && !isTodayError && todayJoke && (
-          <DailyJokeCard joke={todayJoke} />
-        )}
-      </section>
-
-      {/* History */}
-      <section>
-        <div className="flex items-center gap-3 mb-6">
-          <History className="size-6 text-[#6B7280]" />
-          <h2 className="text-xl lg:text-2xl font-display font-bold text-[#2E2F2F]">
-            Previous Daily Jokes
-          </h2>
-        </div>
-
-        {isHistoryLoading && (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <HistoryCardSkeleton key={i} />
-            ))}
+          {/* Hero JOTD */}
+          <div style={{ marginTop: 32 }}>
+            {loadingToday ? <JotdSkeleton /> : <JotdHero text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} date={today?.date} />}
           </div>
-        )}
 
-        {isHistoryError && (
-          <div className="text-center py-8 text-[#6B7280]">
-            Couldn't load history. Try refreshing the page.
-          </div>
-        )}
-
-        {!isHistoryLoading && !isHistoryError && history.length === 0 && (
-          <div className="text-center py-12 text-[#6B7280] bg-[#FAFAFA] rounded-[32px]">
-            <CalendarDays className="size-12 mx-auto mb-3 opacity-50" />
-            <p>No previous daily jokes yet. Come back tomorrow!</p>
-          </div>
-        )}
-
-        {!isHistoryLoading && !isHistoryError && history.length > 0 && (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {history.map((item) => (
-              <div key={`${item.joke.id}-${item.date}`} className="relative">
-                <div className="absolute top-4 left-5 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-[#6B7280] border border-[#E9E8E7]">
-                  {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </div>
-                <JokeCard joke={item.joke} className="pt-12" />
+          {/* History */}
+          <section style={{ marginTop: 56 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                borderBottom: '2px solid #1A1A1A',
+                paddingBottom: 12,
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
+            >
+              <div>
+                <span className="eyebrow-mono">History · The week in punchlines</span>
+                <h3
+                  style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontStyle: 'italic',
+                    fontWeight: 600,
+                    fontSize: 28,
+                    marginTop: 4,
+                    color: '#1A1A1A',
+                  }}
+                >
+                  Every joke we've sent.
+                </h3>
               </div>
-            ))}
+              <span className="tag-flow">
+                <History size={10} style={{ marginRight: 4 }} />
+                Archive
+              </span>
+            </div>
+            {loadingHistory ? (
+              <HistorySkeleton />
+            ) : history?.results && history.results.length > 0 ? (
+              <div
+                style={{
+                  marginTop: 18,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: 16,
+                }}
+              >
+                {history.results.slice(0, 12).map((entry, i) => (
+                  <HistoryTile key={entry.date ?? i} text={entry.joke?.text} date={entry.date} index={i} />
+                ))}
+              </div>
+            ) : (
+              <p style={{ marginTop: 24, fontSize: 14, color: '#6B7280' }}>
+                No history yet. Come back tomorrow for the next one.
+              </p>
+            )}
+          </section>
+        </div>
+      </FlowAppShell>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// JOTD hero — adapted from FlowCanvas's hero card.
+// ──────────────────────────────────────────────────────────────────────────
+
+interface JotdHeroProps {
+  setup?: string | null
+  punchline?: string | null
+  text?: string
+  date?: string
+}
+
+function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
+  const [revealed, setRevealed] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const isSetupPunch = !!(setup && punchline)
+  const headlineText = isSetupPunch ? null : text ?? setup ?? ''
+
+  const dateline = date
+    ? new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  return (
+    <article
+      style={{
+        background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
+        border: '1px solid #E9E8E7',
+        borderRadius: 24,
+        padding: 'clamp(28px, 4vw, 40px)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: -60,
+          right: -60,
+          width: 240,
+          height: 240,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, #F2E9FF, transparent 70%)',
+        }}
+      />
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', flexWrap: 'wrap', gap: 8 }}>
+        <span className="tag-flow">{dateline}</span>
+        <span className="eyebrow-mono">{isSetupPunch ? 'Setup → Punchline' : 'One-liner'}</span>
+      </header>
+
+      {isSetupPunch ? (
+        <div style={{ marginTop: 32, position: 'relative' }}>
+          <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+            Setup
+          </span>
+          <div
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+              color: '#1A1A1A',
+              lineHeight: 1.25,
+              marginTop: 8,
+              maxWidth: 640,
+            }}
+          >
+            {setup}
           </div>
-        )}
-      </section>
+          <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+            Punchline
+          </span>
+          <div
+            onClick={() => setRevealed(true)}
+            className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+            style={{
+              cursor: revealed ? 'default' : 'pointer',
+              marginTop: 8,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              fontSize: 'clamp(2rem, 5vw, 4rem)',
+              letterSpacing: '-0.025em',
+              color: '#1A1A1A',
+              lineHeight: 1.02,
+            }}
+          >
+            {punchline}
+          </div>
+          {!revealed && (
+            <button
+              type="button"
+              onClick={() => setRevealed(true)}
+              className="btn-flow-reward"
+              style={{ marginTop: 24 }}
+            >
+              <Sparkles size={16} /> Reveal punchline
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 32,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: 'clamp(1.75rem, 4vw, 3rem)',
+            letterSpacing: '-0.02em',
+            color: '#1A1A1A',
+            lineHeight: 1.1,
+            position: 'relative',
+          }}
+        >
+          {headlineText}
+        </div>
+      )}
+
+      <footer
+        style={{
+          marginTop: 32,
+          paddingTop: 24,
+          borderTop: '1px solid #E9E8E7',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'relative',
+          flexWrap: 'wrap',
+          gap: 14,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 18, fontSize: 13, color: '#52525B' }}>
+          <span>😂 612 laughs</span>
+          <span>💾 4.1K saves</span>
+          <span>🔁 312 retold</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setSaved((s) => !s)}
+            aria-pressed={saved}
+            className={saved ? 'btn-flow-reward' : 'btn-flow-ghost'}
+            style={{ height: 44 }}
+          >
+            {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+            {saved ? 'Saved' : 'Save'}
+          </button>
+          <button type="button" className="btn-flow-ghost" style={{ height: 44 }}>
+            <Share2 size={14} /> Share
+          </button>
+        </div>
+      </footer>
+    </article>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// History tile
+// ──────────────────────────────────────────────────────────────────────────
+
+function HistoryTile({ text, date, index }: { text?: string; date?: string; index: number }) {
+  const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)']
+  const bg = tints[index % tints.length]
+  const dateline = date ? new Date(date) : null
+  const day = dateline?.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() ?? '—'
+  const num = dateline ? String(40 - index).padStart(3, '0') : '—'
+
+  return (
+    <button
+      type="button"
+      style={{
+        padding: 24,
+        background: bg,
+        borderRadius: 18,
+        border: bg === 'transparent' ? '1px solid #E9E8E7' : '0',
+        textAlign: 'left',
+        cursor: 'pointer',
+        minHeight: 180,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 12,
+        fontFamily: 'inherit',
+        color: 'inherit',
+      }}
+    >
+      <div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
+          {day} · No. {num}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontStyle: 'italic',
+            fontSize: 16,
+            marginTop: 12,
+            lineHeight: 1.35,
+            color: '#1A1A1A',
+          }}
+        >
+          "{(text ?? '').slice(0, 140)}{(text?.length ?? 0) > 140 ? '…' : ''}"
+        </div>
+      </div>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: '#52525B',
+        }}
+      >
+        Open →
+      </div>
+    </button>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Skeletons
+// ──────────────────────────────────────────────────────────────────────────
+
+function JotdSkeleton() {
+  return (
+    <div
+      style={{
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 24,
+        padding: 40,
+        minHeight: 300,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ height: 22, width: 180, background: '#F2F0F0', borderRadius: 6 }} />
+        <div style={{ height: 28, background: '#F2F0F0', borderRadius: 6, width: '70%' }} />
+        <div style={{ height: 60, background: '#F2F0F0', borderRadius: 6, marginTop: 16 }} />
+      </div>
+    </div>
+  )
+}
+
+function HistorySkeleton() {
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: 16,
+      }}
+    >
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            padding: 24,
+            background: '#FBFAF7',
+            border: '1px solid #E9E8E7',
+            borderRadius: 18,
+            minHeight: 180,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}
+        >
+          <div style={{ height: 12, width: 80, background: '#F2F0F0', borderRadius: 4 }} />
+          <div style={{ height: 56, background: '#F2F0F0', borderRadius: 6 }} />
+        </div>
+      ))}
     </div>
   )
 }

@@ -209,9 +209,21 @@ v2 rewrote to match `Docs/JokesFor/`:
 - Extracted `FlowAppShell` shared chrome
 - All 8 designed screens implemented end-to-end
 
-### Iteration 4 (post-merge — not in this branch)
-- Per-feature adapter flips to real-API mode as response shapes are confirmed
-- Reskin remaining pages (HomePage, FavoritesPage, etc.) to the new design language
-- Consolidate parallel components (JokeCard, Layout) once approved across all consumers
-- Mobile/tablet breakpoints
-- Retire `/onboarding` legacy route
+### Iteration 4 (current — on `dev` branch)
+
+The work formerly described as "post-merge" is now happening on `dev`. The branch was created by fast-forwarding from `feat/redesign-user-flow` (which is a strict superset of `main`); `main` is untouched. The `dev` branch is our integration trunk going forward — feature branches PR into `dev`, and `dev` → `main` is the release event.
+
+**Done:**
+- ✅ `dev` branch established and tracking origin
+- ✅ Reskinned `LibraryPage` to use `FlowAppShell` + new visual language (collection tiles, recent saves masonry, search)
+- ✅ Reskinned `DailyJokePage` to use `FlowAppShell` + reveal-on-tap hero + history grid
+- ✅ Hoisted `/library` and `/daily` out of the legacy `Layout`-wrapped subtree (they have their own chrome now)
+- ✅ Retired `/onboarding` route — now redirects to `/flow` (legacy `OnboardingPage` component stays in code, no longer routed)
+- ✅ Wired `preferencesAdapter` to optionally route through real `/users/me/preferences/` via `VITE_USE_REAL_PREFERENCES` flag (default off; converter handles camelCase ↔ snake_case mismatch)
+
+**Still in flight:**
+- Reskin remaining legacy pages: `FavoritesPage`, `DraftsPage`, `ProfilePage`, `SettingsPage`, `TrendingPage`, `SubmitJokePage`, `HomePage` — each needs its own focused PR
+- Adapter flips for the other features once shapes are confirmed: `favoritesAdapter`, `draftsAdapter`, `profileAdapter`, `trendingAdapter`
+- Consolidate `JokeCard` (still used by `HomePage`/`FavoritesPage`/`SubmitJokePage`) with `FlowJokeCard`
+- Consolidate `Layout` (still used by `HomePage`/`TrendingPage` and protected pages still inside that subtree) with `FlowAppShell`
+- Mobile/tablet breakpoints — Flow pages are designed for 1440px desktop; smaller screens partially handled via `clamp()`
