@@ -3,6 +3,7 @@ import type { User, Joke, Collection, SavedJoke, PaginatedResponse } from './api
 // ── Mock User ──
 export const mockUser: User = {
   pk: 1,
+  username: 'laughmaster',
   email: 'laughmaster@jokesfor.com',
   first_name: 'Laugh',
   last_name: 'Master',

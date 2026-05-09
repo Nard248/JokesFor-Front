@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/lib/api'
-import type { LoginCredentials, RegisterCredentials } from '@/lib/api'
+import type {
+  LoginCredentials,
+  RegisterCredentials,
+  GoogleAuthRequest,
+  PasswordChangeRequest,
+  PasswordResetRequest,
+  PasswordResetConfirmRequest,
+  UpdateUserRequest,
+} from '@/lib/api'
 import { useAuthStore } from './store'
 import { setAccessToken } from '@/lib/axios'
 
@@ -18,8 +26,6 @@ export function useCurrentUser() {
       return response.data
     },
     retry: false,
-    // On success, user is already authenticated (token valid)
-    // This is called on app init to check if user has valid session
   })
 }
 
@@ -34,11 +40,9 @@ export function useLogin() {
       return response.data
     },
     onSuccess: (data) => {
-      // User data is included in login response - no extra API call needed
       if (data.user) {
         setAuth(data.user, data.access)
       } else {
-        // Fallback: fetch user if not in response
         setAccessToken(data.access)
         authApi.getUser().then((res) => setAuth(res.data, data.access))
       }
@@ -58,11 +62,31 @@ export function useRegister() {
       return response.data
     },
     onSuccess: (data) => {
-      // User data is included in registration response - no extra API call needed
       if (data.user) {
         setAuth(data.user, data.access)
       } else {
-        // Fallback: fetch user if not in response
+        setAccessToken(data.access)
+        authApi.getUser().then((res) => setAuth(res.data, data.access))
+      }
+      queryClient.invalidateQueries({ queryKey: authKeys.user() })
+    },
+  })
+}
+
+// Google OAuth code-exchange mutation
+export function useGoogleAuth() {
+  const queryClient = useQueryClient()
+  const { setAuth } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (payload: GoogleAuthRequest) => {
+      const response = await authApi.googleAuth(payload)
+      return response.data
+    },
+    onSuccess: (data) => {
+      if (data.user) {
+        setAuth(data.user, data.access)
+      } else {
         setAccessToken(data.access)
         authApi.getUser().then((res) => setAuth(res.data, data.access))
       }
@@ -82,12 +106,68 @@ export function useLogout() {
     },
     onSuccess: () => {
       logout()
-      queryClient.clear() // Clear all cached data
+      queryClient.clear()
     },
     onError: () => {
-      // Even if logout API fails, clear local state
       logout()
       queryClient.clear()
+    },
+  })
+}
+
+// Update current user (PATCH /auth/user/)
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+  const { setUser } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (patch: UpdateUserRequest) => {
+      const response = await authApi.updateUser(patch)
+      return response.data
+    },
+    onSuccess: (user) => {
+      setUser(user)
+      queryClient.invalidateQueries({ queryKey: authKeys.user() })
+    },
+  })
+}
+
+// Password change (authenticated)
+export function usePasswordChange() {
+  return useMutation({
+    mutationFn: async (payload: PasswordChangeRequest) => {
+      const response = await authApi.passwordChange(payload)
+      return response.data
+    },
+  })
+}
+
+// Password reset request (sends email)
+export function usePasswordReset() {
+  return useMutation({
+    mutationFn: async (payload: PasswordResetRequest) => {
+      const response = await authApi.passwordReset(payload)
+      return response.data
+    },
+  })
+}
+
+// Password reset confirm (uid+token from email link)
+export function usePasswordResetConfirm() {
+  return useMutation({
+    mutationFn: async (payload: PasswordResetConfirmRequest) => {
+      const response = await authApi.passwordResetConfirm(payload)
+      return response.data
+    },
+  })
+}
+
+// Resend email verification link
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const response = await authApi.resendVerification(email)
+      return response.data
     },
   })
 }

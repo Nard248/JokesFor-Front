@@ -3,6 +3,7 @@ import { api } from './axios'
 // Auth types
 export interface User {
   pk: number
+  username: string
   email: string
   first_name: string
   last_name: string
@@ -21,8 +22,35 @@ export interface RegisterCredentials {
 
 export interface AuthResponse {
   access: string
-  refresh?: string // May not be returned if using httpOnly cookies
-  user?: User
+  refresh: string
+  user: User
+}
+
+export interface GoogleAuthRequest {
+  code: string
+}
+
+export interface PasswordResetRequest {
+  email: string
+}
+
+export interface PasswordResetConfirmRequest {
+  uid: string
+  token: string
+  new_password1: string
+  new_password2: string
+}
+
+export interface PasswordChangeRequest {
+  old_password: string
+  new_password1: string
+  new_password2: string
+}
+
+export interface UpdateUserRequest {
+  username?: string
+  first_name?: string
+  last_name?: string
 }
 
 // Auth API
@@ -36,11 +64,35 @@ export const authApi = {
   logout: () =>
     api.post('/auth/logout/'),
 
+  googleAuth: (payload: GoogleAuthRequest) =>
+    api.post<AuthResponse>('/auth/google/', payload),
+
   getUser: () =>
     api.get<User>('/auth/user/'),
 
+  updateUser: (patch: UpdateUserRequest) =>
+    api.patch<User>('/auth/user/', patch),
+
   refreshToken: () =>
     api.post<{ access: string }>('/auth/token/refresh/'),
+
+  verifyToken: (token: string) =>
+    api.post<Record<string, never>>('/auth/token/verify/', { token }),
+
+  passwordChange: (payload: PasswordChangeRequest) =>
+    api.post<{ detail: string }>('/auth/password/change/', payload),
+
+  passwordReset: (payload: PasswordResetRequest) =>
+    api.post<{ detail: string }>('/auth/password/reset/', payload),
+
+  passwordResetConfirm: (payload: PasswordResetConfirmRequest) =>
+    api.post<{ detail: string }>('/auth/password/reset/confirm/', payload),
+
+  verifyEmail: (key: string) =>
+    api.post<{ detail: string }>('/auth/registration/verify-email/', { key }),
+
+  resendVerification: (email: string) =>
+    api.post<{ detail: string }>('/auth/registration/resend-email/', { email }),
 }
 
 // Joke types (from backend models)

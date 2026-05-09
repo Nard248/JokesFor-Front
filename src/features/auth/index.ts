@@ -1,8 +1,23 @@
 // Store
 export { useAuthStore } from './store'
 
-// API/Queries
-export { useLogin, useRegister, useLogout, useCurrentUser, authKeys } from './api'
+// Mutations & queries
+export {
+  authKeys,
+  useCurrentUser,
+  useLogin,
+  useRegister,
+  useGoogleAuth,
+  useLogout,
+  useUpdateUser,
+  usePasswordChange,
+  usePasswordReset,
+  usePasswordResetConfirm,
+  useResendVerification,
+} from './api'
 
-// Hooks
+// Convenience hooks
 export { useAuth, useRequireAuth } from './hooks'
+
+// Google OAuth helper
+export { getGoogleAuthUrl, GOOGLE_OAUTH_REDIRECT_URI } from './google-oauth'

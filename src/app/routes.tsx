@@ -1,11 +1,14 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router'
 import { Layout } from '@/components/Layout'
+import { ProtectedRoute } from './providers/ProtectedRoute'
+import { GuestOnlyRoute } from './providers/GuestOnlyRoute'
 import {
   HomePage,
   SearchPage,
   DailyJokePage,
   LoginPage,
   RegisterPage,
+  GoogleCallbackPage,
   OnboardingPage,
   LibraryPage,
   TrendingPage,
@@ -27,23 +30,28 @@ const router = createBrowserRouter([
     path: '/',
     element: <Layout><Outlet /></Layout>,
     children: [
+      // Public — anyone can browse
       { index: true, element: <HomePage /> },
       { path: 'daily', element: <DailyJokePage /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'trending', element: <TrendingPage /> },
-      { path: 'favorites', element: <FavoritesPage /> },
-      { path: 'drafts', element: <DraftsPage /> },
-      { path: 'profile', element: <ProfilePage /> },
-      { path: 'settings', element: <SettingsPage /> },
+      // Authenticated only
+      { path: 'favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
+      { path: 'drafts', element: <ProtectedRoute><DraftsPage /></ProtectedRoute> },
+      { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       // Backward compat
       { path: 'collections', element: <Navigate to="/library" replace /> },
     ],
   },
-  // Standalone pages (no Layout shell)
-  { path: '/submit', element: <SubmitJokePage /> },
-  { path: '/onboarding', element: <OnboardingPage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  // Standalone authenticated pages (no Layout shell)
+  { path: '/submit', element: <ProtectedRoute><SubmitJokePage /></ProtectedRoute> },
+  { path: '/onboarding', element: <ProtectedRoute><OnboardingPage /></ProtectedRoute> },
+  // Guest-only — redirect home if already signed in
+  { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
+  { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },
+  // OAuth callback — must process even if user state is uncertain (no guard)
+  { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
   // Catch-all
   { path: '*', element: <NotFoundPage /> },
 ])
