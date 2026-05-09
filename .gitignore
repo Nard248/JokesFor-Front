@@ -35,3 +35,18 @@ dist-ssr
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-mcp/
+
+# Office lockfiles
+~$*.docx
+~$*.xlsx
+
+# Claude / agent local state
+.claude/
+.agents/
+skills-lock.json
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
