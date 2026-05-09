@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>JokesFor — Flow Prototype</title>
+<meta name="viewport" content="width=1440"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,600;1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#FBFAF7; --paper:#FFFFFF; --ink:#1A1A1A; --mute:#52525B; --sub:#6B7280;
+  --line:#E9E8E7; --line2:#F1EFEC;
+  --purple:#6A1CF6; --purpleDeep:#5D00E4; --purpleTint:#F2E9FF; --purpleLt:#AC8EFF;
+  --lime:#CAFD00; --limeDark:#3A4A00;
+  --amber:#FFC965; --amberDark:#5F4200;
+  --display:"Epilogue",system-ui,sans-serif;
+  --body:"Plus Jakarta Sans",system-ui,sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0E0D11;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+img,svg{display:block;max-width:100%}
+button{font-family:inherit}
+
+/* Stage that holds each "screen" frame */
+.app{min-height:100vh;padding:32px 16px 64px;display:flex;flex-direction:column;align-items:center;gap:24px}
+.frame{width:1440px;max-width:100%;background:var(--bg);border-radius:24px;overflow:hidden;border:1px solid #1F1D24;box-shadow:0 32px 80px rgba(0,0,0,.5)}
+.frame-label{display:flex;align-items:center;justify-content:space-between;width:1440px;max-width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);padding:0 4px}
+.frame-label .pgnum{color:var(--lime)}
+
+/* Top nav (linking screens for the prototype only) */
+.proto-nav{position:sticky;top:0;z-index:100;background:rgba(14,13,17,.85);backdrop-filter:blur(12px);padding:14px 24px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1F1D24;width:100%;justify-content:center;flex-wrap:wrap}
+.proto-nav .brand{display:flex;align-items:center;gap:10px;color:#fff;font-family:var(--display);font-weight:800;margin-right:24px}
+.proto-nav .brand img{height:28px;width:28px;border-radius:7px}
+.proto-nav a{color:rgba(255,255,255,.6);font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;padding:8px 12px;border-radius:8px;border:1px solid transparent;cursor:pointer}
+.proto-nav a:hover{color:#fff;border-color:#2A2832}
+.proto-nav a.is-active{color:#0E0D11;background:var(--lime);border-color:var(--lime)}
+
+/* Headings + utilities */
+h1,h2,h3,h4{font-family:var(--display);margin:0;letter-spacing:-.02em;color:var(--ink);line-height:1.05}
+h1{font-weight:900;font-size:80px}
+h2{font-weight:900;font-size:56px}
+h3{font-weight:800;font-size:28px}
+.wink{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--purple)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+.lead{font-size:18px;color:var(--mute);line-height:1.5}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:#fff;color:var(--ink);font-size:12px;font-weight:600;border:1px solid var(--line)}
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:6px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;background:var(--purpleTint);color:var(--purple);font-weight:600}
+.tag.lime{background:var(--lime);color:var(--limeDark)}
+.tag.amber{background:var(--amber);color:var(--amberDark)}
+.tag.dark{background:var(--ink);color:#fff}
+.btn{height:48px;padding:0 24px;border:0;border-radius:999px;font-family:var(--body);font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:transform .12s ease, background .12s ease}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purpleDeep)}
+.btn-reward{background:var(--ink);color:var(--lime)}
+.btn-reward:hover{background:#000}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:#F4F2EE}
+.btn:active{transform:translateY(1px)}
+.input{height:48px;width:100%;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:#fff;font-family:var(--body);font-size:15px;color:var(--ink);outline:none;transition:box-shadow .12s ease, border-color .12s ease}
+.input:focus{border-color:var(--purple);box-shadow:0 0 0 4px var(--purpleTint)}
+.label{font-family:var(--display);font-weight:700;font-size:13px;color:var(--ink);display:block;margin-bottom:8px}
+
+/* Cards */
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px}
+.card-flat{background:transparent;border:1px solid var(--line);border-radius:18px;padding:20px}
+
+/* Generic shell pieces */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.6);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+.app-header .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.app-header .logo img{width:32px;height:32px;border-radius:8px}
+.app-header .logo-text{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.01em}
+.app-nav{display:flex;align-items:center;gap:4px}
+.app-nav a{color:var(--mute);font-family:var(--display);font-weight:600;font-size:14px;text-decoration:none;padding:8px 14px;border-radius:999px;cursor:pointer}
+.app-nav a:hover{color:var(--ink);background:#F4F2EE}
+.app-nav a.is-active{color:var(--ink);background:#fff;border:1px solid var(--line)}
+
+/* Streak chip */
+.streak-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:999px;background:var(--lime);color:var(--limeDark);font-family:var(--display);font-weight:800;font-size:13px}
+.streak-chip .dot{width:18px;height:18px;border-radius:50%;background:var(--limeDark);color:var(--lime);display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+</style>
+</head>
+<body>
+
+<!-- prototype top-nav (not part of any single screen) -->
+<nav class="proto-nav">
+  <div class="brand"><img src="assets/logo-mark-purple.svg" alt=""/> JokesFor · Prototype</div>
+  <a data-go="login">01 Login</a>
+  <a data-go="register">02 Register</a>
+  <a data-go="onb1">03 Onboarding · Vibes</a>
+  <a data-go="onb2">04 Onboarding · Formats</a>
+  <a data-go="onb3">05 Onboarding · Ritual</a>
+  <a data-go="today">06 Today</a>
+  <a data-go="explore">07 Explore</a>
+  <a data-go="search">08 Search</a>
+</nav>
+
+<div class="app" id="app"><!-- screens get injected here --></div>
+<script>if(window!==window.top){document.documentElement.style.setProperty('background','#FBFAF7');var s=document.createElement('style');s.textContent='html,body{background:#FBFAF7!important}.proto-nav{display:none!important}.app{padding:0!important;gap:0!important;background:#FBFAF7!important}.frame{border-radius:0!important;border:0!important;box-shadow:none!important;width:1440px!important}.frame-label{display:none!important}';document.head.appendChild(s);}</script>
+
+<!-- Components / scripts -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="parts/flow.jsx"></script>
+<script type="text/babel" src="parts/flow-screens.jsx"></script>
+<script type="text/babel" src="parts/flow-app.jsx"></script>
+
+</body>
+</html>

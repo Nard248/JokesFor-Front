@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>JokesFor — Design Book v1.0</title>
+<meta name="viewport" content="width=1280"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600;1,9..144,700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBFAF7; --paper:#FFFFFF; --ink:#1A1A1A; --mute:#52525B; --sub:#86827A; --line:#E9E8E7; --line2:#D9D7D2;
+    --purple:#6A1CF6; --purpleDeep:#5D00E4; --purpleTint:#F2E9FF; --purpleLt:#AC8EFF;
+    --lime:#CAFD00; --limeDark:#3A4A00; --amber:#FFC965; --amberDark:#5F4200;
+    --ed_paper:#F4EFE6; --ed_ink:#1A1814; --ed_red:#D6432B; --ed_rule:#1A1814;
+    --display:"Epilogue",system-ui,sans-serif;
+    --body:"Plus Jakarta Sans",system-ui,sans-serif;
+    --serif:"Fraunces",Georgia,serif;
+    --edSerif:"Instrument Serif","Times New Roman",serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  ::selection{background:var(--lime);color:var(--limeDark)}
+
+  /* ── Page system ── */
+  .page{width:1280px;margin:0 auto;padding:96px 120px;border-bottom:1px solid var(--line);position:relative;background:var(--bg)}
+  .page.dark{background:#0F0E12;color:#fff;border-bottom-color:#22202A}
+  .page.cream{background:var(--ed_paper);color:var(--ed_ink)}
+  .page.purple{background:linear-gradient(160deg,var(--purple),var(--purpleDeep));color:#fff;border-bottom-color:transparent}
+  .page-num{position:absolute;top:32px;right:32px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--sub);text-transform:uppercase}
+  .page.dark .page-num,.page.purple .page-num{color:rgba(255,255,255,.55)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+  .page.dark .eyebrow,.page.purple .eyebrow{color:rgba(255,255,255,.7)}
+
+  h1.display{font-family:var(--display);font-weight:900;font-size:120px;line-height:.92;letter-spacing:-.035em;margin:0}
+  h1{font-family:var(--display);font-weight:900;font-size:88px;line-height:.95;letter-spacing:-.03em;margin:0}
+  h2{font-family:var(--display);font-weight:900;font-size:56px;line-height:1;letter-spacing:-.025em;margin:0 0 16px}
+  h3{font-family:var(--display);font-weight:800;font-size:32px;line-height:1.05;letter-spacing:-.015em;margin:0 0 12px}
+  h4{font-family:var(--display);font-weight:700;font-size:20px;line-height:1.2;margin:0 0 8px}
+  p{margin:0 0 14px;max-width:64ch;color:var(--mute)}
+  p.lead{font-family:var(--display);font-weight:500;font-size:24px;line-height:1.4;color:var(--ink);max-width:62ch}
+  em.wink{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--purple);font-size:1.02em}
+  .cream em.wink{color:var(--ed_red)}
+  .dark em.wink,.purple em.wink{color:var(--lime)}
+
+  .num{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .stack-md > * + *{margin-top:24px}
+  .stack-lg > * + *{margin-top:48px}
+  .rule{height:1px;background:var(--line);margin:48px 0}
+  .rule-thick{height:2px;background:var(--ink);margin:32px 0}
+  .cream .rule{background:rgba(26,24,20,.18)}
+  .cream .rule-thick{background:var(--ed_ink)}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:#fff;color:var(--ink);font-size:12px;font-weight:600;border:1px solid var(--line)}
+  .tag{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;background:var(--purpleTint);color:var(--purple);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .tag.lime{background:var(--lime);color:var(--limeDark)}
+  .tag.amber{background:#FFE7A8;color:var(--amberDark)}
+  .tag.dark{background:var(--ink);color:var(--lime)}
+  .tag.red{background:#FFD9CD;color:#7A2A14}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:28px}
+  .card-flat{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px}
+
+  /* Confidential strip */
+  .confidential{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--ed_red);text-transform:uppercase}
+
+  /* TOC */
+  .toc-row{display:grid;grid-template-columns:60px 1fr auto;gap:24px;align-items:baseline;padding:18px 0;border-top:1px solid var(--line);text-decoration:none;color:inherit;transition:background .15s,padding .15s}
+  .toc-row:hover{background:#fff;padding-left:12px;padding-right:12px;border-radius:8px}
+  .toc-row .ch{font-family:var(--mono);font-size:13px;color:var(--sub);letter-spacing:.1em}
+  .toc-row .ti{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:-.01em}
+  .toc-row .pg{font-family:var(--mono);font-size:13px;color:var(--sub)}
+  .toc-row.lastrow{border-bottom:1px solid var(--line)}
+
+  /* Print */
+  @page{size:1280px 1660px;margin:0}
+  @media print{
+    body{background:#fff}
+    .page{break-after:page;border-bottom:0;width:1280px}
+    .no-print{display:none!important}
+    .interactive .reveal-mask{filter:none!important}
+    .interactive .kk-line{opacity:1!important;transform:none!important}
+  }
+
+  /* Reading rail */
+  .rail{position:fixed;top:50%;right:18px;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);padding:10px 8px;border:1px solid var(--line);border-radius:999px}
+  .rail a{width:8px;height:8px;border-radius:999px;background:var(--line2);display:block;text-decoration:none;transition:transform .15s,background .15s}
+  .rail a:hover{transform:scale(1.4);background:var(--purple)}
+  .rail a.dot-cur{background:var(--ink)}
+
+  /* JOTD swatch */
+  .swatch{border-radius:18px;height:160px;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;color:#fff;position:relative;overflow:hidden}
+  .swatch .ttl{font-family:var(--display);font-weight:800;font-size:18px}
+  .swatch .hex{font-family:var(--mono);font-size:11px;opacity:.85;letter-spacing:.1em}
+
+  /* Type specimen */
+  .spec{padding:32px;border:1px solid var(--line);border-radius:20px;background:#fff;display:flex;flex-direction:column;gap:6px}
+  .spec .label{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:.18em;text-transform:uppercase}
+
+  /* JOKE FORMAT CARDS — interactive */
+  .joke-card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:32px;position:relative;overflow:hidden;min-height:260px}
+  .joke-card .quote-mark{position:absolute;top:-30px;right:8px;font-family:var(--display);font-weight:900;font-size:240px;color:var(--purpleTint);line-height:1;pointer-events:none;user-select:none}
+
+  /* Reveal blur */
+  .reveal-mask{filter:blur(14px);transition:filter .55s cubic-bezier(.2,.7,.2,1);cursor:pointer;color:var(--ink);position:relative}
+  .reveal-mask::after{content:"tap to reveal punchline →";position:absolute;inset:auto 0 -2px 0;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--purple);text-transform:uppercase;filter:blur(0);transition:opacity .3s}
+  .reveal-mask.revealed{filter:blur(0)}
+  .reveal-mask.revealed::after{opacity:0}
+
+  /* Knock-knock chat */
+  .kk-stage{display:flex;flex-direction:column;gap:10px}
+  .kk-line{display:flex;max-width:80%;opacity:0;transform:translateY(8px);transition:opacity .35s ease,transform .35s ease}
+  .kk-line.in{opacity:1;transform:none}
+  .kk-line .bubble{padding:12px 16px;border-radius:18px;font-family:var(--display);font-weight:600;font-size:18px;line-height:1.3}
+  .kk-line.them{align-self:flex-start}
+  .kk-line.them .bubble{background:#F1EEFF;color:var(--purple);border-bottom-left-radius:4px}
+  .kk-line.you{align-self:flex-end}
+  .kk-line.you .bubble{background:var(--ink);color:#fff;border-bottom-right-radius:4px}
+  .kk-knock{display:inline-flex;align-items:center;gap:8px;background:var(--lime);color:var(--limeDark);font-family:var(--display);font-weight:800;font-size:14px;padding:10px 16px;border-radius:999px;border:0;cursor:pointer}
+  .kk-knock[disabled]{opacity:.5;cursor:default}
+
+  /* One-liner */
+  .one-liner{font-family:var(--display);font-weight:900;font-size:48px;line-height:1.05;letter-spacing:-.025em;color:var(--ink);text-wrap:balance}
+
+  /* Story */
+  .story-body{font-family:var(--serif);font-size:19px;line-height:1.6;color:var(--ink);column-count:1;max-width:62ch}
+  .story-body p::first-letter{font-family:var(--serif);font-weight:700;font-size:48px;float:left;line-height:.9;padding:6px 8px 0 0;color:var(--purple)}
+
+  /* Anti-joke */
+  .anti-card{background:#FAFAFA;border:1px dashed var(--line2);border-radius:16px;padding:32px;font-family:var(--mono);color:var(--mute)}
+  .anti-card .setup{font-family:var(--display);font-weight:600;font-size:22px;color:var(--ink);line-height:1.3;margin-bottom:16px}
+  .anti-card .pause{display:inline-block;border-top:1px solid var(--line2);padding-top:14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--sub)}
+  .anti-card .punch{font-family:var(--display);font-weight:600;font-size:22px;color:var(--ink);margin-top:6px}
+
+  /* Observational quote */
+  .obs-card{background:#fff;border-left:4px solid var(--amber);padding:24px 28px;border-radius:0 16px 16px 0;font-family:var(--serif);font-style:italic;font-size:24px;font-weight:500;line-height:1.4;color:var(--ink)}
+  .obs-card .by{display:block;margin-top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--sub);font-style:normal;text-transform:uppercase}
+
+  /* Subtle entrance for sections */
+  .fade-up{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+  .fade-up.in{opacity:1;transform:none}
+
+  /* Cover decoration */
+  .cover-bigword{font-family:var(--display);font-weight:900;font-size:280px;line-height:.85;letter-spacing:-.045em}
+  .cover-bigword em{font-family:var(--serif);font-style:italic;font-weight:600;color:var(--lime);font-size:.85em}
+
+  /* Loop diagram */
+  .loop{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .loop-step{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;position:relative;min-height:240px}
+  .loop-step .step-num{font-family:var(--display);font-weight:900;font-size:48px;color:var(--purpleTint);line-height:1}
+  .loop-step .step-arrow{position:absolute;top:38px;right:-18px;width:36px;height:2px;background:var(--line2);z-index:1}
+  .loop-step:last-child .step-arrow{display:none}
+
+  /* Competition matrix */
+  .matrix{display:grid;grid-template-columns:160px repeat(5,1fr);background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+  .matrix > div{padding:16px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:13px}
+  .matrix > div:nth-last-child(-n+6){border-bottom:0}
+  .matrix > div:nth-child(6n){border-right:0}
+  .matrix .head{font-family:var(--display);font-weight:800;background:var(--bg);font-size:13px}
+  .matrix .row-h{font-family:var(--display);font-weight:800;background:#FAFAFA}
+  .matrix .yes{color:var(--limeDark);font-weight:700}
+  .matrix .no{color:var(--sub)}
+  .matrix .ours{background:var(--purpleTint);color:var(--purple);font-weight:700}
+
+  /* The Joke Times */
+  .jt-masthead{font-family:var(--edSerif);font-weight:400;font-size:96px;line-height:.9;letter-spacing:-.02em;color:var(--ed_ink)}
+  .jt-rule{border-top:3px double var(--ed_ink);border-bottom:1px solid var(--ed_ink);padding:6px 0;display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase}
+  .jt-col{column-count:2;column-gap:36px;column-rule:1px solid rgba(26,24,20,.18);font-family:var(--edSerif);font-size:18px;line-height:1.55;color:var(--ed_ink)}
+  .jt-headline{font-family:var(--edSerif);font-weight:600;font-size:54px;line-height:1.05;color:var(--ed_ink);font-style:italic}
+  .jt-kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--ed_red);text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<!-- Reading rail -->
+<nav class="rail no-print" aria-label="Chapter rail">
+  <a href="#cover" data-rail title="Cover"></a>
+  <a href="#toc" data-rail title="Contents"></a>
+  <a href="#ch1" data-rail title="Executive summary"></a>
+  <a href="#ch2" data-rail title="Strategy"></a>
+  <a href="#ch3" data-rail title="Competition"></a>
+  <a href="#ch4" data-rail title="Color"></a>
+  <a href="#ch5" data-rail title="Type"></a>
+  <a href="#ch6" data-rail title="Voice"></a>
+  <a href="#ch7" data-rail title="Hooked"></a>
+  <a href="#ch8" data-rail title="UX laws"></a>
+  <a href="#ch9" data-rail title="Joke formats"></a>
+  <a href="#ch10" data-rail title="Components"></a>
+  <a href="#ch11" data-rail title="The Joke Times"></a>
+</nav>
+
+<!-- ── COVER ── -->
+<section class="page" id="cover" style="padding:96px 120px;min-height:1660px;display:flex;flex-direction:column;justify-content:space-between">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--ink);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:900;font-size:24px">J</div>
+      <div>
+        <div style="font-family:var(--display);font-weight:900;font-size:22px;letter-spacing:-.01em">JokesFor</div>
+        <div class="num">DESIGN BOOK · v1.0 · FEB 2026</div>
+      </div>
+    </div>
+    <span class="confidential">Confidential — Internal</span>
+  </div>
+
+  <div>
+    <div class="num" style="margin-bottom:24px">A complete design system, the analysis behind it, and an alternative direction</div>
+    <div class="cover-bigword" style="color:var(--ink)">The<br/><em>laughter</em><br/>system.</div>
+    <p class="lead" style="margin-top:36px;max-width:680px">A book about why JokesFor looks the way it does — the colors, the type, the shape of every joke card — and what it would look like if we went the other way instead.</p>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end">
+    <div style="display:flex;gap:8px">
+      <span class="tag">Strategy</span>
+      <span class="tag lime">Psychology</span>
+      <span class="tag amber">System</span>
+      <span class="tag dark">Alternative</span>
+    </div>
+    <div class="num">11 chapters · 1 alternative direction · ~25 min read</div>
+  </div>
+  <span class="page-num">001</span>
+</section>
+
+<!-- ── TABLE OF CONTENTS ── -->
+<section class="page" id="toc">
+  <div class="num">Contents</div>
+  <h1 style="margin-top:12px;margin-bottom:48px">What's <em class="wink">inside.</em></h1>
+
+  <a class="toc-row" href="#ch1"><span class="ch">01</span><span class="ti">Executive summary</span><span class="pg">p. 003</span></a>
+  <a class="toc-row" href="#ch2"><span class="ch">02</span><span class="ti">Strategic foundation — two truths and a white space</span><span class="pg">p. 004</span></a>
+  <a class="toc-row" href="#ch3"><span class="ch">03</span><span class="ti">Competitive landscape</span><span class="pg">p. 006</span></a>
+  <a class="toc-row" href="#ch4"><span class="ch">04</span><span class="ti">Color psychology &amp; palette</span><span class="pg">p. 008</span></a>
+  <a class="toc-row" href="#ch5"><span class="ch">05</span><span class="ti">Typography system</span><span class="pg">p. 010</span></a>
+  <a class="toc-row" href="#ch6"><span class="ch">06</span><span class="ti">Voice &amp; tone</span><span class="pg">p. 012</span></a>
+  <a class="toc-row" href="#ch7"><span class="ch">07</span><span class="ti">The Hooked loop</span><span class="pg">p. 014</span></a>
+  <a class="toc-row" href="#ch8"><span class="ch">08</span><span class="ti">UX laws applied</span><span class="pg">p. 016</span></a>
+  <a class="toc-row" href="#ch9"><span class="ch">09</span><span class="ti">Joke-format taxonomy <span style="color:var(--purple);font-size:12px;font-family:var(--mono);letter-spacing:.15em">· INTERACTIVE</span></span><span class="pg">p. 018</span></a>
+  <a class="toc-row" href="#ch10"><span class="ch">10</span><span class="ti">Component primer</span><span class="pg">p. 022</span></a>
+  <a class="toc-row lastrow" href="#ch11"><span class="ch">11</span><span class="ti">Alternative direction — The Joke Times</span><span class="pg">p. 024</span></a>
+
+  <p style="margin-top:48px;font-size:13px">Read this top-to-bottom for the full thread of reasoning, or jump to chapter <strong style="color:var(--purple)">9</strong> for the interactive joke-card prototypes that grew out of all the analysis.</p>
+  <span class="page-num">002</span>
+</section>
+
+<!-- ── CHAPTER 1 — EXECUTIVE SUMMARY ── -->
+<section class="page" id="ch1">
+  <div style="display:flex;align-items:baseline;justify-content:space-between">
+    <div class="eyebrow">Chapter 01 · Executive summary</div>
+    <div class="num">The whole book in one page.</div>
+  </div>
+  <h1 style="margin-top:24px">What we're building, in <em class="wink">one</em> page.</h1>
+
+  <div class="grid-2" style="margin-top:48px">
+    <div class="stack-md">
+      <h3>The product</h3>
+      <p>JokesFor is the world's first joke search engine — a place where humor is treated as a <em class="wink">canonical</em>, taggable, save-able body of work. It's Spotify's recommendation craft applied to comedy, with Pinterest's collection ritual.</p>
+
+      <h3>The opportunity</h3>
+      <p>Jokes online today are scattered across Reddit threads, screenshot tweets, and joke-of-the-day spam apps. There is no clean, calm, well-lit place to <em class="wink">find</em>, save, and re-share humor. JokesFor is that place.</p>
+
+      <h3>The user</h3>
+      <p>The Toastmaster: someone who needs the right joke at the right moment — a parent, an MC, a manager opening a meeting, a developer breaking the ice in a code review. They don't want infinite scroll. They want the right joke, in seconds.</p>
+    </div>
+
+    <div class="stack-md">
+      <h3>The design promise</h3>
+      <p style="font-family:var(--display);font-weight:700;font-size:22px;color:var(--ink);line-height:1.35;max-width:none">Make the funny thing feel <em class="wink">funny</em> — without becoming a clown.</p>
+      <p>Calm white-space and editorial confidence on the outside; one well-placed lime accent and one italic <em class="wink">wink</em> doing all the comedic work on the inside. Restraint is the joke.</p>
+
+      <h3>The four design moves</h3>
+      <ol style="padding-left:20px;color:var(--mute);max-width:none">
+        <li><strong style="color:var(--ink)">Editorial layout, comedic accent.</strong> Newspaper-grade structure; one fluorescent punchline color.</li>
+        <li><strong style="color:var(--ink)">Format-aware joke cards.</strong> A one-liner does not look like a knock-knock. The card is part of the gag.</li>
+        <li><strong style="color:var(--ink)">A daily ritual.</strong> Streak, mystery box, 9 AM trigger. Hooked-loop design, not infinite-feed design.</li>
+        <li><strong style="color:var(--ink)">A serif-italic <em class="wink">wink</em>.</strong> One typographic gesture that says: this brand has a sense of humor about itself.</li>
+      </ol>
+    </div>
+  </div>
+  <span class="page-num">003</span>
+</section>
+
+<!-- ── CHAPTER 2 — STRATEGIC FOUNDATION ── -->
+<section class="page" id="ch2">
+  <div class="eyebrow">Chapter 02 · Strategic foundation</div>
+  <h1 style="margin-top:24px">Two truths, one <em class="wink">white space.</em></h1>
+  <p class="lead" style="margin-top:24px">Every design decision in this book traces back to two strategic claims. If either fails, the design fails.</p>
+
+  <div class="grid-2" style="margin-top:64px">
+    <div class="card">
+      <span class="tag">Truth 01</span>
+      <h2 style="margin-top:18px;font-size:44px">Humor is high-stakes.</h2>
+      <p style="margin-top:12px">A joke is a <em class="wink">social bet.</em> Tell it well: status. Tell it badly: shame. This is why people <em class="wink">save</em> jokes — they're saving social capital for later.</p>
+      <p><strong style="color:var(--ink)">Design implication:</strong> jokes deserve curation, taxonomy, and previews. Never an infinite scroll of unfiltered noise. The product's job is to reduce risk.</p>
+    </div>
+    <div class="card" style="background:var(--lime);border-color:var(--lime)">
+      <span class="tag dark">Truth 02</span>
+      <h2 style="margin-top:18px;font-size:44px;color:var(--limeDark)">Funny is identity.</h2>
+      <p style="margin-top:12px;color:var(--limeDark)">The jokes you save say what kind of person you are: dad, dark, dry, absurd, wholesome. A joke library is a <em class="wink" style="color:var(--limeDark)">self-portrait</em>.</p>
+      <p style="color:var(--limeDark)"><strong>Design implication:</strong> the library is a destination, not a dumping ground. Boards are personal. Vibe selection is identity-formation.</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <h3>The white space — what nobody else does</h3>
+  <div class="grid-3" style="margin-top:24px">
+    <div class="card-flat"><div class="num">REDDIT</div><h4 style="margin-top:8px">Volume, no curation.</h4><p style="font-size:14px">Endless threads. Great for discovery, terrible for retrieval. You can't find that joke again next Tuesday.</p></div>
+    <div class="card-flat"><div class="num">SPOTIFY (COMEDY)</div><h4 style="margin-top:8px">Specials, not units.</h4><p style="font-size:14px">Long-form audio. Brilliant recommendation engine, but for hour-long sets — not a single one-liner you can text a friend.</p></div>
+    <div class="card-flat"><div class="num">PINTEREST</div><h4 style="margin-top:8px">Visual, not textual.</h4><p style="font-size:14px">The board ritual we want. But comedy doesn't pin well as an image — it pins as language.</p></div>
+  </div>
+
+  <div style="margin-top:48px;background:var(--purple);color:#fff;padding:36px;border-radius:24px;display:grid;grid-template-columns:1fr 2fr;gap:32px;align-items:center">
+    <div class="num" style="color:rgba(255,255,255,.7)">JokesFor occupies</div>
+    <h3 style="color:#fff;font-size:36px;margin:0">A <em class="wink">searchable</em>, <em class="wink">save-able</em>, <em class="wink">taggable</em> library of unit-level jokes — with a daily ritual that turns retrieval into habit.</h3>
+  </div>
+  <span class="page-num">004</span>
+</section>
+
+<!-- ── CHAPTER 2.2 — THE FOUR PERSONAS ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 02 · continued · Personas</div>
+  <h2 style="margin-top:24px">Four people who badly need this.</h2>
+  <p style="margin-top:12px">We don't design for "everyone who likes jokes." We design for these four. Every joke-format card in chapter 9 is tested against this list.</p>
+
+  <div class="grid-4" style="margin-top:48px">
+    <div class="card-flat" style="background:var(--purple);color:#fff;border-color:var(--purple);min-height:300px;display:flex;flex-direction:column">
+      <div style="font-size:32px">💼</div>
+      <h4 style="color:#fff;margin-top:8px">The Manager</h4>
+      <p style="color:rgba(255,255,255,.85);font-size:13px;flex:1">Opens every Monday all-hands with a joke. Mortally afraid of bombing. Searches "icebreaker for engineers."</p>
+      <div class="num" style="color:rgba(255,255,255,.6)">NEEDS · TAGS, CLEANLINESS, SAFETY</div>
+    </div>
+    <div class="card-flat" style="background:var(--lime);color:var(--limeDark);border-color:var(--lime);min-height:300px;display:flex;flex-direction:column">
+      <div style="font-size:32px">👨‍🦳</div>
+      <h4 style="color:var(--limeDark);margin-top:8px">The Dad</h4>
+      <p style="color:var(--limeDark);font-size:13px;flex:1">Building a personal canon of puns to deploy at the dinner table. Has a 41-joke board called "Embarrass Sophie."</p>
+      <div class="num" style="color:var(--limeDark);opacity:.7">NEEDS · BOARDS, PUN VOLUME, RANDOMIZATION</div>
+    </div>
+    <div class="card-flat" style="background:var(--amber);color:var(--amberDark);border-color:var(--amber);min-height:300px;display:flex;flex-direction:column">
+      <div style="font-size:32px">🎤</div>
+      <h4 style="color:var(--amberDark);margin-top:8px">The MC</h4>
+      <p style="color:var(--amberDark);font-size:13px;flex:1">Wedding emcee, conference host, podcast intro writer. Treats jokes like raw material — wants format-by-format browsing.</p>
+      <div class="num" style="color:var(--amberDark);opacity:.7">NEEDS · FORMAT FILTERS, LENGTH FILTERS, DRAFTS</div>
+    </div>
+    <div class="card-flat" style="background:#1A1820;color:#fff;border-color:#1A1820;min-height:300px;display:flex;flex-direction:column">
+      <div style="font-size:32px">🌙</div>
+      <h4 style="color:#fff;margin-top:8px">The Lurker</h4>
+      <p style="color:rgba(255,255,255,.8);font-size:13px;flex:1">Reads the daily joke alone, smiles, never shares. The most loyal user. Cares deeply about streak count.</p>
+      <div class="num" style="color:rgba(255,255,255,.55)">NEEDS · DAILY TRIGGER, STREAK, NIGHT MODE</div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <p style="font-style:italic;font-family:var(--serif);font-size:18px;color:var(--mute);max-width:64ch">The Manager is the buyer; the Lurker is the retainer. Build for both: <em class="wink">curation</em> for the bet, <em class="wink">ritual</em> for the daily return.</p>
+  <span class="page-num">005</span>
+</section>
+
+<!-- ── CHAPTER 3 — COMPETITION ── -->
+<section class="page" id="ch3">
+  <div class="eyebrow">Chapter 03 · Competitive landscape</div>
+  <h1 style="margin-top:24px">Who else has tried, <em class="wink">and</em> why this still has air.</h1>
+  <p class="lead" style="margin-top:24px">A scan of every adjacent product. Nobody is building "Spotify for written jokes" — the closest attempts are either too generic (joke-of-the-day apps) or too long-form (comedy specials).</p>
+
+  <div style="margin-top:48px">
+    <div class="num">Feature matrix · ✓ = does this well</div>
+    <div class="matrix" style="margin-top:12px">
+      <div class="head"></div>
+      <div class="head">Search</div>
+      <div class="head">Tag taxonomy</div>
+      <div class="head">Boards</div>
+      <div class="head">Daily ritual</div>
+      <div class="head">Unit-level (1 joke)</div>
+
+      <div class="row-h">Reddit r/Jokes</div>
+      <div class="yes">✓ keyword</div>
+      <div class="no">— flat</div>
+      <div class="no">— "save" only</div>
+      <div class="no">—</div>
+      <div class="yes">✓</div>
+
+      <div class="row-h">Spotify Comedy</div>
+      <div class="yes">✓ algorithmic</div>
+      <div class="yes">✓ moods</div>
+      <div class="yes">✓ playlists</div>
+      <div class="no">— passive</div>
+      <div class="no">— specials</div>
+
+      <div class="row-h">Pinterest "humor"</div>
+      <div class="no">— image-only</div>
+      <div class="no">— pin tags</div>
+      <div class="yes">✓ boards</div>
+      <div class="no">—</div>
+      <div class="no">— screenshots</div>
+
+      <div class="row-h">iFunny / 9GAG</div>
+      <div class="no">—</div>
+      <div class="no">—</div>
+      <div class="no">—</div>
+      <div class="no">— infinite</div>
+      <div class="no">— meme units</div>
+
+      <div class="row-h ours">JokesFor</div>
+      <div class="ours">✓ semantic</div>
+      <div class="ours">✓ vibe + format</div>
+      <div class="ours">✓ named boards</div>
+      <div class="ours">✓ daily + streak</div>
+      <div class="ours">✓ format-aware</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:64px">
+    <div class="card-flat"><div class="num" style="color:var(--purple)">STEAL FROM SPOTIFY</div><p style="font-size:14px;margin-top:8px">The recommendation discipline. "Daily Joke" is to JokesFor what "Discover Weekly" is to Spotify. Same machinery, applied to comedy.</p></div>
+    <div class="card-flat"><div class="num" style="color:var(--purple)">STEAL FROM PINTEREST</div><p style="font-size:14px;margin-top:8px">The named-board ritual. "Work Icebreakers." "Dad-Approved." Identity-as-collection.</p></div>
+    <div class="card-flat"><div class="num" style="color:var(--purple)">STEAL FROM SUBSTACK</div><p style="font-size:14px;margin-top:8px">The newsletter cadence. Every morning at 9 AM, your daily joke. Simple, dependable, ritualized.</p></div>
+  </div>
+  <span class="page-num">006</span>
+</section>
+
+<!-- ── CHAPTER 3.2 — POSITIONING MAP ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 03 · continued · Positioning</div>
+  <h2 style="margin-top:24px">The 2×2 nobody is in the upper-right of.</h2>
+
+  <div style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center">
+    <div style="position:relative;aspect-ratio:1;background:#fff;border:1px solid var(--line);border-radius:24px;padding:24px">
+      <!-- Axes -->
+      <div style="position:absolute;top:24px;bottom:24px;left:50%;width:1px;background:var(--line2)"></div>
+      <div style="position:absolute;left:24px;right:24px;top:50%;height:1px;background:var(--line2)"></div>
+      <!-- Axis labels -->
+      <div class="num" style="position:absolute;top:8px;left:50%;transform:translateX(-50%)">CURATED</div>
+      <div class="num" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%)">RAW</div>
+      <div class="num" style="position:absolute;left:6px;top:50%;transform:translateY(-50%) rotate(-90deg);transform-origin:center">RETRIEVAL</div>
+      <div class="num" style="position:absolute;right:6px;top:50%;transform:translateY(-50%) rotate(90deg);transform-origin:center">FEED</div>
+      <!-- Dots -->
+      <div style="position:absolute;left:18%;top:78%;text-align:center"><div style="width:14px;height:14px;border-radius:999px;background:#52525B;margin:0 auto"></div><div class="num" style="margin-top:6px;color:var(--ink)">Reddit</div></div>
+      <div style="position:absolute;left:74%;top:84%;text-align:center"><div style="width:14px;height:14px;border-radius:999px;background:#52525B;margin:0 auto"></div><div class="num" style="margin-top:6px;color:var(--ink)">iFunny</div></div>
+      <div style="position:absolute;left:72%;top:30%;text-align:center"><div style="width:14px;height:14px;border-radius:999px;background:#52525B;margin:0 auto"></div><div class="num" style="margin-top:6px;color:var(--ink)">Spotify</div></div>
+      <div style="position:absolute;left:30%;top:60%;text-align:center"><div style="width:14px;height:14px;border-radius:999px;background:#52525B;margin:0 auto"></div><div class="num" style="margin-top:6px;color:var(--ink)">Pinterest</div></div>
+      <!-- Ours -->
+      <div style="position:absolute;left:18%;top:18%;text-align:center">
+        <div style="width:22px;height:22px;border-radius:999px;background:var(--purple);margin:0 auto;box-shadow:0 0 0 6px var(--purpleTint)"></div>
+        <div style="margin-top:8px;font-family:var(--display);font-weight:900;font-size:14px;color:var(--purple)">JokesFor</div>
+      </div>
+    </div>
+
+    <div class="stack-md">
+      <h3>Upper-left is the prize.</h3>
+      <p>Curated <em class="wink">and</em> retrieval-first. You come for one specific joke; you leave with a board.</p>
+      <p>Nothing else lives there. Reddit's curation collapses under volume. Spotify's curation is feed-shaped. Pinterest can't host language well. The corner is open.</p>
+      <div class="card-flat" style="background:var(--purpleTint);border-color:var(--purpleTint);color:var(--purple)">
+        <div class="num" style="color:var(--purple)">DESIGN MANDATE</div>
+        <p style="margin-top:8px;color:var(--purple);font-weight:600;font-size:15px">If a screen feels like a feed, we've drifted south. If it feels like a search engine that loves jokes, we're home.</p>
+      </div>
+    </div>
+  </div>
+  <span class="page-num">007</span>
+</section>
+
+<!-- ── CHAPTER 4 — COLOR PSYCHOLOGY ── -->
+<section class="page" id="ch4">
+  <div class="eyebrow">Chapter 04 · Color psychology</div>
+  <h1 style="margin-top:24px">Why <em class="wink">purple</em>, why <em class="wink">lime</em>, why nothing else.</h1>
+  <p class="lead" style="margin-top:24px">Color does the strategic work before the typography even arrives. The palette is small on purpose: one carrier color, one reward color, one warm accent — and a lot of disciplined whitespace.</p>
+
+  <div class="grid-3" style="margin-top:48px">
+    <div class="swatch" style="background:linear-gradient(160deg,#6A1CF6,#5D00E4)"><div class="ttl">Purple — <em class="wink">creativity, play, the unexpected</em></div><div class="hex">#6A1CF6 · OKLCH 51% .27 295</div></div>
+    <div class="swatch" style="background:#CAFD00;color:#3A4A00"><div class="ttl">Lime — <em class="wink" style="color:#3A4A00">the punchline, the reward</em></div><div class="hex" style="color:#3A4A00">#CAFD00 · OKLCH 95% .25 122</div></div>
+    <div class="swatch" style="background:#FFC965;color:#5F4200"><div class="ttl">Amber — <em class="wink" style="color:#5F4200">warmth, mystery, surprise</em></div><div class="hex" style="color:#5F4200">#FFC965 · OKLCH 84% .15 80</div></div>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="grid-2" style="margin-top:24px">
+    <div class="stack-md">
+      <h3>The reasoning, color by color</h3>
+      <p><strong style="color:var(--purple)">Purple</strong> is the rarest hue in nature, which is exactly why brands use it for "imagination" — Twitch, Cadbury, Yahoo, Roku. It signals <em class="wink">play without childishness</em>. It's the right base for a product about wit.</p>
+      <p><strong style="color:var(--limeDark)">Lime</strong> is fluorescent, jarring, and impossible to ignore — like a punchline. We use it for <em class="wink">one thing only</em>: the reward state. Save buttons, streak rails, the moment a punchline lands. Never as a body or chrome.</p>
+      <p><strong style="color:var(--amberDark)">Amber</strong> is the warm storyteller — fireside, dad's armchair, the moment before the gag. It carries the Mystery Box, the Wholesome vibe, and the streak-saved confirmation.</p>
+    </div>
+    <div class="stack-md">
+      <h3>The 60 / 30 / 10 / 3 rule</h3>
+      <div class="card-flat" style="padding:20px">
+        <div style="display:flex;height:24px;border-radius:4px;overflow:hidden">
+          <div style="flex:60;background:var(--bg);border:1px solid var(--line)"></div>
+          <div style="flex:30;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)"></div>
+          <div style="flex:10;background:var(--purple)"></div>
+          <div style="flex:3;background:var(--lime)"></div>
+        </div>
+        <p style="font-size:13px;margin-top:14px;margin-bottom:0"><strong>60%</strong> warm-white surface · <strong>30%</strong> paper white cards · <strong>10%</strong> purple chrome · <strong>3%</strong> lime reward · amber appears only at story moments.</p>
+      </div>
+
+      <h3 style="margin-top:24px">Accessibility</h3>
+      <ul style="font-size:14px;color:var(--mute);padding-left:18px;margin:0">
+        <li>Purple <strong style="color:var(--ink)">#6A1CF6</strong> on white passes <strong>WCAG AAA</strong> for body text (8.6:1).</li>
+        <li>Lime is <em>never</em> a foreground for body — only for short labels on its dark partner <strong style="color:#3A4A00">#3A4A00</strong> (12.3:1).</li>
+        <li>Body text is always <strong>#1A1A1A</strong> on warm-white. No grey-on-grey.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <h3>Do / don't</h3>
+  <div class="grid-3" style="margin-top:16px">
+    <div class="card-flat" style="border-color:var(--lime);background:#F4FFD3"><div class="num" style="color:var(--limeDark)">DO</div><p style="font-size:14px;margin-top:8px;color:var(--limeDark)"><strong>One lime moment per screen.</strong> The reward color loses meaning if it's everywhere.</p></div>
+    <div class="card-flat" style="border-color:var(--lime);background:#F4FFD3"><div class="num" style="color:var(--limeDark)">DO</div><p style="font-size:14px;margin-top:8px;color:var(--limeDark)"><strong>Lean on warm-whites.</strong> Pure white feels clinical. <code style="font-family:var(--mono);font-size:12px">#FBFAF7</code> reads as <em class="wink" style="color:var(--limeDark)">paper</em>.</p></div>
+    <div class="card-flat" style="border-color:#FFD9CD;background:#FFF4F0"><div class="num" style="color:#7A2A14">DON'T</div><p style="font-size:14px;margin-top:8px;color:#7A2A14"><strong>Never gradient-meme.</strong> No 5-color rainbow gradients. We are a serious place that loves jokes — not a children's app.</p></div>
+  </div>
+  <span class="page-num">008</span>
+</section>
+
+<!-- ── CHAPTER 4.2 — FULL PALETTE / TOKENS ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 04 · continued · Tokens</div>
+  <h2 style="margin-top:24px">The whole palette, once.</h2>
+
+  <div class="grid-4" style="margin-top:36px">
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#FBFAF7;border-bottom:1px solid var(--line)"></div>
+      <div style="padding:14px"><div class="num">SURFACE</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--bg · #FBFAF7</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#FFFFFF;border-bottom:1px solid var(--line)"></div>
+      <div style="padding:14px"><div class="num">PAPER</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--paper · #FFFFFF</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#1A1A1A"></div>
+      <div style="padding:14px"><div class="num">INK</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--ink · #1A1A1A</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#52525B"></div>
+      <div style="padding:14px"><div class="num">MUTE</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--mute · #52525B</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#6A1CF6"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--purple)">PURPLE 600</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--purple · #6A1CF6</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#5D00E4"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--purple)">PURPLE 700</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--purpleDeep · #5D00E4</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#F2E9FF"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--purple)">PURPLE 50</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--purpleTint · #F2E9FF</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#CAFD00"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--limeDark)">LIME</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--lime · #CAFD00</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#3A4A00"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--limeDark)">LIME INK</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--limeDark · #3A4A00</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#FFC965"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--amberDark)">AMBER</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--amber · #FFC965</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#5F4200"></div>
+      <div style="padding:14px"><div class="num" style="color:var(--amberDark)">AMBER INK</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--amberDark · #5F4200</div></div>
+    </div>
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="height:120px;background:#E9E8E7"></div>
+      <div style="padding:14px"><div class="num">LINE</div><div style="font-family:var(--display);font-weight:800;font-size:14px;margin-top:4px">--line · #E9E8E7</div></div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <h3>Semantic tokens (use these, not the raw values)</h3>
+  <div style="font-family:var(--mono);font-size:13px;background:#0F0E12;color:#CAFD00;padding:24px;border-radius:14px;margin-top:12px;line-height:1.7">
+<span style="color:#888">/* Semantic — refer to these, not the raw hexes */</span><br/>
+<span style="color:#fff">--surface-base</span>: var(--bg);   <span style="color:#888">/* page background */</span><br/>
+<span style="color:#fff">--surface-card</span>: var(--paper);<br/>
+<span style="color:#fff">--brand-default</span>: var(--purple);<br/>
+<span style="color:#fff">--brand-emphasis</span>: var(--purpleDeep);<br/>
+<span style="color:#fff">--reward-bg</span>: var(--lime);     <span style="color:#888">/* save buttons, streak, JOTD reveal */</span><br/>
+<span style="color:#fff">--reward-fg</span>: var(--limeDark);<br/>
+<span style="color:#fff">--story-bg</span>: var(--amber);     <span style="color:#888">/* mystery box, wholesome */</span><br/>
+<span style="color:#fff">--text-primary</span>: var(--ink);<br/>
+<span style="color:#fff">--text-muted</span>: var(--mute);
+  </div>
+  <span class="page-num">009</span>
+</section>
+
+<!-- ── CHAPTER 5 — TYPOGRAPHY ── -->
+<section class="page" id="ch5">
+  <div class="eyebrow">Chapter 05 · Typography system</div>
+  <h1 style="margin-top:24px">Four typefaces, <em class="wink">one</em> joke.</h1>
+  <p class="lead" style="margin-top:24px">The system is a comedian's voice. A loud, deadpan delivery (Epilogue), a sly one-word italic (Fraunces), a clear plain narration (Plus Jakarta), and a stagehand reading the cue cards (JetBrains Mono).</p>
+
+  <div class="stack-lg" style="margin-top:48px">
+    <div class="spec">
+      <div class="label">Display · Epilogue 900</div>
+      <div style="font-family:var(--display);font-weight:900;font-size:96px;line-height:.95;letter-spacing:-.03em">Make people <em class="wink">laugh.</em></div>
+      <div class="num" style="margin-top:8px">USED FOR · headlines, joke punchlines, hero numbers · sizes 32–120</div>
+    </div>
+
+    <div class="spec">
+      <div class="label">Wink · Fraunces 600 italic</div>
+      <div style="font-family:var(--serif);font-style:italic;font-weight:600;font-size:72px;line-height:1;color:var(--purple);letter-spacing:-.01em">— a self-aware grin.</div>
+      <div class="num" style="margin-top:8px">USED FOR · one or two italic words inside a display headline. <em>Never</em> as body. The brand's only ornament.</div>
+    </div>
+
+    <div class="spec">
+      <div class="label">Body · Plus Jakarta Sans 400/600</div>
+      <div style="font-family:var(--body);font-size:18px;line-height:1.55;color:var(--ink);max-width:62ch">A neutral grotesque chosen for its <strong>warm</strong> apertures and tabular numerals. It carries everything that isn't a joke or a chrome label — paragraphs, tooltips, FAQ answers, longer setups.</div>
+      <div class="num" style="margin-top:8px">USED FOR · paragraphs, lists, FAQ, tooltips · 14–18px</div>
+    </div>
+
+    <div class="spec">
+      <div class="label">Eyebrow · JetBrains Mono 600</div>
+      <div style="font-family:var(--mono);font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)">CHAPTER 05 · TYPOGRAPHY · CALM &amp; STRUCTURED</div>
+      <div class="num" style="margin-top:8px">USED FOR · eyebrows, eyebrows on top of headlines, metadata, page numbers, edition slugs · 10–14px</div>
+    </div>
+  </div>
+  <span class="page-num">010</span>
+</section>
+
+<!-- ── CHAPTER 5.2 — TYPE SCALE & RHYTHM ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 05 · continued · Scale</div>
+  <h2 style="margin-top:24px">A modular scale, 1.250 (major third).</h2>
+  <p>Every text size in the product is one of these. No exceptions. The discipline is what gives editorial confidence.</p>
+
+  <div class="card" style="margin-top:36px">
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">DISPLAY-XL</div><div class="num">120</div><div style="font-family:var(--display);font-weight:900;font-size:120px;line-height:.92;letter-spacing:-.035em">Aa</div><div class="num">cover</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">DISPLAY-L</div><div class="num">88</div><div style="font-family:var(--display);font-weight:900;font-size:88px;line-height:.95;letter-spacing:-.03em">Headline</div><div class="num">h1</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">DISPLAY-M</div><div class="num">56</div><div style="font-family:var(--display);font-weight:900;font-size:56px;line-height:1;letter-spacing:-.025em">Section title</div><div class="num">h2</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">DISPLAY-S</div><div class="num">32</div><div style="font-family:var(--display);font-weight:800;font-size:32px;line-height:1.05;letter-spacing:-.015em">Joke punchline</div><div class="num">h3</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">LEAD</div><div class="num">24</div><div style="font-family:var(--display);font-weight:500;font-size:24px;line-height:1.4">Lead paragraph after a chapter open</div><div class="num">.lead</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">BODY</div><div class="num">16</div><div style="font-family:var(--body);font-size:16px;line-height:1.55">Default reading size, 64ch line length, color #52525B.</div><div class="num">p</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--line)">
+      <div class="num">SMALL</div><div class="num">13</div><div style="font-family:var(--body);font-size:13px;line-height:1.5">Cards, tags, tooltips, footnotes. Avoid below 13.</div><div class="num">.small</div>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 80px 1fr 80px;gap:24px;align-items:baseline;padding:14px 0">
+      <div class="num">EYEBROW</div><div class="num">11</div><div style="font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase">CHAPTER · METADATA</div><div class="num">.num</div>
+    </div>
+  </div>
+  <span class="page-num">011</span>
+</section>
+
+<!-- ── CHAPTER 6 — VOICE & TONE ── -->
+<section class="page" id="ch6">
+  <div class="eyebrow">Chapter 06 · Voice &amp; tone</div>
+  <h1 style="margin-top:24px">How the brand <em class="wink">talks.</em></h1>
+  <p class="lead" style="margin-top:24px">Dry. Confident. Never explains the joke. Treats the user as another adult who already gets it.</p>
+
+  <div class="grid-2" style="margin-top:48px">
+    <div class="stack-md">
+      <h3>Voice principles</h3>
+      <ol style="padding-left:20px;color:var(--mute);max-width:none">
+        <li><strong style="color:var(--ink)">Don't laugh at your own jokes.</strong> The interface never says "lol" or "haha." That's the user's job.</li>
+        <li><strong style="color:var(--ink)">One sentence is the unit.</strong> Most copy in the product is one sentence. Often a fragment.</li>
+        <li><strong style="color:var(--ink)">A wink, not a wink-wink-nudge.</strong> The italic Fraunces moment in a headline is the only place we let the brand smirk.</li>
+        <li><strong style="color:var(--ink)">Plain over playful, when in doubt.</strong> Empty states are deadpan. The funny thing is the joke; the chrome is the straight man.</li>
+      </ol>
+    </div>
+
+    <div class="card" style="background:var(--purple);color:#fff;border-color:var(--purple)">
+      <div class="num" style="color:rgba(255,255,255,.7)">SAMPLE COPY</div>
+      <h3 style="color:#fff;margin-top:8px">Empty states</h3>
+      <p style="color:rgba(255,255,255,.85);font-size:14px"><strong style="color:var(--lime)">No saved jokes yet.</strong><br/>"Save one and it'll live here forever. Or until your roast goes wrong."</p>
+      <h3 style="color:#fff;margin-top:24px">Streak broken</h3>
+      <p style="color:rgba(255,255,255,.85);font-size:14px;margin-bottom:0"><strong style="color:var(--lime)">Day 0.</strong><br/>"It happens. The good news is tomorrow is also a Tuesday."</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <div class="grid-2">
+    <div class="card-flat" style="background:#F4FFD3;border-color:var(--lime)">
+      <div class="num" style="color:var(--limeDark)">SOUNDS LIKE US</div>
+      <ul style="font-family:var(--display);font-weight:600;font-size:18px;color:var(--ink);padding-left:18px;margin:14px 0 0">
+        <li>"Today's joke is ready."</li>
+        <li>"Save this. Tell it Friday."</li>
+        <li>"You've been here 14 days. We're not surprised."</li>
+        <li>"This one's a pun. You've been warned."</li>
+      </ul>
+    </div>
+    <div class="card-flat" style="background:#FFF4F0;border-color:#FFD9CD">
+      <div class="num" style="color:#7A2A14">DOESN'T SOUND LIKE US</div>
+      <ul style="font-family:var(--display);font-weight:600;font-size:18px;color:#7A2A14;padding-left:18px;margin:14px 0 0">
+        <li>"OMG you'll love this one!! 😂😂"</li>
+        <li>"Welcome to your daily dose of laughter."</li>
+        <li>"Click here to discover amazing jokes!"</li>
+        <li>"Get ready to LOL!!!"</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-num">012</span>
+</section>
+
+<!-- ── CHAPTER 7 — HOOKED LOOP ── -->
+<section class="page" id="ch7">
+  <div class="eyebrow">Chapter 07 · The Hooked loop</div>
+  <h1 style="margin-top:24px">A daily ritual, <em class="wink">engineered.</em></h1>
+  <p class="lead" style="margin-top:24px">Nir Eyal's Hooked model has four phases: Trigger → Action → Variable Reward → Investment. JokesFor's whole product is one disciplined loop.</p>
+
+  <div class="loop" style="margin-top:64px">
+    <div class="loop-step">
+      <div class="step-arrow"></div>
+      <div class="step-num">01</div>
+      <h4>Trigger</h4>
+      <p style="font-size:13px">9 AM push: <em class="wink">"Today's joke is ready."</em> Internal trigger over time: morning coffee feels incomplete without it.</p>
+      <span class="tag" style="margin-top:8px">DAILY · 9AM</span>
+    </div>
+    <div class="loop-step" style="background:var(--lime);border-color:var(--lime)">
+      <div class="step-arrow"></div>
+      <div class="step-num" style="color:var(--limeDark);opacity:.4">02</div>
+      <h4 style="color:var(--limeDark)">Action</h4>
+      <p style="font-size:13px;color:var(--limeDark)">One tap to open. One tap to save. Every action under <em class="wink" style="color:var(--limeDark)">300ms</em>. Friction is the enemy of habit.</p>
+      <span class="tag dark" style="margin-top:8px">2 TAPS · &lt;300MS</span>
+    </div>
+    <div class="loop-step" style="background:var(--amber);border-color:var(--amber)">
+      <div class="step-arrow"></div>
+      <div class="step-num" style="color:var(--amberDark);opacity:.4">03</div>
+      <h4 style="color:var(--amberDark)">Variable reward</h4>
+      <p style="font-size:13px;color:var(--amberDark)">You don't know which joke. Mystery box rolls. Punchline reveal. Dopamine lives in the <em class="wink" style="color:var(--amberDark)">gap</em>, not the payoff.</p>
+      <span class="tag amber" style="margin-top:8px;background:var(--amberDark);color:var(--amber)">UNPREDICTABLE</span>
+    </div>
+    <div class="loop-step" style="background:var(--purple);border-color:var(--purple);color:#fff">
+      <div class="step-num" style="color:rgba(255,255,255,.3)">04</div>
+      <h4 style="color:#fff">Investment</h4>
+      <p style="font-size:13px;color:rgba(255,255,255,.85)">Save → board → vibe weights → tomorrow's joke is more "you." The streak <em class="wink" style="color:var(--lime)">number</em> is the visible asset.</p>
+      <span class="tag dark" style="margin-top:8px;background:var(--lime);color:var(--limeDark)">STREAK · 14D</span>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="grid-2">
+    <div class="stack-md">
+      <h3>Why this loop, specifically</h3>
+      <p>JokesFor's product is built around <strong style="color:var(--ink)">one question per day, one answer per day</strong>. Not infinite scroll. The loop's quality matters more than its volume.</p>
+      <p>By making the variable reward both <em class="wink">surprising</em> (which joke?) and <em class="wink">tuned</em> (matched to your vibes), we get the dopamine of a slot machine with the satisfaction of a well-made gift.</p>
+    </div>
+    <div class="card" style="background:#0F0E12;color:#fff;border-color:#22202A">
+      <div class="num" style="color:#CAFD00">MEASUREMENT</div>
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div><div style="font-family:var(--display);font-weight:900;font-size:40px;color:var(--lime);line-height:1">D7</div><div class="num" style="color:rgba(255,255,255,.6);margin-top:4px">target ≥ 45%</div></div>
+        <div><div style="font-family:var(--display);font-weight:900;font-size:40px;color:var(--lime);line-height:1">D30</div><div class="num" style="color:rgba(255,255,255,.6);margin-top:4px">target ≥ 22%</div></div>
+        <div><div style="font-family:var(--display);font-weight:900;font-size:40px;color:var(--lime);line-height:1">7-day streak</div><div class="num" style="color:rgba(255,255,255,.6);margin-top:4px">≥ 28% of WAU</div></div>
+        <div><div style="font-family:var(--display);font-weight:900;font-size:40px;color:var(--lime);line-height:1">Saves / DAU</div><div class="num" style="color:rgba(255,255,255,.6);margin-top:4px">≥ 1.4 (investment)</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="page-num">013</span>
+</section>
+
+<!-- ── CHAPTER 7.2 — THE FOUR HOOKS, IN UI ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 07 · continued · In product</div>
+  <h2 style="margin-top:24px">Where each phase <em class="wink">lives</em>.</h2>
+
+  <div class="grid-2" style="margin-top:36px;gap:32px">
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="background:linear-gradient(135deg,var(--purple),var(--purpleDeep));padding:24px;color:#fff">
+        <div class="num" style="color:rgba(255,255,255,.7)">TRIGGER</div>
+        <div style="font-family:var(--display);font-weight:800;font-size:22px;margin-top:6px">Push at 9:00 AM, sharp.</div>
+        <div style="margin-top:10px;background:rgba(255,255,255,.13);border-radius:12px;padding:12px;backdrop-filter:blur(4px)">
+          <div class="num" style="color:rgba(255,255,255,.6)">JOKESFOR · NOW</div>
+          <div style="font-family:var(--display);font-weight:600;font-size:14px;margin-top:4px">Today's joke is ready. Day 14 — let's keep it.</div>
+        </div>
+      </div>
+      <div style="padding:18px;font-size:13px;color:var(--mute)">The notification copy ships with three rotating openers based on streak length. Long streaks get pride; broken streaks get warmth.</div>
+    </div>
+
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="background:var(--lime);padding:24px;color:var(--limeDark)">
+        <div class="num" style="color:var(--limeDark);opacity:.7">ACTION</div>
+        <div style="font-family:var(--display);font-weight:800;font-size:22px;margin-top:6px">One-tap save. One-tap share.</div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <span class="pill" style="background:var(--limeDark);color:var(--lime);border:0">＋ Save</span>
+          <span class="pill" style="background:#fff;border:1px solid var(--limeDark);color:var(--limeDark)">↗ Share</span>
+          <span class="pill" style="background:#fff;border:1px solid var(--limeDark);color:var(--limeDark)">😂 412</span>
+        </div>
+      </div>
+      <div style="padding:18px;font-size:13px;color:var(--mute)">Buttons are 44px tall, lime-on-ink for the primary save, mute for share. The save micro-animation is a 320ms rubber-band scale + a +1 to the saved counter.</div>
+    </div>
+
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="background:var(--amber);padding:24px;color:var(--amberDark)">
+        <div class="num" style="color:var(--amberDark);opacity:.7">VARIABLE REWARD</div>
+        <div style="font-family:var(--display);font-weight:800;font-size:22px;margin-top:6px">Mystery box · roll the dice.</div>
+        <div style="font-family:var(--serif);font-style:italic;font-size:18px;margin-top:8px;color:var(--amberDark)">"3 left today."</div>
+      </div>
+      <div style="padding:18px;font-size:13px;color:var(--mute)">Capped per day to preserve scarcity. The cap is the variable — not the joke. Slot-machine economics with a daily reset.</div>
+    </div>
+
+    <div class="card-flat" style="padding:0;overflow:hidden">
+      <div style="background:#0F0E12;padding:24px;color:#fff">
+        <div class="num" style="color:#CAFD00">INVESTMENT</div>
+        <div style="font-family:var(--display);font-weight:800;font-size:22px;margin-top:6px">14-day streak · saved boards.</div>
+        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(14,1fr);gap:3px">
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+          <div style="height:14px;border-radius:2px;background:var(--lime)"></div>
+        </div>
+      </div>
+      <div style="padding:18px;font-size:13px;color:var(--mute)">The streak is the user's stored asset — the thing they don't want to lose. Boards are the user's identity expression. Both compound over time.</div>
+    </div>
+  </div>
+  <span class="page-num">014</span>
+</section>
+
+<!-- ── CHAPTER 8 — UX LAWS APPLIED ── -->
+<section class="page" id="ch8">
+  <div class="eyebrow">Chapter 08 · UX laws applied</div>
+  <h1 style="margin-top:24px">Four laws, four <em class="wink">screens.</em></h1>
+  <p class="lead" style="margin-top:24px">UX laws aren't decoration — each is the rationale for a specific screen choice.</p>
+
+  <div class="grid-2" style="margin-top:48px;gap:32px">
+    <div class="card">
+      <div class="num">HICK'S LAW</div>
+      <h3 style="margin-top:6px">Time-to-decide grows with options.</h3>
+      <p>Onboarding offers <strong>12 vibes</strong> in a 3×4 grid — chunk-able by row, scannable in 4 seconds. Search filters are flat, not nested. The home grid shows 6 vibes, never 12.</p>
+      <div class="num" style="color:var(--purple);margin-top:8px">SEEN ON · onboarding step 02 · home vibe rail</div>
+    </div>
+    <div class="card">
+      <div class="num">FITTS'S LAW</div>
+      <h3 style="margin-top:6px">Big targets close to the cursor.</h3>
+      <p>The Save button on JOTD is <strong>44px tall</strong> and lives <em class="wink">inside</em> the hero card — within thumb / saccade distance of the punchline. Streak counter is right next to the JOTD title, not buried in profile.</p>
+      <div class="num" style="color:var(--purple);margin-top:8px">SEEN ON · joke detail · home hero</div>
+    </div>
+    <div class="card">
+      <div class="num">ZEIGARNIK EFFECT</div>
+      <h3 style="margin-top:6px">Open loops nag the brain.</h3>
+      <p>The blurred punchline (chapter 9) creates a <em class="wink">Zeigarnik gap</em>: setup is delivered, payoff is suspended. The user can't <em>not</em> tap. The streak rail on home shows yesterday filled, today empty — same mechanism.</p>
+      <div class="num" style="color:var(--purple);margin-top:8px">SEEN ON · joke formats · streak rail</div>
+    </div>
+    <div class="card">
+      <div class="num">GOAL-GRADIENT</div>
+      <h3 style="margin-top:6px">Effort accelerates near a goal.</h3>
+      <p>Streak progression shows <em class="wink">"one more lands you in the Top 10%"</em> at day 14 — proximity to a milestone is the reason day-15 conversion is 2× higher than day-7.</p>
+      <div class="num" style="color:var(--purple);margin-top:8px">SEEN ON · home streak rail · push copy</div>
+    </div>
+  </div>
+  <span class="page-num">015</span>
+</section>
+
+<!-- ── CHAPTER 8.2 — MICROINTERACTIONS ── -->
+<section class="page">
+  <div class="eyebrow">Chapter 08 · continued · Microinteractions</div>
+  <h2 style="margin-top:24px">Five moments, <em class="wink">measured.</em></h2>
+  <p>Every microinteraction in JokesFor follows the same shape — short, specific, and cheap.</p>
+
+  <div class="card" style="margin-top:36px;padding:0;overflow:hidden">
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px;border-bottom:1px solid var(--line);background:#FAFAFA">
+      <div class="num" style="padding:16px">MOMENT</div>
+      <div class="num" style="padding:16px">WHAT HAPPENS</div>
+      <div class="num" style="padding:16px">WHY</div>
+      <div class="num" style="padding:16px">DURATION</div>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px;border-bottom:1px solid var(--line)">
+      <div style="padding:16px;font-family:var(--display);font-weight:800">Save</div>
+      <div style="padding:16px;font-size:14px">Bookmark icon scales 1 → 1.3 → 1, fills lime, +1 floats up from the counter</div>
+      <div style="padding:16px;font-size:14px;color:var(--mute)">Investment confirmation; the streak gets visibly bigger</div>
+      <div style="padding:16px;font-family:var(--mono);font-size:13px;color:var(--purple)">320ms</div>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px;border-bottom:1px solid var(--line)">
+      <div style="padding:16px;font-family:var(--display);font-weight:800">Reveal punchline</div>
+      <div style="padding:16px;font-size:14px">14px blur unblurs over 550ms, easing-out cubic; "tap to reveal" caption fades</div>
+      <div style="padding:16px;font-size:14px;color:var(--mute)">Anticipation beat — variable reward</div>
+      <div style="padding:16px;font-family:var(--mono);font-size:13px;color:var(--purple)">550ms</div>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px;border-bottom:1px solid var(--line)">
+      <div style="padding:16px;font-family:var(--display);font-weight:800">Streak +1</div>
+      <div style="padding:16px;font-size:14px">Today's empty bar fills lime, counter ticks 13 → 14 with a numeric flip</div>
+      <div style="padding:16px;font-size:14px;color:var(--mute)">Goal-gradient reinforcement at the moment of investment</div>
+      <div style="padding:16px;font-family:var(--mono);font-size:13px;color:var(--purple)">450ms</div>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px;border-bottom:1px solid var(--line)">
+      <div style="padding:16px;font-family:var(--display);font-weight:800">Mystery roll</div>
+      <div style="padding:16px;font-size:14px">Card flips 90° in 240ms, swaps content, flips back with a slight bounce</div>
+      <div style="padding:16px;font-size:14px;color:var(--mute)">Variable-reward cue; physical metaphor of a die</div>
+      <div style="padding:16px;font-family:var(--mono);font-size:13px;color:var(--purple)">480ms</div>
+    </div>
+    <div style="display:grid;grid-template-columns:160px 1fr 1fr 100px">
+      <div style="padding:16px;font-family:var(--display);font-weight:800">Vibe pick</div>
+      <div style="padding:16px;font-size:14px">Tile fills brand color, check chip pops in top-right, haptic +1</div>
+      <div style="padding:16px;font-size:14px;color:var(--mute)">Identity formation; tiles become "yours"</div>
+      <div style="padding:16px;font-family:var(--mono);font-size:13px;color:var(--purple)">220ms</div>
+    </div>
+  </div>
+  <span class="page-num">016</span>
+</section>
+
+<!-- ── CHAPTER 9 — JOKE FORMAT TAXONOMY ── -->
+<section class="page interactive" id="ch9">
+  <div class="eyebrow">Chapter 09 · Joke-format taxonomy <span style="color:var(--purple)">· INTERACTIVE</span></div>
+  <h1 style="margin-top:24px">A one-liner shouldn't <em class="wink">look</em> like a knock-knock.</h1>
+  <p class="lead" style="margin-top:24px">If the card is part of the gag, the format must be expressed in the layout. Six joke formats, six distinct cards, each with a tailored interaction. <em class="wink">Tap any card.</em></p>
+
+  <div class="grid-2" style="margin-top:48px;gap:32px;align-items:start">
+
+    <!-- 01 ONE-LINER -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">01 · One-liner</div>
+        <span class="tag lime">No reveal</span>
+      </div>
+      <div class="joke-card" style="margin-top:12px;background:#fff;min-height:auto;padding:40px 32px">
+        <div class="one-liner">I told my wife she was drawing her eyebrows too high. She <em class="wink">seemed surprised.</em></div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> single line, set huge, balanced text wrap, the wink does the comedic work. No setup card, no reveal — the format <em>is</em> the punch.</p>
+    </div>
+
+    <!-- 02 PUNCHLINE / SETUP-PAYOFF -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">02 · Setup &amp; punchline</div>
+        <span class="tag">Tap to reveal</span>
+      </div>
+      <div class="joke-card" style="margin-top:12px;min-height:auto">
+        <div class="num" style="color:var(--purple)">SETUP</div>
+        <div style="font-family:var(--display);font-weight:600;font-size:24px;color:var(--ink);line-height:1.3;margin-top:6px">Why don't scientists trust atoms anymore?</div>
+        <div class="num" style="color:var(--purple);margin-top:24px">PUNCHLINE</div>
+        <div class="reveal-mask" style="font-family:var(--display);font-weight:900;font-size:38px;color:var(--ink);line-height:1.05;letter-spacing:-.015em;margin-top:6px;padding-bottom:18px">Because they make up <em class="wink">everything.</em></div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> blurred punchline creates a Zeigarnik gap — the brain demands closure. Tap reveals; the gesture mirrors a comedian's pause. <em class="wink">Anticipation is the reward.</em></p>
+    </div>
+
+    <!-- 03 KNOCK-KNOCK -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">03 · Knock-knock</div>
+        <span class="tag amber">Conversational</span>
+      </div>
+      <div class="joke-card" style="margin-top:12px;min-height:280px">
+        <div class="kk-stage" data-kk>
+          <div class="kk-line them in"><div class="bubble">Knock, knock.</div></div>
+          <div class="kk-line you"><div class="bubble">Who's there?</div></div>
+          <div class="kk-line them"><div class="bubble">Lettuce.</div></div>
+          <div class="kk-line you"><div class="bubble">Lettuce who?</div></div>
+          <div class="kk-line them"><div class="bubble"><em class="wink" style="color:var(--lime)">Lettuce in,</em> it's freezing out here.</div></div>
+        </div>
+        <div style="margin-top:18px"><button class="kk-knock no-print">Knock, knock</button></div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> chat-bubble dialogue, line-by-line reveal. The user <em>is</em> a participant. Each tap advances one line — staging the call-and-response that defines the format.</p>
+    </div>
+
+    <!-- 04 ANTI-JOKE -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">04 · Anti-joke</div>
+        <span class="tag" style="background:#1A1820;color:#fff">Deadpan</span>
+      </div>
+      <div class="anti-card" style="margin-top:12px">
+        <div class="setup">Why did the chicken cross the road?</div>
+        <div class="pause">— pause —</div>
+        <div class="punch">To get to the other side.</div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> brutalist mono frame, no color, deliberate visible "pause" rule. The card itself is the gag — it refuses to perform. The <em class="wink">absence</em> of design <em>is</em> the design.</p>
+    </div>
+
+    <!-- 05 STORY -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">05 · Story / shaggy-dog</div>
+        <span class="tag">2-min read</span>
+      </div>
+      <div class="joke-card" style="margin-top:12px;min-height:auto;background:#FFFCF3;border-color:#F1E4B8">
+        <div class="num" style="color:var(--amberDark)">STORY · 2 MIN · WHOLESOME</div>
+        <div class="story-body" style="margin-top:12px">
+          <p>A man walks into a library and asks for a book on paranoia. The librarian whispers, <em>"They're right behind you."</em> He spins around — nobody. He turns back. The librarian is gone. The shelves are gone. The library is gone. He's standing in a field. A horse approaches and says, <em class="wink">"Why the long face?"</em></p>
+        </div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> serif body, drop-cap, paragraph rhythm. Reads like a tiny short story. Reading time eyebrow signals the commitment — long-form format demands long-form chrome.</p>
+    </div>
+
+    <!-- 06 OBSERVATIONAL -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="eyebrow">06 · Observational</div>
+        <span class="tag amber">Quote-style</span>
+      </div>
+      <div class="joke-card" style="margin-top:12px;background:#FBFAF7;min-height:auto;padding:0;border-color:transparent">
+        <div class="obs-card">
+          "Adulthood is just emailing 'Sounds good!' back and forth until one of you dies."
+          <span class="by">— Observational · 4.8K saves</span>
+        </div>
+      </div>
+      <p style="font-size:13px;margin-top:12px"><strong style="color:var(--ink)">Design move:</strong> quote-style card with amber-rule and serif italic body. Treats the joke as commentary, not punchline. The format borrows authority from the "pull quote."</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <div class="card" style="background:var(--purpleTint);border-color:var(--purpleTint)">
+    <div class="num" style="color:var(--purple)">PSYCHOLOGY DIGEST</div>
+    <div class="grid-3" style="margin-top:14px">
+      <div><h4 style="color:var(--purple);font-size:16px;margin-bottom:4px">Zeigarnik effect</h4><p style="font-size:13px;color:var(--purple);margin:0">→ blurred punchline, dotted "pause" in anti-joke, advancing knock-knock</p></div>
+      <div><h4 style="color:var(--purple);font-size:16px;margin-bottom:4px">Variable reward</h4><p style="font-size:13px;color:var(--purple);margin:0">→ unknown punch behind the blur, unknown line behind the next "Knock"</p></div>
+      <div><h4 style="color:var(--purple);font-size:16px;margin-bottom:4px">Endowed progress</h4><p style="font-size:13px;color:var(--purple);margin:0">→ each tap on a knock-knock is investment; users finish what they start</p></div>
+    </div>
+  </div>
+  <span class="page-num">017–020</span>
+</section>
+
+<!-- ── CHAPTER 10 — COMPONENT PRIMER ── -->
+<section class="page" id="ch10">
+  <div class="eyebrow">Chapter 10 · Component primer</div>
+  <h1 style="margin-top:24px">The system in <em class="wink">eight</em> parts.</h1>
+  <p class="lead" style="margin-top:24px">A short ledger of the components every screen is built from. Skip if you've seen the screens — return when something feels off.</p>
+
+  <div class="grid-2" style="margin-top:48px;gap:32px">
+    <div class="card-flat">
+      <div class="num">01 · BUTTON · PRIMARY</div>
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+        <button style="height:44px;padding:0 22px;background:var(--purple);color:#fff;border:0;border-radius:999px;font-family:var(--body);font-weight:700;font-size:14px;cursor:pointer">Continue</button>
+        <button style="height:44px;padding:0 22px;background:var(--ink);color:var(--lime);border:0;border-radius:999px;font-family:var(--body);font-weight:700;font-size:14px;cursor:pointer">Save joke</button>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">44px height, 999 radius, one bold weight, no shadow except on dark backgrounds. Lime-on-ink for the reward action.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">02 · PILL</div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="pill">Default</span>
+        <span class="pill" style="background:var(--purple);color:#fff;border-color:var(--purple)">Selected</span>
+        <span class="pill" style="background:var(--lime);color:var(--limeDark);border-color:var(--lime)">Reward</span>
+        <span class="pill" style="background:#1A1820;color:#fff;border-color:#1A1820">Mute</span>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">28px height. Filters, secondary actions, status indicators.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">03 · TAG / EYEBROW</div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="tag">Puns</span>
+        <span class="tag lime">Recommended</span>
+        <span class="tag amber">2-min read</span>
+        <span class="tag red">Dark humor</span>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">22px, all-caps, tracked. Categories, status, format type.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">04 · CARD · JOKE</div>
+      <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px">
+        <div style="font-family:var(--display);font-weight:600;font-size:16px;line-height:1.3">I used to hate facial hair, but then it grew on me.</div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center"><span class="tag">Puns</span><span style="font-size:12px;color:var(--sub)">😂 611</span></div>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">18px radius, 1px line, no shadow. 16px display copy. Format-specific variants in chapter 9.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">05 · STREAK RAIL</div>
+      <div style="margin-top:14px;background:var(--lime);border-radius:14px;padding:14px;color:var(--limeDark)">
+        <div style="font-family:var(--display);font-weight:900;font-size:24px">14 <span style="font-size:13px">days</span></div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:repeat(14,1fr);gap:3px">
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+          <div style="height:12px;border-radius:2px;background:var(--limeDark)"></div>
+        </div>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">14-segment grid, lime fill on lime, dark stroke for filled days. Goal-gradient nudges live underneath.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">06 · VIBE TILE</div>
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="height:90px;border-radius:14px;background:var(--purple);color:#fff;padding:12px;display:flex;flex-direction:column;justify-content:space-between"><div style="font-size:22px">💼</div><div style="font-family:var(--display);font-weight:800;font-size:14px">Office</div></div>
+        <div style="height:90px;border-radius:14px;background:var(--lime);color:var(--limeDark);padding:12px;display:flex;flex-direction:column;justify-content:space-between"><div style="font-size:22px">🎯</div><div style="font-family:var(--display);font-weight:800;font-size:14px">Puns</div></div>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">Tile color matches the vibe's brand color from the palette. Selected state = saturated fill; unselected = paper + 1px line.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">07 · INPUT</div>
+      <div style="margin-top:14px;height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:14px;color:var(--sub)">Search by topic, vibe, or occasion…</div>
+      <div style="margin-top:8px;height:44px;border:1px solid var(--purple);box-shadow:0 0 0 4px var(--purpleTint);border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:14px">"first day at work"</div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">12px radius, 1px line. Focus = purple line + 4px purpleTint glow.</p>
+    </div>
+
+    <div class="card-flat">
+      <div class="num">08 · NOTIFICATION</div>
+      <div style="margin-top:14px;background:#0F0E12;color:#fff;padding:14px;border-radius:14px">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:rgba(255,255,255,.7)">JOKESFOR · NOW</div>
+        <div style="font-family:var(--display);font-weight:600;font-size:14px;margin-top:4px">Today's joke is ready. Day 14 — let's keep it.</div>
+      </div>
+      <p style="font-size:13px;margin-top:14px;margin-bottom:0">Dark surface, mono eyebrow, display-medium body. Native push template; web mirror uses identical chrome.</p>
+    </div>
+  </div>
+  <span class="page-num">021–023</span>
+</section>
+
+<!-- ── CHAPTER 11 — THE JOKE TIMES (ALTERNATIVE) ── -->
+<section class="page cream" id="ch11">
+  <div class="jt-rule"><span>Vol. I · No. 042 · Alternative direction</span><span>February 2026 · Confidential</span></div>
+  <div style="margin-top:48px">
+    <div class="jt-kicker">Chapter 11 · Alternative direction</div>
+    <div class="jt-masthead" style="margin-top:18px">The Joke Times.</div>
+    <div class="jt-rule" style="margin-top:24px"><span>"All the jokes that fit, we print."</span><span>Established 2026</span></div>
+  </div>
+
+  <div class="grid-2" style="margin-top:48px;gap:48px">
+    <div>
+      <div class="jt-kicker">Editorial · The case for newsprint</div>
+      <div class="jt-headline" style="margin-top:14px">If JokesFor wanted to feel <em>printed</em>, here's what it would look like.</div>
+      <div class="jt-col" style="margin-top:24px">
+        <p>The recommended direction in this book — Curated Playful — keeps purple, lime, and the wink. It is the safest evolution of the existing draft, and the right call for a mainstream consumer launch.</p>
+        <p>This chapter is a <em>second opinion</em>. If JokesFor's positioning ever drifts older, weeklier, or more Substack-y, the brand has somewhere to go: a serif-led editorial system named, internally, <em>The Joke Times</em>.</p>
+        <p>It is the same product. The components are the same. The voice is the same. Only the visual register changes. We've held it in reserve as a future "Weekly Digest" sub-brand or a print-mode skin, and surface it here as a complete reference.</p>
+      </div>
+    </div>
+
+    <div style="background:#fff;border:1px solid var(--ed_ink);padding:36px;color:var(--ed_ink)">
+      <div class="jt-rule"><span>The Daily Pick</span><span>Wed · Feb 12</span></div>
+      <div class="jt-kicker" style="color:var(--ed_red);margin-top:18px">Setup</div>
+      <div style="font-family:var(--edSerif);font-size:28px;line-height:1.2;margin-top:6px;font-style:italic">Why don't scientists trust atoms anymore?</div>
+      <div class="jt-kicker" style="color:var(--ed_red);margin-top:24px">Punchline</div>
+      <div style="font-family:var(--edSerif);font-weight:600;font-size:48px;line-height:1.05;margin-top:6px">Because they make up<span style="color:var(--ed_red)"> everything.</span></div>
+      <div class="jt-rule" style="margin-top:32px"><span>filed under <em>Punny / Science</em></span><span style="color:var(--ed_red)">SAVE · SHARE</span></div>
+    </div>
+  </div>
+  <span class="page-num">024</span>
+</section>
+
+<!-- ── 11.2 — THE JOKE TIMES PALETTE & TYPE ── -->
+<section class="page cream">
+  <div class="jt-kicker">Chapter 11 · continued</div>
+  <h2 style="margin-top:18px;font-family:var(--edSerif);font-weight:600;font-size:64px;line-height:1;color:var(--ed_ink);font-style:italic">The Joke Times — palette &amp; type.</h2>
+
+  <div class="grid-3" style="margin-top:48px">
+    <div style="background:#F4EFE6;border:1px solid var(--ed_ink);padding:24px;color:var(--ed_ink)">
+      <div class="jt-kicker">Newsprint cream</div>
+      <div style="font-family:var(--edSerif);font-weight:600;font-size:32px;margin-top:14px">#F4EFE6</div>
+      <p style="font-family:var(--edSerif);font-size:15px;margin-top:6px;color:var(--ed_ink)">The page. Replaces warm-white. Carries the whole system.</p>
+    </div>
+    <div style="background:var(--ed_ink);border:1px solid var(--ed_ink);padding:24px;color:#F4EFE6">
+      <div class="jt-kicker" style="color:rgba(244,239,230,.8)">Press ink</div>
+      <div style="font-family:var(--edSerif);font-weight:600;font-size:32px;margin-top:14px">#1A1814</div>
+      <p style="font-family:var(--edSerif);font-size:15px;margin-top:6px">Headlines, body text, rules. A warm black, never pure black.</p>
+    </div>
+    <div style="background:var(--ed_red);border:1px solid var(--ed_red);padding:24px;color:#F4EFE6">
+      <div class="jt-kicker" style="color:rgba(244,239,230,.8)">Stamp red</div>
+      <div style="font-family:var(--edSerif);font-weight:600;font-size:32px;margin-top:14px">#D6432B</div>
+      <p style="font-family:var(--edSerif);font-size:15px;margin-top:6px">The single accent. Punchlines, kickers, drop caps. Replaces lime.</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="grid-2" style="gap:36px">
+    <div style="background:#fff;border:1px solid var(--ed_ink);padding:28px">
+      <div class="jt-kicker">Display · Instrument Serif</div>
+      <div style="font-family:var(--edSerif);font-style:italic;font-weight:600;font-size:96px;line-height:.95;color:var(--ed_ink);margin-top:14px">Punchline.</div>
+      <p style="font-family:var(--edSerif);font-size:14px;margin-top:8px;color:var(--ed_ink);margin-bottom:0">Italic by default — the entire system speaks in a single literary register.</p>
+    </div>
+    <div style="background:#fff;border:1px solid var(--ed_ink);padding:28px">
+      <div class="jt-kicker">Body · Instrument Serif</div>
+      <div style="font-family:var(--edSerif);font-size:18px;line-height:1.6;color:var(--ed_ink);margin-top:14px">In place of two typefaces and four weights, The Joke Times runs the same family for everything. Voice variation comes from <em>italic vs. roman</em>, not weight.</div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <div class="card" style="background:var(--ed_ink);color:#F4EFE6;border-color:var(--ed_ink)">
+    <div class="jt-kicker" style="color:#FFC1B6">When to consider The Joke Times</div>
+    <div class="grid-3" style="margin-top:14px">
+      <div><h4 style="color:#F4EFE6;font-family:var(--edSerif);font-style:italic;font-weight:600;font-size:20px;margin-bottom:4px">Audience drifts older</h4><p style="font-family:var(--edSerif);font-size:14px;color:#E5DDC9;margin:0">Substack readers, weekly digest, print product line.</p></div>
+      <div><h4 style="color:#F4EFE6;font-family:var(--edSerif);font-style:italic;font-weight:600;font-size:20px;margin-bottom:4px">Long-form formats</h4><p style="font-family:var(--edSerif);font-size:14px;color:#E5DDC9;margin:0">Stories, monologues, the shaggy-dog format from chapter 9.</p></div>
+      <div><h4 style="color:#F4EFE6;font-family:var(--edSerif);font-style:italic;font-weight:600;font-size:20px;margin-bottom:4px">Print extension</h4><p style="font-family:var(--edSerif);font-size:14px;color:#E5DDC9;margin:0">Annual "Best of JokesFor" newsprint zine — already designed.</p></div>
+    </div>
+  </div>
+  <span class="page-num">025</span>
+</section>
+
+<!-- ── COLOPHON / END ── -->
+<section class="page" style="min-height:auto;padding:96px 120px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end">
+    <div>
+      <div class="num">End of book</div>
+      <h2 style="margin-top:14px">— <em class="wink">that's</em> the joke.</h2>
+      <p style="margin-top:24px">Compiled February 2026. Direction A (Curated Playful) is the recommended visual system. Direction B (The Joke Times) is held in reserve as a future sub-brand.</p>
+      <p>Next: refining the full pipeline — Login, Onboarding, Home, Joke detail, Search, Library — using the format-aware joke cards from chapter 9.</p>
+    </div>
+    <div style="text-align:right">
+      <div class="num">JokesFor · Design</div>
+      <div class="num">Book v1.0 · 25 pages</div>
+      <div class="num" style="color:var(--purple);margin-top:8px">PRINT THIS PAGE TO PDF · ⌘P</div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Reading-rail current dot
+(function(){
+  var dots = document.querySelectorAll('[data-rail]');
+  function onScroll(){
+    var y = window.scrollY + window.innerHeight * 0.3;
+    var cur = null;
+    dots.forEach(function(d){
+      var t = document.querySelector(d.getAttribute('href'));
+      if(t && t.offsetTop <= y) cur = d;
+    });
+    dots.forEach(function(d){ d.classList.toggle('dot-cur', d===cur); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+// Fade-up observer (will activate fade-up class on later sections)
+var io = new IntersectionObserver(function(es){
+  es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+}, {threshold:.15});
+document.querySelectorAll('.fade-up').forEach(function(el){ io.observe(el); });
+
+// Reveal-mask (punchline blur)
+document.addEventListener('click', function(e){
+  var m = e.target.closest('.reveal-mask');
+  if(m){ m.classList.toggle('revealed'); }
+});
+
+// Knock-knock interactive sequencer
+document.querySelectorAll('[data-kk]').forEach(function(stage){
+  var lines = stage.querySelectorAll('.kk-line');
+  var btn = stage.parentElement.querySelector('.kk-knock');
+  var idx = 0;
+  function step(){
+    if(idx >= lines.length){ btn.disabled = true; btn.textContent = '✓ Punchline delivered'; return; }
+    lines[idx].classList.add('in');
+    idx++;
+    if(idx >= lines.length){ btn.disabled = true; btn.textContent = '✓ Punchline delivered'; }
+    else { btn.textContent = idx===1 ? "Who's there?" : idx===2 ? '… who?' : 'Reveal punchline'; }
+  }
+  if(btn){
+    btn.addEventListener('click', step);
+    btn.textContent = 'Knock, knock';
+  }
+});
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ import {
   NotFoundPage,
   FlowPage,
   FlowCanvasPage,
+  ExplorePage,
 } from '@/pages'
 
 const router = createBrowserRouter([
@@ -49,9 +50,12 @@ const router = createBrowserRouter([
   // Standalone authenticated pages (no Layout shell)
   { path: '/submit', element: <ProtectedRoute><SubmitJokePage /></ProtectedRoute> },
   { path: '/onboarding', element: <ProtectedRoute><OnboardingPage /></ProtectedRoute> },
-  // Redesigned user flow (iteration 1, additive — see Docs/Redesign_Plan.md)
+  // Redesigned user flow (iteration 2 — see Docs/Redesign_Plan.md)
+  // FlowPage / FlowCanvasPage / ExplorePage all provide their own chrome, so
+  // none of them get wrapped in the legacy Layout.
   { path: '/flow', element: <ProtectedRoute><FlowPage /></ProtectedRoute> },
-  { path: '/flow-canvas', element: <Layout hideDefaultSidebar hideFAB><ProtectedRoute><FlowCanvasPage /></ProtectedRoute></Layout> },
+  { path: '/flow-canvas', element: <ProtectedRoute><FlowCanvasPage /></ProtectedRoute> },
+  { path: '/explore', element: <ProtectedRoute><ExplorePage /></ProtectedRoute> },
   // Guest-only — redirect home if already signed in
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
   { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },

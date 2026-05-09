@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>JokesFor — Design Analysis & Screens</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;}
+  *{box-sizing:border-box}
+  body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;color:#2E2F2F}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="parts/tokens.jsx"></script>
+<script type="text/babel" src="parts/analysis-1.jsx"></script>
+<script type="text/babel" src="parts/analysis-2.jsx"></script>
+<script type="text/babel" src="parts/analysis-3.jsx"></script>
+<script type="text/babel" src="parts/analysis-4.jsx"></script>
+<script type="text/babel" src="parts/analysis-5.jsx"></script>
+<script type="text/babel" src="parts/screens-1.jsx"></script>
+<script type="text/babel" src="parts/screens-2.jsx"></script>
+<script type="text/babel" src="parts/screens-3.jsx"></script>
+<script type="text/babel" src="parts/screens-4.jsx"></script>
+
+<script type="text/babel">
+const App = () => (
+  <DesignCanvas>
+    <DCSection id="cover" title="JokesFor — Design Case Study" subtitle="Strategy → psychology → typography → Hooked framework → directions → screens. Pan with two fingers / drag · pinch or ⌘+wheel to zoom · click any artboard to focus.">
+      <DCArtboard id="cover" label="00 · Cover" width={1280} height={720}>{window.CoverBoard ? <window.CoverBoard/> : null}</DCArtboard>
+      <DCArtboard id="truths" label="01 · Strategic truths" width={1280} height={720}>{window.PositioningBoard ? <window.PositioningBoard/> : null}</DCArtboard>
+      <DCArtboard id="competition" label="02 · Competitive landscape" width={1280} height={720}>{window.CompetitiveBoard ? <window.CompetitiveBoard/> : null}</DCArtboard>
+    </DCSection>
+
+    <DCSection id="psych" title="Psychology of color, type & UI" subtitle="What the brand should feel like, why, and how to encode it.">
+      <DCArtboard id="color-psych" label="03 · Color psychology & palette" width={1280} height={720}>{window.ColorBoard ? <window.ColorBoard/> : null}</DCArtboard>
+      <DCArtboard id="type" label="04 · Typography system" width={1280} height={720}>{window.TypeBoard ? <window.TypeBoard/> : null}</DCArtboard>
+    </DCSection>
+
+    <DCSection id="hooked" title="Hooked framework — the daily-joke loop" subtitle="Trigger → Action → Variable Reward → Investment, mapped to JokesFor's product surfaces.">
+      <DCArtboard id="hooked-loop" label="05 · The full loop" width={1280} height={720}>{window.HookedBoard ? <window.HookedBoard/> : null}</DCArtboard>
+    </DCSection>
+
+    <DCSection id="directions" title="Three visual directions" subtitle="Same daily-joke card, three brand temperatures. Direction A is recommended — it's the one that ships in the screens below.">
+      <DCArtboard id="dirs" label="06 · A / B / C" width={1280} height={720}>{window.DirectionsBoard ? <window.DirectionsBoard/> : null}</DCArtboard>
+    </DCSection>
+
+    <DCSection id="screens" title="Screens — Direction A applied" subtitle="Lightly clickable. Hover the cards, click 'Sign in →' or any 'Continue' to flow through. Optimised for 1280–1440px desktop.">
+      <DCArtboard id="screen-login" label="Login" width={1280} height={832}>{window.LoginScreen ? <window.LoginScreen/> : null}</DCArtboard>
+      <DCArtboard id="screen-onboarding" label="Onboarding · Step 02" width={1280} height={832}>{window.OnboardingScreen ? <window.OnboardingScreen/> : null}</DCArtboard>
+      <DCArtboard id="screen-home" label="Home (logged-in)" width={1280} height={832}>{window.HomeScreen ? <window.HomeScreen/> : null}</DCArtboard>
+      <DCArtboard id="screen-joke" label="Daily joke detail" width={1280} height={832}>{window.JokeDetailScreen ? <window.JokeDetailScreen/> : null}</DCArtboard>
+      <DCArtboard id="screen-search" label="Search results" width={1280} height={832}>{window.SearchScreen ? <window.SearchScreen/> : null}</DCArtboard>
+      <DCArtboard id="screen-lib" label="My library" width={1280} height={832}>{window.LibraryScreen ? <window.LibraryScreen/> : null}</DCArtboard>
+    </DCSection>
+  </DesignCanvas>
+);
+
+// Wait one tick so all part scripts have registered their globals.
+setTimeout(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+}, 80);
+</script>
+</body>
+</html>

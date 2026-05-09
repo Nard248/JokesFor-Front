@@ -107,6 +107,95 @@ button, a {
   -webkit-backdrop-filter: blur(24px);
 }
 
+/* ── Flow redesign tokens & utilities (additive — see Docs/Redesign_Plan.md) ── */
+/* Anchored to the design system in Docs/JokesFor/Flow.html. New utilities are
+   parallel to existing ones; existing classes/tokens are untouched. */
+
+@theme {
+  --font-serif: "Fraunces", "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-flow-bg: #FBFAF7;       /* page bg in the redesign (warmer than --color-page-bg) */
+  --color-flow-ink: #1A1A1A;       /* body text in the redesign (darker than --color-text-primary) */
+  --color-flow-line2: #F1EFEC;     /* subtle divider */
+  --color-flow-purple-tint: #F2E9FF; /* deeper than --color-purple-tint #F7F0FF */
+}
+
+/* The brand "wink" — italic Fraunces serif word inside an Epilogue display headline.
+   Drops into <em className="wink">…</em>. Color override per context. */
+.wink {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  font-optical-sizing: auto;
+  color: #6A1CF6;
+}
+
+/* Mono eyebrow — caps tracking-wide label above headlines. */
+.eyebrow-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+/* Tag — square-radius (NOT pill) mono caps badge. The flow design uses these
+   instead of large pills for editorial/category tags. */
+.tag-flow {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: #F2E9FF;
+  color: #6A1CF6;
+  font-weight: 600;
+}
+.tag-flow.lime  { background: #CAFD00; color: #3A4A00; }
+.tag-flow.amber { background: #FFC965; color: #5F4200; }
+.tag-flow.dark  { background: #1A1A1A; color: #fff; }
+
+/* Streak chip — lime daily-ritual gamification chip with flame dot. */
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 9999px;
+  background: #CAFD00;
+  color: #3A4A00;
+  font-family: "Epilogue", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.streak-chip .dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3A4A00;
+  color: #CAFD00;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reveal-on-tap blur (for setup → punchline). Toggle via .is-revealed. */
+.punch-blur {
+  filter: blur(18px);
+  user-select: none;
+  transition: filter 0.55s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.punch-blur.is-revealed {
+  filter: none;
+  user-select: auto;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

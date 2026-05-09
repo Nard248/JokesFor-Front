@@ -1,7 +1,7 @@
 # Main User Flow Redesign — Plan & Rationale
 
-> **Status**: Iteration 1, in feature branch `feat/redesign-user-flow`. Not merged.
-> **Important**: this iteration is built **without access to the original Claude design files** (`Flow Canvas.html`, `Flow.html`). The Claude.ai design preview URLs require browser auth that the agent doesn't have. What's implemented is an **interpretation** of intent based on (1) the brand book in `MEMORY.md`, (2) the existing app structure, (3) the utility-first product philosophy, and (4) standard "post-login hub + onboarding flow" patterns. When the actual design files are made available, the structural work here will likely transfer; the visual specifics will likely change.
+> **Status**: Iteration 2, in feature branch `feat/redesign-user-flow`. Not merged.
+> **Iteration 1** was built blind (without the Claude design files I couldn't fetch). **Iteration 2** is built against the actual designs the user saved at `Docs/JokesFor/` — including `Flow.html`, `Flow Canvas.html`, `parts/flow-screens.jsx`, and the broader Design Book. The design system is `Direction A` (per `index.html` the design book's recommended direction) — its tokens are now reflected in `src/index.css` additively.
 
 ---
 
@@ -159,9 +159,41 @@ Or open a PR on GitHub — the PR workflow will deploy this branch to a preview 
 
 ## 9. Follow-ups (not in this branch)
 
-- Flip auth-success redirect from `/` to `/flow-canvas`
+### Pages I deliberately deferred to a follow-up PR
+
+The full design package at `Docs/JokesFor/` defines 8 screens. Iteration 2 implements 3 (Flow, FlowCanvas/Today, Explore). Three more are designs of pages that already exist on `main` and serve the demo today, so I left them alone in this branch:
+
+- **Login screen** (Docs/JokesFor/parts/flow-screens.jsx::LoginScreen) — split-canvas: gradient brand panel left with "today's joke preview" inside it, sign-in form right with streak nudge "Keep your 14-day streak alive."
+- **Register screen** — 2-step flow (account fields → handle/pronouns/locale + ritual preview pane on the right).
+- **Search screen** — "Sentence Builder" pattern: "Show me {format} jokes about {theme} that feel {category}." — clickable inline pills with dropdown panels.
+
+Reasoning: each of these touches a route that's live on `main` and used by the demo. Doing them in this PR risks the demo and bloats the diff. Each deserves its own focused PR.
+
+### Other follow-ups
+
+- Flip auth-success redirect from `/` to `/flow-canvas` (one-line change in LoginPage/RegisterPage `onSuccess`)
 - Decide between `/flow` and `/onboarding` (keep one, retire the other)
-- Reskin `LoginPage` / `RegisterPage` to match Flow's visual treatment
-- Wire the `Layout` component's nav shell to recognize "you are inside the canvas" vs "you are inside a destination"
-- Real-API wiring for trending, drafts, profile, preferences (currently mock-only in `api-adapter.ts`)
-- A "Try the new canvas" entry point on existing HomePage so users can opt in before we flip defaults
+- Wire `useUpdatePreferences` to a real `/preferences/me/` adapter when the backend hook lands
+- Real-API wiring for trending, drafts, profile, preferences (currently mock-only)
+- Build the "Today" sections deferred from this iteration:
+  - 7-day archive newspaper strip
+  - Top jokesters this week
+  - Weekly special collection card
+  - "How you've been laughing" stats card
+  - "Themes you laugh at most" pill cloud
+  - "Test it on a friend" share preview
+- The existing `JokeCard` and `FlowJokeCard` will eventually consolidate. New flow uses `FlowJokeCard` (format-aware); old pages keep `JokeCard`. When confidence is high, retire the old.
+
+## 10. Iteration 2 — what changed since Iteration 1
+
+| Aspect | v1 | v2 |
+|---|---|---|
+| Source of truth | brand book + guess | actual designs at `Docs/JokesFor/` |
+| Wink pattern (Fraunces italic in headlines) | missing | applied everywhere via `.wink` |
+| Eyebrow / Mono caps labels | missing | `JetBrains Mono` via `.eyebrow-mono` |
+| FlowCanvas | hub with mood lanes (generic) | "Today" — JOTD reveal hero + streak rail + mystery box + tomorrow teaser + continue-yesterday + 3-up + brand pull-quote |
+| FlowPage | tones / age rating / languages | Vibes (rich color chips, 12 vibes) / Formats (with example demos) / Ritual (slot picker + days + streak forecast) |
+| JokeCard | none | NEW `FlowJokeCard` with 6 format rhythms (setup/oneliner/observ/anti/knock/story) + reveal-on-tap interaction |
+| Explore | not built | NEW page at `/explore` — three-axis filter rail + format-aware masonry |
+| Tokens | reused existing | additive new ones (`--font-serif`, `--font-mono`, `--color-flow-bg`, `--color-flow-ink`, `--color-flow-purple-tint`) |
+| Hooked-loop encoding | missing | trigger (notification preview) + variable reward (blur-lift, mystery box "3 left") + investment (streak chip, "Top 10%") |

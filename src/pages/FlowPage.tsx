@@ -1,49 +1,36 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router'
-import { ArrowLeft, ArrowRight, Sparkles, Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft, ArrowRight, Bell, Check, X } from 'lucide-react'
 import { useUpdatePreferences } from '@/features/preferences'
 
 /**
- * Flow — onboarding journey.
+ * Flow — onboarding journey, redesigned per Docs/JokesFor/Flow.html.
  *
- * 4 steps:
- *   0. Welcome (brand moment)
- *   1. Tone preferences (multi-select)
- *   2. Age rating (single-select)
- *   3. Languages (multi-select)
+ * Three steps:
+ *   1. Vibes   — pick at least 3 vibe cards (rich color/icon chips)
+ *   2. Formats — pick joke formats (one-liner, setup, knock, story, anti, observational)
+ *   3. Ritual  — set time + days + streak forecast (the Hooked-loop trigger)
  *
- * Skippable. Saves on finish via useUpdatePreferences (mock-only today).
- * Lands on /flow-canvas at completion.
- *
- * Iteration 1: built without seeing the original Flow.html design. Visual
- * specifics will likely change; structure and the 4-step sequence should hold.
- *
- * TODO when API hooks land:
- *   - Replace hardcoded TONES / AGE_RATINGS / LANGUAGES with calls to
- *     /tones/, /age-ratings/, /languages/ (lookup tables in backend handoff).
- *   - Wire useUpdatePreferences to a real adapter once preferences API is wired.
+ * On finish: PATCH preferences, navigate to /flow-canvas.
+ * Skip from any step jumps straight to /flow-canvas.
  */
 export function FlowPage() {
   const navigate = useNavigate()
   const updatePreferences = useUpdatePreferences()
 
-  const [step, setStep] = useState(0)
-  const [selectedTones, setSelectedTones] = useState<string[]>([])
-  const [selectedAgeRating, setSelectedAgeRating] = useState<string | null>(null)
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['english'])
+  const [step, setStep] = useState(1)
+  const [vibes, setVibes] = useState<Set<string>>(new Set(['office', 'puns', 'observ', 'oneliner']))
+  const [formats, setFormats] = useState<Set<string>>(new Set(['setup', 'oneliner', 'observ']))
+  const [ritualTime, setRitualTime] = useState('09:00')
+  const [ritualDays, setRitualDays] = useState<Set<string>>(new Set(['mon', 'tue', 'wed', 'thu', 'fri']))
 
-  const totalSteps = 4
-
-  const goNext = () => setStep((s) => Math.min(s + 1, totalSteps - 1))
-  const goBack = () => setStep((s) => Math.max(s - 1, 0))
-
+  const skip = () => navigate('/flow-canvas', { replace: true })
   const finish = () => {
     updatePreferences.mutate(
       {
-        tones: selectedTones,
-        ageRating: selectedAgeRating ?? undefined,
-        languages: selectedLanguages,
+        tones: Array.from(vibes),
+        humorTypes: Array.from(formats),
+        languages: ['english'],
       },
       {
         onSettled: () => navigate('/flow-canvas', { replace: true }),
@@ -51,416 +38,631 @@ export function FlowPage() {
     )
   }
 
-  const skip = () => navigate('/flow-canvas', { replace: true })
-
-  const toggleTone = (slug: string) =>
-    setSelectedTones((prev) =>
-      prev.includes(slug) ? prev.filter((t) => t !== slug) : [...prev, slug],
-    )
-
-  const toggleLanguage = (slug: string) =>
-    setSelectedLanguages((prev) =>
-      prev.includes(slug) ? prev.filter((l) => l !== slug) : [...prev, slug],
-    )
-
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{
-        backgroundImage: 'linear-gradient(180deg, #F7F0FF 0%, #F8F6F6 60%, #F8F6F6 100%)',
-      }}
-    >
-      {/* Top bar — logo + skip */}
-      <header className="px-6 lg:px-8 py-6 flex items-center justify-between">
-        <Link to="/" aria-label="Jokes For — home">
-          <img src="/Logos/compact_light.svg" alt="Jokes For" className="h-9" />
+    <div style={{ minHeight: '100vh', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
+      {/* Header — logo, progress, skip */}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '22px 32px',
+          borderBottom: '1px solid #E9E8E7',
+        }}
+      >
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#1A1A1A' }}>
+          <img src="/Logos/appicon_purple.svg" alt="" style={{ width: 32, height: 32, borderRadius: 8 }} />
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>
+            JokesFor
+          </span>
         </Link>
-        {step < totalSteps - 1 && (
-          <button
-            type="button"
-            onClick={skip}
-            className="text-sm text-[#6B7280] hover:text-[#2E2F2F] transition-colors"
-          >
-            Skip for now
-          </button>
-        )}
+        <div style={{ flex: 1, maxWidth: 400, margin: '0 32px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              style={{
+                flex: 1,
+                height: 6,
+                borderRadius: 3,
+                background: s <= step ? '#6A1CF6' : '#E9E8E7',
+                transition: 'background 0.3s ease',
+              }}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={skip}
+          className="eyebrow-mono"
+          style={{
+            color: '#52525B',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          Skip <X size={12} />
+        </button>
       </header>
 
-      {/* Step indicator */}
-      <div className="max-w-xl mx-auto w-full px-6 mb-8">
-        <StepIndicator current={step} total={totalSteps} />
-      </div>
-
-      {/* Step body */}
-      <main className="flex-1 flex items-start justify-center px-6 lg:px-8">
-        <div className="w-full max-w-xl">
-          <div
-            key={step}
-            className="bg-white rounded-[48px] shadow-card border border-[#E9E8E7] p-8 lg:p-12 animate-fade-in-up"
-          >
-            {step === 0 && <WelcomeStep onNext={goNext} />}
-            {step === 1 && (
-              <TonesStep
-                selected={selectedTones}
-                onToggle={toggleTone}
-                onNext={goNext}
-                onBack={goBack}
-              />
-            )}
-            {step === 2 && (
-              <AgeRatingStep
-                selected={selectedAgeRating}
-                onSelect={setSelectedAgeRating}
-                onNext={goNext}
-                onBack={goBack}
-              />
-            )}
-            {step === 3 && (
-              <LanguagesStep
-                selected={selectedLanguages}
-                onToggle={toggleLanguage}
-                onFinish={finish}
-                onBack={goBack}
-                isPending={updatePreferences.isPending}
-              />
-            )}
-          </div>
-
-          <p className="text-center text-xs text-[#6B7280] mt-4">
-            You can change any of these later in Settings.
-          </p>
-        </div>
+      {/* Main */}
+      <main style={{ flex: 1, padding: '56px 88px', display: 'flex', flexDirection: 'column' }}>
+        {step === 1 && (
+          <StepVibes
+            vibes={vibes}
+            onToggle={(id) =>
+              setVibes((prev) => {
+                const next = new Set(prev)
+                if (next.has(id)) next.delete(id)
+                else next.add(id)
+                return next
+              })
+            }
+          />
+        )}
+        {step === 2 && (
+          <StepFormats
+            formats={formats}
+            onToggle={(id) =>
+              setFormats((prev) => {
+                const next = new Set(prev)
+                if (next.has(id)) next.delete(id)
+                else next.add(id)
+                return next
+              })
+            }
+          />
+        )}
+        {step === 3 && (
+          <StepRitual
+            time={ritualTime}
+            onTime={setRitualTime}
+            days={ritualDays}
+            onToggleDay={(d) =>
+              setRitualDays((prev) => {
+                const next = new Set(prev)
+                if (next.has(d)) next.delete(d)
+                else next.add(d)
+                return next
+              })
+            }
+          />
+        )}
       </main>
 
-      <div className="h-12" aria-hidden />
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Step indicator
-// ──────────────────────────────────────────────────────────────────────────
-
-function StepIndicator({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center justify-center gap-2" role="progressbar" aria-valuenow={current + 1} aria-valuemin={1} aria-valuemax={total} aria-label={`Step ${current + 1} of ${total}`}>
-      {Array.from({ length: total }).map((_, i) => {
-        const isActive = i === current
-        const isComplete = i < current
-        return (
-          <div
-            key={i}
-            className="h-2 rounded-full transition-all duration-300"
-            style={{
-              width: isActive ? 32 : 8,
-              backgroundColor: isComplete
-                ? '#6A1CF6'
-                : isActive
-                ? '#CAFD00'
-                : '#E9E8E7',
-            }}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Step 0 — Welcome
-// ──────────────────────────────────────────────────────────────────────────
-
-function WelcomeStep({ onNext }: { onNext: () => void }) {
-  return (
-    <div className="text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#F7F0FF] mb-6">
-        <Sparkles className="w-7 h-7 text-[#6A1CF6]" />
-      </div>
-      <h1 className="font-display text-3xl lg:text-4xl text-[#2E2F2F] tracking-tight">
-        Welcome to Jokes For
-      </h1>
-      <p className="mt-3 text-[#52525B]">
-        We help you find the right joke for any moment. Let's set up a few
-        preferences so we can serve you better — should take about a minute.
-      </p>
-      <Button
-        type="button"
-        variant="pill-lime"
-        size="xl"
-        className="mt-8 w-full"
-        onClick={onNext}
+      {/* Footer — back / continue */}
+      <footer
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '22px 32px',
+          borderTop: '1px solid #E9E8E7',
+          background: '#fff',
+        }}
       >
-        Let's go
-        <ArrowRight className="w-4 h-4 ml-1" />
-      </Button>
+        {step > 1 ? (
+          <button
+            type="button"
+            onClick={() => setStep((s) => s - 1)}
+            style={{
+              cursor: 'pointer',
+              color: '#52525B',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 14,
+              background: 'none',
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+        ) : (
+          <span />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <span style={{ fontSize: 13, color: '#6B7280' }}>You can change this anytime.</span>
+          {step < 3 ? (
+            <button
+              type="button"
+              onClick={() => setStep((s) => s + 1)}
+              disabled={step === 1 ? vibes.size < 3 : formats.size === 0}
+              className="btn-flow-primary"
+            >
+              Continue <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={finish}
+              disabled={updatePreferences.isPending}
+              className="btn-flow-primary"
+            >
+              {updatePreferences.isPending ? 'Saving…' : "Done — show me today's joke"}
+              {!updatePreferences.isPending && <ArrowRight size={16} />}
+            </button>
+          )}
+        </div>
+      </footer>
+
+      {/* Locally-scoped button styles to avoid touching global CSS */}
+      <style>{`
+        .btn-flow-primary {
+          height: 48px; padding: 0 24px; border: 0; border-radius: 9999px;
+          font-family: var(--font-sans); font-weight: 700; font-size: 15px;
+          background: #6A1CF6; color: #fff; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 8px;
+          transition: background 0.12s ease, transform 0.12s ease;
+        }
+        .btn-flow-primary:hover { background: #5D00E4; }
+        .btn-flow-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-flow-primary:active { transform: translateY(1px); }
+      `}</style>
     </div>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Step 1 — Tone preferences
+// Step 1 — Vibes
 // ──────────────────────────────────────────────────────────────────────────
 
-function TonesStep({
-  selected,
-  onToggle,
-  onNext,
-  onBack,
-}: {
-  selected: string[]
-  onToggle: (slug: string) => void
-  onNext: () => void
-  onBack: () => void
-}) {
-  return (
-    <>
-      <h2 className="font-display text-2xl lg:text-3xl text-[#2E2F2F]">
-        What tones land for you?
-      </h2>
-      <p className="mt-2 text-[#52525B]">Pick as many as you like.</p>
+const VIBES = [
+  { id: 'office',    label: 'Office',         sub: 'Meetings · Slack',        ico: '💼', c: '#6A1CF6', fg: '#fff' },
+  { id: 'dad',       label: 'Dad jokes',      sub: 'Eye-roll guaranteed',     ico: '🧓', c: '#FFC965', fg: '#5F4200' },
+  { id: 'puns',      label: 'Puns',           sub: 'Wordplay supreme',        ico: '🎯', c: '#CAFD00', fg: '#3A4A00' },
+  { id: 'dark',      label: 'Dark humor',     sub: 'Black coffee, no sugar',  ico: '🌑', c: '#1A1820', fg: '#fff' },
+  { id: 'nerd',      label: 'Nerd',           sub: 'Physics · code · maths',  ico: '🧪', c: '#F2E9FF', fg: '#5D00E4' },
+  { id: 'surreal',   label: 'Surreal',        sub: 'Logic optional',          ico: '🌀', c: '#AC8EFF', fg: '#fff' },
+  { id: 'wholesome', label: 'Wholesome',      sub: 'For the group chat',      ico: '🌼', c: '#FFE6B5', fg: '#5F4200' },
+  { id: 'observ',    label: 'Observational',  sub: 'Adulthood is…',           ico: '👀', c: '#FBFAF7', fg: '#1A1A1A' },
+  { id: 'oneliner',  label: 'One-liners',     sub: 'Hit, run, save',          ico: '⚡', c: '#1A1A1A', fg: '#CAFD00' },
+  { id: 'date',      label: 'Date night',     sub: 'Charm a stranger',        ico: '🍷', c: '#F4E4D7', fg: '#5F2A14' },
+  { id: 'kids',      label: 'Kids OK',        sub: 'School-pickup safe',      ico: '🧃', c: '#D6F2FF', fg: '#003B5C' },
+  { id: 'absurd',    label: 'Absurd',         sub: 'Mostly fruit',            ico: '🍌', c: '#FFC965', fg: '#5F4200' },
+]
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {TONES.map((tone) => {
-          const isSelected = selected.includes(tone.slug)
+function StepVibes({ vibes, onToggle }: { vibes: Set<string>; onToggle: (id: string) => void }) {
+  return (
+    <StepShell
+      step={1}
+      eyebrow="Vibes"
+      title={
+        <>
+          What's your <em className="wink">flavor</em> of funny?
+        </>
+      }
+      sub="Pick at least 3. We'll tune your daily joke around these — and you can always change them later."
+    >
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 14,
+        }}
+      >
+        {VIBES.map((v) => {
+          const on = vibes.has(v.id)
           return (
             <button
-              key={tone.slug}
+              key={v.id}
               type="button"
-              onClick={() => onToggle(tone.slug)}
-              aria-pressed={isSelected}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                isSelected
-                  ? 'bg-[#6A1CF6] text-white border-[#6A1CF6]'
-                  : 'bg-white text-[#2E2F2F] border-[#E9E8E7] hover:border-[#AC8EFF] hover:bg-[#F7F0FF]'
-              }`}
+              onClick={() => onToggle(v.id)}
+              aria-pressed={on}
+              style={{
+                position: 'relative',
+                height: 160,
+                borderRadius: 18,
+                padding: 18,
+                border: `2px solid ${on ? v.c : '#E9E8E7'}`,
+                background: on ? v.c : '#fff',
+                color: on ? v.fg : '#1A1A1A',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 0.12s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
             >
-              {isSelected && <Check className="w-3.5 h-3.5 mr-1 inline -mt-0.5" />}
-              {tone.label}
+              <div style={{ fontSize: 32 }}>{v.ico}</div>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18 }}>{v.label}</div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{v.sub}</div>
+              </div>
+              {on && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    background: v.fg,
+                    color: v.c,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={14} strokeWidth={3} />
+                </div>
+              )}
             </button>
           )
         })}
       </div>
-
-      <StepFooter onBack={onBack}>
-        <Button type="button" variant="pill" size="xl" onClick={onNext}>
-          Continue
-          <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </StepFooter>
-    </>
+      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="tag-flow lime">{vibes.size} picked</span>
+        <span style={{ fontSize: 13, color: '#6B7280' }}>
+          {vibes.size < 3 ? `Pick at least 3 to continue.` : 'Aim for 3–6. Pick more, get more variety.'}
+        </span>
+      </div>
+    </StepShell>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Step 2 — Age rating
+// Step 2 — Formats
 // ──────────────────────────────────────────────────────────────────────────
 
-function AgeRatingStep({
-  selected,
-  onSelect,
-  onNext,
-  onBack,
-}: {
-  selected: string | null
-  onSelect: (slug: string) => void
-  onNext: () => void
-  onBack: () => void
-}) {
-  return (
-    <>
-      <h2 className="font-display text-2xl lg:text-3xl text-[#2E2F2F]">
-        How spicy do you like it?
-      </h2>
-      <p className="mt-2 text-[#52525B]">
-        Sets the default content filter. You can override per search.
-      </p>
+const FORMATS = [
+  { id: 'oneliner', label: 'One-liner',        sub: 'Single punch.',                       demo: "I told my wife she was drawing her eyebrows too high. She seemed surprised." },
+  { id: 'setup',    label: 'Setup → punchline', sub: 'The classic two-beat.',              demo: "Why don't scientists trust atoms? Because they make up everything." },
+  { id: 'knock',    label: 'Knock-knock',       sub: 'Conversational reveal.',             demo: "Knock, knock. Lettuce in, it's freezing." },
+  { id: 'story',    label: 'Story / shaggy',    sub: 'Long-form, slow burn.',              demo: 'A man walks into a library and asks for a book on paranoia…' },
+  { id: 'anti',     label: 'Anti-joke',         sub: 'Refuses to land.',                   demo: 'Why did the chicken cross the road? To get to the other side.' },
+  { id: 'observ',   label: 'Observational',     sub: 'Quote-style.',                       demo: "Adulthood is just emailing 'Sounds good!' until one of you dies." },
+]
 
-      <div className="mt-6 space-y-3">
-        {AGE_RATINGS.map((rating) => {
-          const isSelected = selected === rating.slug
+function StepFormats({ formats, onToggle }: { formats: Set<string>; onToggle: (id: string) => void }) {
+  return (
+    <StepShell
+      step={2}
+      eyebrow="Formats"
+      title={
+        <>
+          How do you like your jokes <em className="wink">delivered</em>?
+        </>
+      }
+      sub="Some people love the slow burn. Others want a one-liner and out. Pick whatever you'll actually finish reading."
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+        {FORMATS.map((f) => {
+          const on = formats.has(f.id)
           return (
             <button
-              key={rating.slug}
+              key={f.id}
               type="button"
-              onClick={() => onSelect(rating.slug)}
-              aria-pressed={isSelected}
-              className={`w-full text-left rounded-[24px] p-5 border transition-all ${
-                isSelected
-                  ? 'border-[#6A1CF6] bg-[#F7F0FF] shadow-cta'
-                  : 'border-[#E9E8E7] bg-white hover:border-[#AC8EFF]'
-              }`}
+              onClick={() => onToggle(f.id)}
+              aria-pressed={on}
+              style={{
+                position: 'relative',
+                borderRadius: 18,
+                padding: 24,
+                border: `2px solid ${on ? '#6A1CF6' : '#E9E8E7'}`,
+                background: on ? '#F2E9FF' : '#fff',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+                minHeight: 240,
+              }}
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shrink-0 ${
-                    isSelected ? 'bg-[#6A1CF6] text-white' : 'bg-[#F2F0F0] text-[#52525B]'
-                  }`}
-                >
-                  {rating.label}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-display text-lg text-[#2E2F2F]">{rating.title}</p>
-                  <p className="text-sm text-[#6B7280]">{rating.description}</p>
-                </div>
-                {isSelected && <Check className="w-5 h-5 text-[#6A1CF6] shrink-0" />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="eyebrow-mono" style={{ color: on ? '#6A1CF6' : '#6B7280' }}>
+                  {f.label}
+                </span>
+                {on && (
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      background: '#6A1CF6',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={13} strokeWidth={3} />
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  color: on ? '#6A1CF6' : '#1A1A1A',
+                }}
+              >
+                {f.sub}
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  background: '#fff',
+                  border: '1px dashed #E9E8E7',
+                  borderRadius: 12,
+                  fontFamily: 'var(--font-display)',
+                  fontStyle: 'italic',
+                  fontSize: 14,
+                  color: '#52525B',
+                  lineHeight: 1.4,
+                }}
+              >
+                "{f.demo}"
               </div>
             </button>
           )
         })}
       </div>
-
-      <StepFooter onBack={onBack}>
-        <Button
-          type="button"
-          variant="pill"
-          size="xl"
-          onClick={onNext}
-          disabled={!selected}
-        >
-          Continue
-          <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </StepFooter>
-    </>
+    </StepShell>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Step 3 — Languages
+// Step 3 — Ritual
 // ──────────────────────────────────────────────────────────────────────────
 
-function LanguagesStep({
-  selected,
-  onToggle,
-  onFinish,
-  onBack,
-  isPending,
+const SLOTS: { time: string; lbl: string }[] = [
+  { time: '07:00', lbl: 'Pre-coffee' },
+  { time: '08:00', lbl: 'Commute' },
+  { time: '09:00', lbl: 'Office in' },
+  { time: '12:00', lbl: 'Lunch' },
+  { time: '17:00', lbl: 'Wind-down' },
+  { time: '21:00', lbl: 'Late night' },
+]
+
+const DAYS: { id: string; lbl: string }[] = [
+  { id: 'mon', lbl: 'M' },
+  { id: 'tue', lbl: 'T' },
+  { id: 'wed', lbl: 'W' },
+  { id: 'thu', lbl: 'T' },
+  { id: 'fri', lbl: 'F' },
+  { id: 'sat', lbl: 'S' },
+  { id: 'sun', lbl: 'S' },
+]
+
+function StepRitual({
+  time,
+  onTime,
+  days,
+  onToggleDay,
 }: {
-  selected: string[]
-  onToggle: (slug: string) => void
-  onFinish: () => void
-  onBack: () => void
-  isPending: boolean
+  time: string
+  onTime: (t: string) => void
+  days: Set<string>
+  onToggleDay: (d: string) => void
 }) {
   return (
-    <>
-      <h2 className="font-display text-2xl lg:text-3xl text-[#2E2F2F]">
-        Which languages do you read?
-      </h2>
-      <p className="mt-2 text-[#52525B]">We'll prioritize jokes in these.</p>
+    <StepShell
+      step={3}
+      eyebrow="Ritual"
+      title={
+        <>
+          When should the <em className="wink">joke</em> arrive?
+        </>
+      }
+      sub="One push per day. The most-loved time is 9:00 AM, with morning coffee. Pick whatever fits your routine."
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 36, alignItems: 'start' }}>
+        {/* Left — slot picker + day picker + toggle */}
+        <div>
+          <span className="eyebrow-mono">Pick a slot</span>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
+            {SLOTS.map((s) => {
+              const on = s.time === time
+              return (
+                <button
+                  key={s.time}
+                  type="button"
+                  onClick={() => onTime(s.time)}
+                  aria-pressed={on}
+                  style={{
+                    padding: '16px 12px',
+                    borderRadius: 14,
+                    border: `1px solid ${on ? '#6A1CF6' : '#E9E8E7'}`,
+                    background: on ? '#6A1CF6' : '#fff',
+                    color: on ? '#fff' : '#1A1A1A',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 24,
+                    cursor: 'pointer',
+                    letterSpacing: '-0.01em',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div>{s.time}</div>
+                  <div
+                    className="eyebrow-mono"
+                    style={{ marginTop: 4, opacity: 0.7, color: on ? 'rgba(255,255,255,0.85)' : '#6B7280' }}
+                  >
+                    {s.lbl}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {LANGUAGES.map((lang) => {
-          const isSelected = selected.includes(lang.slug)
-          return (
-            <button
-              key={lang.slug}
-              type="button"
-              onClick={() => onToggle(lang.slug)}
-              aria-pressed={isSelected}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                isSelected
-                  ? 'bg-[#6A1CF6] text-white border-[#6A1CF6]'
-                  : 'bg-white text-[#2E2F2F] border-[#E9E8E7] hover:border-[#AC8EFF] hover:bg-[#F7F0FF]'
-              }`}
+          <span className="eyebrow-mono" style={{ display: 'block', marginTop: 32 }}>
+            Days of the week
+          </span>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            {DAYS.map((d) => {
+              const on = days.has(d.id)
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => onToggleDay(d.id)}
+                  aria-pressed={on}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    border: `1px solid ${on ? '#1A1A1A' : '#E9E8E7'}`,
+                    background: on ? '#1A1A1A' : '#fff',
+                    color: on ? '#CAFD00' : '#52525B',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {d.lbl}
+                </button>
+              )
+            })}
+          </div>
+
+          <div
+            style={{
+              marginTop: 24,
+              padding: 16,
+              border: '1px solid #E9E8E7',
+              borderRadius: 14,
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#F2E9FF',
+                color: '#6A1CF6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <span className="mr-1.5">{lang.flag}</span>
-              {lang.label}
-            </button>
-          )
-        })}
-      </div>
+              <Bell size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
+                Send a streak-saver if I miss the day
+              </div>
+              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                One gentle nudge at 8 PM if you haven't read.
+              </div>
+            </div>
+            <div style={{ width: 36, height: 22, borderRadius: 11, background: '#6A1CF6', position: 'relative' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  background: '#fff',
+                }}
+              />
+            </div>
+          </div>
+        </div>
 
-      <StepFooter onBack={onBack}>
-        <Button
-          type="button"
-          variant="pill-lime"
-          size="xl"
-          onClick={onFinish}
-          disabled={selected.length === 0 || isPending}
-        >
-          {isPending ? 'Saving…' : 'Finish setup'}
-          {!isPending && <ArrowRight className="w-4 h-4 ml-1" />}
-        </Button>
-      </StepFooter>
+        {/* Right — preview + streak forecast */}
+        <div>
+          <span className="eyebrow-mono">Preview</span>
+          <div
+            style={{
+              marginTop: 10,
+              padding: 24,
+              borderRadius: 18,
+              background: 'linear-gradient(160deg, #0F0E12, #1F1B2A)',
+              color: '#fff',
+            }}
+          >
+            <div className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              JOKESFOR · {time}
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginTop: 6, lineHeight: 1.3 }}>
+              Today's joke is ready. Day 1 — let's begin it.
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: 10,
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.7)',
+              }}
+            >
+              Tap to open · 1 swipe to save · ~8 sec total
+            </div>
+          </div>
+          <div style={{ marginTop: 18, padding: 18, borderRadius: 14, background: '#CAFD00', color: '#3A4A00' }}>
+            <div className="eyebrow-mono" style={{ color: '#3A4A00' }}>
+              Streak forecast
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 36, marginTop: 4 }}>
+              {days.size * 2} days
+            </div>
+            <div style={{ fontSize: 13, marginTop: 4 }}>Average for someone with your settings.</div>
+          </div>
+        </div>
+      </div>
+    </StepShell>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Shared step shell — eyebrow + title + sub + body
+// ──────────────────────────────────────────────────────────────────────────
+
+interface StepShellProps {
+  step: number
+  eyebrow: string
+  title: ReactNode
+  sub: string
+  children: ReactNode
+}
+
+function StepShell({ step, eyebrow, title, sub, children }: StepShellProps) {
+  return (
+    <>
+      <span className="eyebrow-mono">
+        Step {step} of 3 · {eyebrow}
+      </span>
+      <h2
+        style={{
+          marginTop: 8,
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
+          letterSpacing: '-0.02em',
+          color: '#1A1A1A',
+          lineHeight: 1.05,
+          maxWidth: 880,
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ marginTop: 14, fontSize: 18, color: '#52525B', lineHeight: 1.5, maxWidth: 680 }}>{sub}</p>
+      <div style={{ marginTop: 36, flex: 1 }}>{children}</div>
     </>
   )
 }
-
-// ──────────────────────────────────────────────────────────────────────────
-// Step footer (Back + primary action)
-// ──────────────────────────────────────────────────────────────────────────
-
-function StepFooter({ onBack, children }: { onBack?: () => void; children: React.ReactNode }) {
-  return (
-    <div className="mt-8 flex items-center justify-between gap-3">
-      {onBack ? (
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-sm text-[#6B7280] hover:text-[#2E2F2F] transition-colors inline-flex items-center gap-1"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-      ) : (
-        <span />
-      )}
-      {children}
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Static lookup data — replace with /tones/, /age-ratings/, /languages/
-// when those endpoints get React-Query hook coverage.
-// ──────────────────────────────────────────────────────────────────────────
-
-const TONES = [
-  { slug: 'witty', label: 'Witty' },
-  { slug: 'wholesome', label: 'Wholesome' },
-  { slug: 'dry', label: 'Dry' },
-  { slug: 'dark', label: 'Dark' },
-  { slug: 'goofy', label: 'Goofy' },
-  { slug: 'clever', label: 'Clever' },
-  { slug: 'surreal', label: 'Surreal' },
-  { slug: 'heartwarming', label: 'Heartwarming' },
-  { slug: 'observational', label: 'Observational' },
-  { slug: 'absurd', label: 'Absurd' },
-]
-
-const AGE_RATINGS = [
-  {
-    slug: 'g',
-    label: 'G',
-    title: 'All ages',
-    description: 'Safe for any room.',
-  },
-  {
-    slug: 'pg',
-    label: 'PG',
-    title: 'Mostly safe',
-    description: 'Tame but with a touch of edge.',
-  },
-  {
-    slug: 'pg-13',
-    label: '13+',
-    title: 'Light spice',
-    description: 'Mild adult humor, occasional bite.',
-  },
-  {
-    slug: 'r',
-    label: 'R',
-    title: 'Full spice',
-    description: 'Adult themes, language, dark humor.',
-  },
-]
-
-const LANGUAGES = [
-  { slug: 'english', label: 'English', flag: '🇬🇧' },
-  { slug: 'spanish', label: 'Spanish', flag: '🇪🇸' },
-  { slug: 'french', label: 'French', flag: '🇫🇷' },
-  { slug: 'german', label: 'German', flag: '🇩🇪' },
-  { slug: 'russian', label: 'Russian', flag: '🇷🇺' },
-  { slug: 'armenian', label: 'Armenian', flag: '🇦🇲' },
-]
