@@ -24,11 +24,9 @@ import {
 } from '@/pages'
 
 const router = createBrowserRouter([
-  // Search page gets its own Layout (filter sidebar replaces nav sidebar)
-  {
-    path: '/search',
-    element: <Layout hideDefaultSidebar hideFAB><SearchPage /></Layout>,
-  },
+  // Search now uses FlowAppShell internally (redesign), so no Layout wrapper.
+  // Public route — utility-first promise: search works for anonymous users.
+  { path: '/search', element: <SearchPage /> },
   {
     path: '/',
     element: <Layout><Outlet /></Layout>,

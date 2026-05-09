@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
-import { Search as SearchIcon, Dice5, Bell } from 'lucide-react'
-import { useAuth } from '@/features/auth'
+import { Search as SearchIcon, Dice5 } from 'lucide-react'
 import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowAppShell } from '@/components/FlowAppShell'
 
 /**
  * Explore — three-axis chip-rail filter + format-aware masonry results.
@@ -17,7 +17,6 @@ import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/componen
  * Editorial tiles (curator note, weekly special) interleave when there's room.
  */
 export function ExplorePage() {
-  const { user } = useAuth()
   const [fmts, setFmts] = useState<Set<FlowJokeFormat>>(new Set())
   const [themes, setThemes] = useState<Set<string>>(new Set())
   const [cats, setCats] = useState<Set<string>>(new Set())
@@ -40,11 +39,9 @@ export function ExplorePage() {
     setCats(new Set())
   }
 
-  const firstName = user?.first_name || user?.username || 'friend'
-
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell active="explore" firstName={firstName}>
+      <FlowAppShell active="explore">
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
           {/* Hero */}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 32, alignItems: 'end' }}>
@@ -277,8 +274,6 @@ export function ExplorePage() {
           )}
         </div>
       </FlowAppShell>
-
-      <ExploreStyles />
     </div>
   )
 }
@@ -421,129 +416,6 @@ function EmptyState({ onClear }: { onClear: () => void }) {
   )
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Reused shell — same as FlowCanvas; keeping inline so pages are independent.
-// If a third Flow page appears, extract into a shared component.
-// ──────────────────────────────────────────────────────────────────────────
-
-interface FlowAppShellProps {
-  active: 'today' | 'explore' | 'search' | 'library'
-  firstName: string
-  children: React.ReactNode
-}
-
-function FlowAppShell({ active, firstName, children }: FlowAppShellProps) {
-  const initial = (firstName?.[0] ?? 'A').toUpperCase()
-  return (
-    <>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '18px 32px',
-          borderBottom: '1px solid #E9E8E7',
-          background: 'rgba(255, 255, 255, 0.6)',
-          backdropFilter: 'blur(8px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 5,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#1A1A1A' }}>
-            <img src="/Logos/appicon_purple.svg" alt="" style={{ width: 32, height: 32, borderRadius: 8 }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.01em' }}>
-              JokesFor
-            </span>
-          </Link>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {(
-              [
-                ['today', 'Today', '/flow-canvas'],
-                ['explore', 'Explore', '/explore'],
-                ['search', 'Search', '/search'],
-                ['library', 'Library', '/library'],
-              ] as const
-            ).map(([key, label, to]) => (
-              <Link
-                key={key}
-                to={to}
-                style={{
-                  color: active === key ? '#1A1A1A' : '#52525B',
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  textDecoration: 'none',
-                  padding: '8px 14px',
-                  borderRadius: 9999,
-                  background: active === key ? '#fff' : 'transparent',
-                  border: active === key ? '1px solid #E9E8E7' : '1px solid transparent',
-                }}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="streak-chip">
-            <span className="dot">🔥</span>
-            14-day streak
-          </span>
-          <button
-            type="button"
-            className="btn-flow-ghost"
-            aria-label="Notifications"
-            style={{ height: 40, width: 40, padding: 0, borderRadius: 12 }}
-          >
-            <Bell size={16} />
-          </button>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: '#6A1CF6',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-            }}
-          >
-            {initial}
-          </div>
-        </div>
-      </header>
-      <main>{children}</main>
-    </>
-  )
-}
-
-function ExploreStyles() {
-  return (
-    <style>{`
-      .btn-flow-primary {
-        height: 48px; padding: 0 24px; border: 0; border-radius: 9999px;
-        font-family: var(--font-sans); font-weight: 700; font-size: 15px;
-        background: #6A1CF6; color: #fff; cursor: pointer;
-        display: inline-flex; align-items: center; gap: 8px;
-        transition: background 0.12s ease;
-      }
-      .btn-flow-primary:hover { background: #5D00E4; }
-      .btn-flow-ghost {
-        height: 40px; padding: 0 16px; border: 1px solid #E9E8E7; border-radius: 9999px;
-        font-family: var(--font-sans); font-weight: 600; font-size: 13px;
-        background: transparent; color: #1A1A1A; cursor: pointer;
-        display: inline-flex; align-items: center; gap: 6px;
-        transition: background 0.12s ease;
-      }
-      .btn-flow-ghost:hover { background: #F4F2EE; }
-    `}</style>
-  )
-}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers
