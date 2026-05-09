@@ -10,13 +10,10 @@ import { VibeCard } from '@/components/VibeCard'
 import { FreshArrivalCard } from '@/components/FreshArrivalCard'
 import { TopJokesterItem } from '@/components/TopJokesterItem'
 import { WeeklySpecialCard } from '@/components/WeeklySpecialCard'
-import {
-  mockJokes,
-  mockTopJokesters,
-  mockPopularThemes,
-  mockHotNowTags,
-  mockDailyJoke,
-} from '@/lib/mock-data'
+import { useTodaysJoke } from '@/features/daily-joke'
+import { useTopJokesters, usePopularThemes } from '@/features/trending'
+import { useJokeSearch } from '@/features/jokes'
+import { mockHotNowTags } from '@/lib/mock-data'
 
 const browseByVibe = [
   { icon: Smile, label: 'Kid-Safe' },
@@ -36,8 +33,14 @@ export function HomePage() {
     }
   }
 
-  const dailyJoke = mockDailyJoke.joke
-  const freshArrivals = mockJokes.slice(1, 4)
+  const { data: todayData } = useTodaysJoke()
+  const { data: topJokesters = [] } = useTopJokesters(3)
+  const { data: popularThemes = [] } = usePopularThemes()
+  // Fresh arrivals: recent jokes (page 1, no filters)
+  const { data: freshData } = useJokeSearch({ page: 1 })
+
+  const dailyJoke = todayData?.joke
+  const freshArrivals = (freshData?.results || []).slice(0, 3)
 
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-6xl">
@@ -91,7 +94,7 @@ export function HomePage() {
       {/* ── JOTD + Vibes (Desktop) ── */}
       <section className="hidden lg:grid grid-cols-5 gap-5 mb-10">
         <div className="col-span-3">
-          <JokeOfTheDayCard joke={dailyJoke} />
+          {dailyJoke && <JokeOfTheDayCard joke={dailyJoke} />}
         </div>
         <div className="col-span-2 grid grid-rows-2 gap-5">
           <VibeCard title="Wholesome & Pure" size="lg" gradient="from-purple-400 to-purple-600" searchQuery="wholesome" />
@@ -104,7 +107,7 @@ export function HomePage() {
 
       {/* ── JOTD (Mobile) ── */}
       <section className="lg:hidden mb-6">
-        <DailyJokeCard joke={dailyJoke} />
+        {dailyJoke && <DailyJokeCard joke={dailyJoke} />}
       </section>
 
       {/* ── Morning Kickoff (Mobile) ── */}
@@ -193,7 +196,7 @@ export function HomePage() {
           <Card radius="lg" className="p-5">
             <h3 className="font-display font-bold text-lg text-[#2E2F2F] mb-4">Popular Themes</h3>
             <div className="flex flex-wrap gap-2">
-              {mockPopularThemes.map((theme) => (
+              {popularThemes.map((theme) => (
                 <button
                   key={theme}
                   onClick={() => navigate(`/search?q=${encodeURIComponent(theme)}`)}
@@ -209,7 +212,7 @@ export function HomePage() {
           <Card radius="lg" className="p-5">
             <h3 className="font-display font-bold text-lg text-[#2E2F2F] mb-4">Top Jokesters</h3>
             <div className="divide-y divide-[#E9E8E7]">
-              {mockTopJokesters.map((jokester) => (
+              {topJokesters.map((jokester) => (
                 <TopJokesterItem key={jokester.id} jokester={jokester} />
               ))}
             </div>

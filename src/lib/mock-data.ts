@@ -289,6 +289,233 @@ export const mockAuthors: Record<number, MockAuthor> = {
   9: { username: '@Mike The Punner', initials: 'MP', color: '#6A1CF6' },
 }
 
+// ── Trending data ──
+export interface TrendingTag {
+  name: string
+  count: number
+  growth: number // percentage
+}
+
+export const mockTrendingTagsWithStats: TrendingTag[] = [
+  { name: 'Dad Jokes', count: 2400, growth: 42 },
+  { name: 'Office Humor', count: 1800, growth: 28 },
+  { name: 'Tech Puns', count: 1200, growth: 65 },
+  { name: 'Classroom Fun', count: 980, growth: 15 },
+  { name: 'Animal Humor', count: 750, growth: 33 },
+  { name: 'Marriage Jokes', count: 620, growth: 12 },
+]
+
+export const mockRisingTopics = [
+  { name: 'AI Humor', growth: 120 },
+  { name: 'Remote Work', growth: 85 },
+  { name: 'Gen Z Slang', growth: 72 },
+  { name: 'Coffee Addiction', growth: 58 },
+  { name: 'Gym Fails', growth: 45 },
+]
+
+// Trending jokes = existing jokes reordered with engagement stats
+export interface TrendingJoke {
+  joke: Joke
+  rank: number
+  likes: number
+  shares: number
+  comments: number
+  trendingSince: string
+}
+
+export const mockTrendingJokes: TrendingJoke[] = [
+  { joke: mockJokes[0], rank: 1, likes: 4200, shares: 1800, comments: 342, trendingSince: '2 hours ago' },
+  { joke: mockJokes[2], rank: 2, likes: 3100, shares: 1200, comments: 284, trendingSince: '5 hours ago' },
+  { joke: mockJokes[4], rank: 3, likes: 2800, shares: 980, comments: 156, trendingSince: '8 hours ago' },
+  { joke: mockJokes[7], rank: 4, likes: 2400, shares: 870, comments: 132, trendingSince: '12 hours ago' },
+  { joke: mockJokes[12], rank: 5, likes: 2100, shares: 760, comments: 98, trendingSince: '1 day ago' },
+  { joke: mockJokes[3], rank: 6, likes: 1900, shares: 650, comments: 87, trendingSince: '1 day ago' },
+  { joke: mockJokes[10], rank: 7, likes: 1600, shares: 520, comments: 73, trendingSince: '2 days ago' },
+  { joke: mockJokes[18], rank: 8, likes: 1400, shares: 480, comments: 61, trendingSince: '2 days ago' },
+]
+
+// ── Favorites ──
+export interface FavoriteJoke {
+  joke: Joke
+  favoritedAt: string
+}
+
+export const mockFavorites: FavoriteJoke[] = [
+  { joke: mockJokes[0], favoritedAt: '2025-10-14T10:30:00Z' },
+  { joke: mockJokes[2], favoritedAt: '2025-10-13T15:20:00Z' },
+  { joke: mockJokes[4], favoritedAt: '2025-10-12T09:00:00Z' },
+  { joke: mockJokes[7], favoritedAt: '2025-10-11T18:45:00Z' },
+  { joke: mockJokes[10], favoritedAt: '2025-10-10T11:30:00Z' },
+  { joke: mockJokes[12], favoritedAt: '2025-10-09T14:15:00Z' },
+  { joke: mockJokes[15], favoritedAt: '2025-10-08T08:00:00Z' },
+  { joke: mockJokes[18], favoritedAt: '2025-10-07T20:30:00Z' },
+  { joke: mockJokes[3], favoritedAt: '2025-10-06T12:00:00Z' },
+  { joke: mockJokes[5], favoritedAt: '2025-10-05T16:45:00Z' },
+]
+
+// ── Drafts ──
+export interface DraftJoke {
+  id: number
+  setup: string
+  punchline: string
+  format: string
+  status: 'draft' | 'pending' | 'published' | 'rejected'
+  tones: string[]
+  lastEditedAt: string
+  likes?: number
+  rejectionReason?: string
+}
+
+export const mockDrafts: DraftJoke[] = [
+  {
+    id: 101,
+    setup: "Why don't eggs tell jokes?",
+    punchline: "They'd crack each other up!",
+    format: 'Setup & Punchline',
+    status: 'draft',
+    tones: ['Dad Joke', 'Punny'],
+    lastEditedAt: '2025-10-14T16:00:00Z',
+  },
+  {
+    id: 102,
+    setup: 'A programmer walks into a bar...',
+    punchline: 'He orders 1 beer. Then 2 beers. Then 4. Then 8. Then 16. Then he crashes.',
+    format: 'Short Story',
+    status: 'pending',
+    tones: ['Geeky', 'Sarcastic'],
+    lastEditedAt: '2025-10-13T10:30:00Z',
+  },
+  {
+    id: 103,
+    setup: 'My dog ate my homework.',
+    punchline: "He's a very literal Lab Retriever.",
+    format: 'Setup & Punchline',
+    status: 'published',
+    tones: ['Dad Joke', 'Punny'],
+    lastEditedAt: '2025-10-11T08:00:00Z',
+    likes: 42,
+  },
+  {
+    id: 104,
+    setup: 'I tried to write a joke about paper.',
+    punchline: "It was tearable.",
+    format: 'One-Liner',
+    status: 'rejected',
+    tones: ['Punny'],
+    lastEditedAt: '2025-10-10T14:00:00Z',
+    rejectionReason: 'Too similar to an existing joke in our database.',
+  },
+]
+
+// ── Profile & Activity ──
+export interface UserProfile {
+  name: string
+  username: string
+  email: string
+  bio: string
+  memberSince: string
+  isPremium: boolean
+  stats: {
+    jokesSaved: number
+    jokesShared: number
+    collections: number
+    daysActive: number
+  }
+  humorDNA: { type: string; percentage: number }[]
+}
+
+export const mockUserProfile: UserProfile = {
+  name: 'Laugh Master',
+  username: '@laugh_master',
+  email: 'laughmaster@jokesfor.com',
+  bio: 'Professional pun enthusiast. Dad joke certified. Making the world groan, one punchline at a time.',
+  memberSince: '2025-08-15',
+  isPremium: true,
+  stats: {
+    jokesSaved: 24,
+    jokesShared: 12,
+    collections: 7,
+    daysActive: 42,
+  },
+  humorDNA: [
+    { type: 'Dad Jokes', percentage: 40 },
+    { type: 'Puns', percentage: 30 },
+    { type: 'Sarcasm', percentage: 20 },
+    { type: 'Geeky', percentage: 10 },
+  ],
+}
+
+export interface ActivityItem {
+  id: number
+  type: 'save' | 'like' | 'share' | 'collection' | 'draft' | 'achievement'
+  description: string
+  timeAgo: string
+  icon: string
+}
+
+export const mockActivity: ActivityItem[] = [
+  { id: 1, type: 'save', description: "Saved 'Why don't scientists trust atoms'", timeAgo: '2 hours ago', icon: '🔖' },
+  { id: 2, type: 'like', description: 'Liked a Dad Joke about flamingos', timeAgo: '5 hours ago', icon: '❤️' },
+  { id: 3, type: 'collection', description: "Created 'Work Humor' collection", timeAgo: '1 day ago', icon: '📁' },
+  { id: 4, type: 'share', description: 'Shared the atoms joke to group chat', timeAgo: '1 day ago', icon: '📤' },
+  { id: 5, type: 'draft', description: "Started a new draft: 'Why don't eggs...'", timeAgo: '2 days ago', icon: '✏️' },
+  { id: 6, type: 'achievement', description: 'Unlocked "7-Day Streak" badge!', timeAgo: '3 days ago', icon: '🏆' },
+  { id: 7, type: 'save', description: "Saved 'Parallel lines have so much...'", timeAgo: '4 days ago', icon: '🔖' },
+]
+
+export interface Achievement {
+  id: string
+  title: string
+  description: string
+  icon: string
+  unlocked: boolean
+  unlockedAt?: string
+}
+
+export const mockAchievements: Achievement[] = [
+  { id: 'first_save', title: 'First Save', description: 'Saved your first joke', icon: '🔖', unlocked: true, unlockedAt: '2025-08-16' },
+  { id: 'streak_7', title: '7-Day Streak', description: 'Visited 7 days in a row', icon: '🔥', unlocked: true, unlockedAt: '2025-10-12' },
+  { id: 'collector', title: 'Collection Creator', description: 'Created 5+ collections', icon: '📚', unlocked: true, unlockedAt: '2025-09-20' },
+  { id: 'pun_master', title: 'Pun Master', description: 'Saved 10 pun-type jokes', icon: '🎯', unlocked: true, unlockedAt: '2025-10-05' },
+  { id: 'sharer', title: 'Social Butterfly', description: 'Shared 10+ jokes', icon: '🦋', unlocked: true, unlockedAt: '2025-10-10' },
+  { id: 'streak_30', title: '30-Day Streak', description: 'Visited 30 days in a row', icon: '💎', unlocked: false },
+  { id: 'centurion', title: 'The Centurion', description: 'Saved 100 jokes', icon: '💯', unlocked: false },
+  { id: 'creator', title: 'Joke Creator', description: 'Published your first joke', icon: '✨', unlocked: false },
+]
+
+// ── Preferences ──
+export interface UserPreferences {
+  humorTypes: string[]
+  notifications: {
+    dailyJoke: boolean
+    trendingAlerts: boolean
+    collectionUpdates: boolean
+    emailDigest: boolean
+  }
+  privacy: {
+    publicProfile: boolean
+    showActivity: boolean
+    shareAnalytics: boolean
+  }
+  theme: 'light' | 'dark' | 'system'
+}
+
+export const mockPreferences: UserPreferences = {
+  humorTypes: ['dad_jokes', 'puns', 'sarcasm'],
+  notifications: {
+    dailyJoke: true,
+    trendingAlerts: false,
+    collectionUpdates: true,
+    emailDigest: false,
+  },
+  privacy: {
+    publicProfile: true,
+    showActivity: true,
+    shareAnalytics: false,
+  },
+  theme: 'light',
+}
+
 // Helper to paginate mock data
 export function paginateMock<T>(items: T[], page = 1, pageSize = 10): PaginatedResponse<T> {
   const start = (page - 1) * pageSize

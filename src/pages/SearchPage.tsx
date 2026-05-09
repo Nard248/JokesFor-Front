@@ -83,9 +83,9 @@ export function SearchPage() {
     [filters, handleFiltersChange]
   )
 
-  // Use mock data when no API results
-  const jokes = data?.results || mockJokes
-  const totalCount = data?.count || mockJokes.length
+  // Use query data when available, otherwise show all mock jokes
+  const jokes = data ? data.results : mockJokes
+  const totalCount = data ? data.count : mockJokes.length
   const totalPages = Math.ceil(totalCount / 10)
   const currentPage = filters.page || 1
   const queryLabel = filters.q || 'Office humor'
@@ -99,13 +99,13 @@ export function SearchPage() {
   )
 
   return (
-    <>
-      {/* Desktop Filter Sidebar — rendered alongside main content */}
-      <div className="hidden lg:block">
+    <div className="flex w-full">
+      {/* Desktop Filter Sidebar */}
+      <div className="hidden lg:block shrink-0">
         {filterSidebar}
       </div>
 
-      <div className="flex-1 px-4 lg:px-8 py-6 lg:py-10">
+      <div className="flex-1 min-w-0 px-4 lg:px-8 py-6 lg:py-10">
         {/* Header */}
         <div className="mb-6">
           <h1 className="font-display font-black text-3xl lg:text-5xl text-[#2E2F2F] mb-2">
@@ -213,6 +213,6 @@ export function SearchPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }
