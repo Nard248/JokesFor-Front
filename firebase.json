@@ -8,14 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/api/**",
-        "run": {
-          "serviceId": "jokesforbackend",
-          "region": "us-east1",
-          "projectId": "jokesfor"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
