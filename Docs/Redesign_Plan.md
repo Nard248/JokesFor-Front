@@ -211,19 +211,53 @@ v2 rewrote to match `Docs/JokesFor/`:
 
 ### Iteration 4 (current — on `dev` branch)
 
-The work formerly described as "post-merge" is now happening on `dev`. The branch was created by fast-forwarding from `feat/redesign-user-flow` (which is a strict superset of `main`); `main` is untouched. The `dev` branch is our integration trunk going forward — feature branches PR into `dev`, and `dev` → `main` is the release event.
+The work formerly described as "post-merge" is happening on `dev`. The branch was created by fast-forwarding from `feat/redesign-user-flow` (a strict superset of `main`); `main` is untouched. The `dev` branch is our integration trunk going forward — feature branches PR into `dev`, and `dev` → `main` is the release event.
 
 **Done:**
 - ✅ `dev` branch established and tracking origin
-- ✅ Reskinned `LibraryPage` to use `FlowAppShell` + new visual language (collection tiles, recent saves masonry, search)
-- ✅ Reskinned `DailyJokePage` to use `FlowAppShell` + reveal-on-tap hero + history grid
-- ✅ Hoisted `/library` and `/daily` out of the legacy `Layout`-wrapped subtree (they have their own chrome now)
-- ✅ Retired `/onboarding` route — now redirects to `/flow` (legacy `OnboardingPage` component stays in code, no longer routed)
-- ✅ Wired `preferencesAdapter` to optionally route through real `/users/me/preferences/` via `VITE_USE_REAL_PREFERENCES` flag (default off; converter handles camelCase ↔ snake_case mismatch)
+- ✅ All 7 remaining legacy pages reskinned with new design system: `HomePage`, `FavoritesPage`, `DraftsPage`, `ProfilePage`, `SettingsPage`, `TrendingPage`, `SubmitJokePage`
+- ✅ `LibraryPage` and `DailyJokePage` reskinned (earlier this iteration)
+- ✅ Legacy versions preserved at `/legacy/*` mirror routes — direct-URL accessible, not in any nav. Component files renamed to `<Name>Legacy.tsx` (e.g. `HomePageLegacy.tsx`).
+- ✅ All canonical routes hoisted out of legacy `Layout`-wrapped subtree (each page provides own `FlowAppShell` chrome).
+- ✅ Retired `/onboarding` route — redirects to `/flow` (legacy `OnboardingPage` component stays in code, no longer routed).
+- ✅ Wired `preferencesAdapter` to optionally route through real `/users/me/preferences/` via `VITE_USE_REAL_PREFERENCES` flag (default off; converter handles camelCase ↔ snake_case).
 
-**Still in flight:**
-- Reskin remaining legacy pages: `FavoritesPage`, `DraftsPage`, `ProfilePage`, `SettingsPage`, `TrendingPage`, `SubmitJokePage`, `HomePage` — each needs its own focused PR
-- Adapter flips for the other features once shapes are confirmed: `favoritesAdapter`, `draftsAdapter`, `profileAdapter`, `trendingAdapter`
-- Consolidate `JokeCard` (still used by `HomePage`/`FavoritesPage`/`SubmitJokePage`) with `FlowJokeCard`
-- Consolidate `Layout` (still used by `HomePage`/`TrendingPage` and protected pages still inside that subtree) with `FlowAppShell`
-- Mobile/tablet breakpoints — Flow pages are designed for 1440px desktop; smaller screens partially handled via `clamp()`
+**Still in flight (Iteration 5+):**
+- Adapter flips for `favoritesAdapter`, `draftsAdapter`, `profileAdapter`, `trendingAdapter` once response shapes confirmed.
+- Consolidate `JokeCard` (still used by `<Name>Legacy` pages only) with `FlowJokeCard` once legacy mirrors retire.
+- Consolidate `Layout` (still used by `/legacy/*` subtree only) with `FlowAppShell` once legacy mirrors retire.
+- Mobile/tablet breakpoints — Flow pages are designed for 1440px desktop; smaller screens partially handled via `clamp()`.
+
+**Routing summary after iteration 4:**
+
+```
+Canonical (redesigned, FlowAppShell):
+  /                       HomePage          (anonymous landing)
+  /search                 SearchPage        (Sentence Builder)
+  /daily                  DailyJokePage     (reveal-hero + archive)
+  /library                LibraryPage       (collection tiles + saves masonry)
+  /trending               TrendingPage      (period-filtered + jokesters + topics)
+  /favorites              FavoritesPage     (auth, masonry + tone filter)
+  /drafts                 DraftsPage        (auth, status badges)
+  /profile                ProfilePage       (auth, identity + activity + achievements)
+  /settings               SettingsPage      (auth, sectioned form + danger zone)
+  /submit                 SubmitJokePage    (auth, format picker + live preview)
+  /flow                   FlowPage          (auth, Vibes/Formats/Ritual)
+  /flow-canvas            FlowCanvasPage    (auth, Today hub)
+  /explore                ExplorePage       (auth, 3-axis filter)
+  /login, /register       LoginPage, RegisterPage (split-canvas, redesigned)
+  /auth/google/callback   GoogleCallbackPage
+
+Legacy mirrors (old design, Layout chrome):
+  /legacy                 HomePageLegacy
+  /legacy/trending        TrendingPageLegacy
+  /legacy/favorites       FavoritesPageLegacy (auth)
+  /legacy/drafts          DraftsPageLegacy    (auth)
+  /legacy/profile         ProfilePageLegacy   (auth)
+  /legacy/settings        SettingsPageLegacy  (auth)
+  /legacy/submit          SubmitJokePageLegacy (auth)
+
+Aliases:
+  /collections           → /library
+  /onboarding            → /flow
+```

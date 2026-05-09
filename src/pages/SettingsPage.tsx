@@ -1,206 +1,375 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Settings, User, Bell, Shield, Palette, AlertTriangle, LogOut } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Chip } from '@/components/ui/chip'
-import { Input } from '@/components/ui/input'
-import { useProfile } from '@/features/profile'
+import { User, Bell, Shield, Palette, AlertTriangle, LogOut } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
+import { useAuth, useLogout } from '@/features/auth'
 import { usePreferences, useUpdatePreferences } from '@/features/preferences'
-import { useOnboardingStore } from '@/stores/onboarding.store'
-import { cn } from '@/lib/utils'
 
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+/**
+ * SettingsPage — redesigned for iteration 4.
+ *
+ * Sections (each in its own card):
+ *   1. Account (read-only display from useAuth)
+ *   2. Notifications (toggle switches)
+ *   3. Privacy (toggle switches)
+ *   4. Appearance (theme picker)
+ *   5. Danger zone (logout, delete account)
+ */
+export function SettingsPage() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { data: prefs } = usePreferences()
+  const updatePrefs = useUpdatePreferences()
+  const logout = useLogout()
+
+  const [theme, setTheme] = useState(prefs?.theme ?? 'light')
+
+  const updateNotifications = (key: 'dailyJoke' | 'trendingAlerts' | 'collectionUpdates' | 'emailDigest', value: boolean) => {
+    if (!prefs) return
+    updatePrefs.mutate({
+      notifications: { ...prefs.notifications, [key]: value },
+    })
+  }
+
+  const updatePrivacy = (key: 'publicProfile' | 'showActivity' | 'shareAnalytics', value: boolean) => {
+    if (!prefs) return
+    updatePrefs.mutate({
+      privacy: { ...prefs.privacy, [key]: value },
+    })
+  }
+
+  const updateTheme = (next: 'light' | 'dark' | 'system') => {
+    setTheme(next)
+    updatePrefs.mutate({ theme: next })
+  }
+
+  const handleLogout = () => {
+    logout.mutate()
+    navigate('/', { replace: true })
+  }
+
   return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative w-11 h-6 rounded-full transition-colors',
-        checked ? 'bg-[#6A1CF6]' : 'bg-[#DDDCDC]'
-      )}
-    >
-      <div className={cn(
-        'absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform',
-        checked ? 'translate-x-[22px]' : 'translate-x-0.5'
-      )} />
-    </button>
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="library">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 880, margin: '0 auto' }}>
+          {/* Hero */}
+          <div>
+            <span className="eyebrow-mono">Settings</span>
+            <h2
+              style={{
+                marginTop: 8,
+                fontFamily: 'var(--font-display)',
+                fontWeight: 900,
+                fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+                letterSpacing: '-0.02em',
+                color: '#1A1A1A',
+                lineHeight: 1.05,
+              }}
+            >
+              Make it <em className="wink">yours.</em>
+            </h2>
+            <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
+              Account, notifications, privacy. Set once, change anytime.
+            </p>
+          </div>
+
+          {/* Account */}
+          <SettingsSection icon={<User size={18} />} title="Account" subtitle="Identity and login.">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+              <Field label="Email" value={user?.email ?? '—'} />
+              <Field label="Username" value={user?.username ?? '—'} />
+              <Field label="Display name" value={`${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || '—'} />
+            </div>
+            <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link to="/profile" className="btn-flow-primary" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
+                Edit profile
+              </Link>
+              <button type="button" className="btn-flow-ghost" style={{ height: 40, fontSize: 13 }}>
+                Change password
+              </button>
+            </div>
+          </SettingsSection>
+
+          {/* Notifications */}
+          <SettingsSection icon={<Bell size={18} />} title="Notifications" subtitle="What and when we ping you.">
+            <Toggle
+              label="Daily joke"
+              description="One push per day at your chosen ritual time."
+              checked={prefs?.notifications?.dailyJoke ?? true}
+              onChange={(v) => updateNotifications('dailyJoke', v)}
+            />
+            <Toggle
+              label="Trending alerts"
+              description="When something blows up in the community."
+              checked={prefs?.notifications?.trendingAlerts ?? false}
+              onChange={(v) => updateNotifications('trendingAlerts', v)}
+            />
+            <Toggle
+              label="Collection updates"
+              description="When jokes you saved get shared by others."
+              checked={prefs?.notifications?.collectionUpdates ?? true}
+              onChange={(v) => updateNotifications('collectionUpdates', v)}
+            />
+            <Toggle
+              label="Email digest"
+              description="Weekly recap of the best of the week."
+              checked={prefs?.notifications?.emailDigest ?? false}
+              onChange={(v) => updateNotifications('emailDigest', v)}
+            />
+          </SettingsSection>
+
+          {/* Privacy */}
+          <SettingsSection icon={<Shield size={18} />} title="Privacy" subtitle="What others can see.">
+            <Toggle
+              label="Public profile"
+              description="Let anyone view your profile and saves."
+              checked={prefs?.privacy?.publicProfile ?? true}
+              onChange={(v) => updatePrivacy('publicProfile', v)}
+            />
+            <Toggle
+              label="Show activity"
+              description="Surface your recent activity on your profile."
+              checked={prefs?.privacy?.showActivity ?? true}
+              onChange={(v) => updatePrivacy('showActivity', v)}
+            />
+            <Toggle
+              label="Share analytics"
+              description="Help us improve recommendations with anonymous usage data."
+              checked={prefs?.privacy?.shareAnalytics ?? false}
+              onChange={(v) => updatePrivacy('shareAnalytics', v)}
+            />
+          </SettingsSection>
+
+          {/* Appearance */}
+          <SettingsSection icon={<Palette size={18} />} title="Appearance" subtitle="Light, dark, or whatever your system says.">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {(['light', 'dark', 'system'] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => updateTheme(option)}
+                  aria-pressed={theme === option}
+                  style={{
+                    padding: '16px 12px',
+                    borderRadius: 14,
+                    border: `1px solid ${theme === option ? '#6A1CF6' : '#E9E8E7'}`,
+                    background: theme === option ? '#F2E9FF' : '#fff',
+                    color: '#1A1A1A',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </SettingsSection>
+
+          {/* Danger zone */}
+          <SettingsSection icon={<AlertTriangle size={18} />} title="Danger zone" subtitle="Irreversible actions." accent="danger">
+            <div
+              style={{
+                padding: 18,
+                background: '#FBFAF7',
+                border: '1px solid #E9E8E7',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>Sign out everywhere</div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>Ends your session on this device.</div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={logout.isPending}
+                className="btn-flow-ghost"
+                style={{ height: 40, fontSize: 13 }}
+              >
+                <LogOut size={14} /> {logout.isPending ? 'Signing out…' : 'Sign out'}
+              </button>
+            </div>
+            <div
+              style={{
+                marginTop: 12,
+                padding: 18,
+                background: 'rgba(214, 67, 43, 0.08)',
+                border: '1px solid rgba(214, 67, 43, 0.2)',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#A02B16' }}>
+                  Delete account
+                </div>
+                <div style={{ fontSize: 12, color: '#A02B16', opacity: 0.85, marginTop: 2 }}>
+                  Permanently removes your account, saves, drafts, and history.
+                </div>
+              </div>
+              <button
+                type="button"
+                style={{
+                  height: 40,
+                  padding: '0 16px',
+                  background: 'transparent',
+                  color: '#A02B16',
+                  border: '1px solid #A02B16',
+                  borderRadius: 9999,
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Delete my account
+              </button>
+            </div>
+          </SettingsSection>
+        </div>
+      </FlowAppShell>
+    </div>
   )
 }
 
-export function SettingsPage() {
-  const navigate = useNavigate()
-  const { selectedHumorTypes } = useOnboardingStore()
-  const { data: profile } = useProfile()
-  const { data: prefs } = usePreferences()
-  const updatePrefs = useUpdatePreferences()
+// ──────────────────────────────────────────────────────────────────────────
+// Section wrapper
+// ──────────────────────────────────────────────────────────────────────────
 
-  // Derive state from server preferences, with sensible defaults
-  const notifications = prefs?.notifications ?? {
-    dailyJoke: true,
-    trendingAlerts: false,
-    collectionUpdates: true,
-    emailDigest: false,
-  }
-  const privacy = prefs?.privacy ?? {
-    publicProfile: true,
-    showActivity: true,
-    shareAnalytics: false,
-  }
-  const theme = prefs?.theme ?? 'light'
-
-  const setNotifications = (updated: typeof notifications) => {
-    updatePrefs.mutate({ notifications: updated })
-  }
-  const setPrivacy = (updated: typeof privacy) => {
-    updatePrefs.mutate({ privacy: updated })
-  }
-  const setTheme = (t: 'light' | 'dark' | 'system') => {
-    updatePrefs.mutate({ theme: t })
-  }
-
+function SettingsSection({
+  icon,
+  title,
+  subtitle,
+  accent,
+  children,
+}: {
+  icon: React.ReactNode
+  title: string
+  subtitle: string
+  accent?: 'danger'
+  children: React.ReactNode
+}) {
+  const headerColor = accent === 'danger' ? '#A02B16' : '#1A1A1A'
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <Settings className="size-8 text-[#6A1CF6]" />
-        <h1 className="font-display font-black text-3xl lg:text-4xl text-[#2E2F2F]">Settings</h1>
+    <section
+      style={{
+        marginTop: 32,
+        padding: 'clamp(24px, 3vw, 32px)',
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 24,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: accent === 'danger' ? 'rgba(214, 67, 43, 0.12)' : '#F2E9FF',
+            color: accent === 'danger' ? '#A02B16' : '#6A1CF6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+        <div>
+          <h3
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 22,
+              color: headerColor,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.1,
+            }}
+          >
+            {title}
+          </h3>
+          <p style={{ marginTop: 2, fontSize: 13, color: '#6B7280' }}>{subtitle}</p>
+        </div>
       </div>
+      <div>{children}</div>
+    </section>
+  )
+}
 
-      <div className="space-y-4">
-        {/* Account */}
-        <Card radius="lg" className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <User className="size-5 text-[#6A1CF6]" />
-            <h2 className="font-display font-bold text-lg text-[#2E2F2F]">Account</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#52525B] mb-1.5">Email</label>
-              <Input variant="pill-sm" defaultValue={profile?.email ?? ''} readOnly className="bg-[#F2F0F0] cursor-not-allowed" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-[#52525B] mb-1.5">First Name</label>
-                <Input variant="pill-sm" defaultValue="Laugh" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#52525B] mb-1.5">Last Name</label>
-                <Input variant="pill-sm" defaultValue="Master" />
-              </div>
-            </div>
-            <Button variant="pill-outline" size="sm">Change Password</Button>
-          </div>
-        </Card>
+// ──────────────────────────────────────────────────────────────────────────
+// Field (read-only)
+// ──────────────────────────────────────────────────────────────────────────
 
-        {/* Humor Preferences */}
-        <Card radius="lg" className="p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🎭</span>
-              <h2 className="font-display font-bold text-lg text-[#2E2F2F]">Humor Preferences</h2>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {(selectedHumorTypes.length > 0 ? selectedHumorTypes : ['dad_jokes', 'puns', 'sarcasm']).map((type) => (
-              <Chip key={type} selected className="pointer-events-none">
-                {type.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </Chip>
-            ))}
-          </div>
-          <Button variant="pill-outline" size="sm" asChild>
-            <Link to="/onboarding">Update Preferences</Link>
-          </Button>
-        </Card>
-
-        {/* Notifications */}
-        <Card radius="lg" className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Bell className="size-5 text-[#6A1CF6]" />
-            <h2 className="font-display font-bold text-lg text-[#2E2F2F]">Notifications</h2>
-          </div>
-          <div className="space-y-4">
-            {([
-              { key: 'dailyJoke' as const, label: 'Daily Joke', desc: 'Get your personalized joke every morning' },
-              { key: 'trendingAlerts' as const, label: 'Trending Alerts', desc: 'When jokes in your taste go viral' },
-              { key: 'collectionUpdates' as const, label: 'Collection Updates', desc: 'When collections you follow get new jokes' },
-              { key: 'emailDigest' as const, label: 'Weekly Email Digest', desc: 'Top jokes of the week in your inbox' },
-            ]).map((item) => (
-              <div key={item.key} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[#2E2F2F]">{item.label}</p>
-                  <p className="text-xs text-[#6B7280]">{item.desc}</p>
-                </div>
-                <ToggleSwitch checked={notifications[item.key]} onChange={(v) => setNotifications({ ...notifications, [item.key]: v })} />
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Privacy */}
-        <Card radius="lg" className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Shield className="size-5 text-[#6A1CF6]" />
-            <h2 className="font-display font-bold text-lg text-[#2E2F2F]">Privacy</h2>
-          </div>
-          <div className="space-y-4">
-            {([
-              { key: 'publicProfile' as const, label: 'Public Profile', desc: 'Let others see your profile and saved jokes' },
-              { key: 'showActivity' as const, label: 'Show Activity', desc: 'Display your recent activity on profile' },
-              { key: 'shareAnalytics' as const, label: 'Share Analytics', desc: 'Help us improve with anonymous usage data' },
-            ]).map((item) => (
-              <div key={item.key} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[#2E2F2F]">{item.label}</p>
-                  <p className="text-xs text-[#6B7280]">{item.desc}</p>
-                </div>
-                <ToggleSwitch checked={privacy[item.key]} onChange={(v) => setPrivacy({ ...privacy, [item.key]: v })} />
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Appearance */}
-        <Card radius="lg" className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <Palette className="size-5 text-[#6A1CF6]" />
-            <h2 className="font-display font-bold text-lg text-[#2E2F2F]">Appearance</h2>
-          </div>
-          <div className="flex gap-3">
-            {(['light', 'dark', 'system'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => t === 'light' && setTheme(t)}
-                className={cn(
-                  'flex-1 py-3 rounded-2xl text-sm font-semibold text-center transition-all border-2',
-                  theme === t
-                    ? 'border-[#6A1CF6] bg-[#F7F0FF] text-[#6A1CF6]'
-                    : 'border-[#E9E8E7] text-[#6B7280]',
-                  t !== 'light' && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-                {t !== 'light' && <Badge variant="muted" size="sm" className="ml-1.5">Soon</Badge>}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* Danger Zone */}
-        <Card radius="lg" className="p-6 border-2 border-red-200">
-          <div className="flex items-center gap-3 mb-5">
-            <AlertTriangle className="size-5 text-red-500" />
-            <h2 className="font-display font-bold text-lg text-red-600">Danger Zone</h2>
-          </div>
-          <div className="flex flex-col lg:flex-row gap-3">
-            <Button variant="pill-outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50" onClick={() => navigate('/login')}>
-              <LogOut className="size-4" /> Log Out
-            </Button>
-            <Button variant="ghost" className="text-red-400 hover:text-red-600 text-sm">
-              Delete Account
-            </Button>
-          </div>
-        </Card>
-      </div>
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="eyebrow-mono">{label}</div>
+      <div style={{ marginTop: 6, fontSize: 15, color: '#1A1A1A', fontFamily: 'var(--font-sans)' }}>{value}</div>
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Toggle switch
+// ──────────────────────────────────────────────────────────────────────────
+
+function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        padding: '14px 0',
+        borderBottom: '1px solid #F1EFEC',
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>{label}</div>
+        <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{description}</div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        aria-pressed={checked}
+        style={{
+          width: 44,
+          height: 24,
+          borderRadius: 12,
+          background: checked ? '#6A1CF6' : '#E9E8E7',
+          position: 'relative',
+          transition: 'background 0.2s ease',
+          flexShrink: 0,
+          border: 0,
+          cursor: 'pointer',
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: checked ? 22 : 2,
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            background: '#fff',
+            transition: 'left 0.2s ease',
+          }}
+        />
+      </button>
+    </label>
   )
 }

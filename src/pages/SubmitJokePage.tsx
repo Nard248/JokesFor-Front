@@ -1,243 +1,488 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
-import { Sparkles, Eye } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Chip } from '@/components/ui/chip'
-import { JokeCard } from '@/components/JokeCard'
-import type { Joke } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { useState, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { Sparkles, Eye, Send, ArrowLeft } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
+import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { useCreateDraft, useSubmitDraft } from '@/features/drafts'
 
-const formats = ['One-Liner', 'Setup & Punchline', 'Short Story']
-const humorTypes = ['Dad Joke', 'Pun', 'Sarcastic', 'Dark', 'Geeky', 'Clean', 'Absurdist', 'Observational']
-const ageRatings = ['Kid Safe (6-12)', 'Teen (13-17)', 'Adult (18+)', 'Family Friendly']
-const contextTags = ['Work', 'School', 'Wedding', 'Social Media', 'Icebreaker', 'Holiday', 'Birthday']
-
+/**
+ * SubmitJokePage — redesigned for iteration 4.
+ *
+ * Two-pane layout:
+ *   Left  — form: format picker, setup/punch/text inputs (format-dependent),
+ *           tags, age rating
+ *   Right — live preview using FlowJokeCard with the form fields piped in
+ *
+ * Submit options:
+ *   - "Save as draft"     → useCreateDraft (status: draft)
+ *   - "Submit for review" → useCreateDraft + useSubmitDraft chained
+ *
+ * Existing SubmitJokePage component preserved at /legacy/submit.
+ */
 export function SubmitJokePage() {
-  const [format, setFormat] = useState('Setup & Punchline')
-  const [setup, setSetup] = useState('')
-  const [punchline, setPunchline] = useState('')
-  const [text, setText] = useState('')
-  const [selectedHumor, setSelectedHumor] = useState<string[]>([])
-  const [selectedAge, setSelectedAge] = useState('')
-  const [selectedContextTags, setSelectedContextTags] = useState<string[]>([])
-  const [source, setSource] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const navigate = useNavigate()
+  const createDraft = useCreateDraft()
+  const submitDraft = useSubmitDraft()
 
-  const toggleHumor = (h: string) =>
-    setSelectedHumor((prev) => prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h])
-  const toggleContext = (c: string) =>
-    setSelectedContextTags((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c])
+  const [format, setFormat] = useState<FlowJokeFormat>('setup')
+  const [setupText, setSetupText] = useState('')
+  const [punchText, setPunchText] = useState('')
+  const [oneLineText, setOneLineText] = useState('')
+  const [knockLines, setKnockLines] = useState<string[]>(['', '', '', '', ''])
+  const [tones, setTones] = useState<Set<string>>(new Set())
+  const [error, setError] = useState<string | null>(null)
 
-  const previewJoke: Joke = {
-    id: 0,
-    text: format === 'One-Liner' ? text : `${setup} ${punchline}`,
-    setup: format !== 'One-Liner' ? (setup || 'Your setup goes here...') : null,
-    punchline: format !== 'One-Liner' ? (punchline || '...and the punchline here!') : null,
-    format: { id: 1, name: format, slug: format.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_') },
-    age_rating: { id: 1, name: selectedAge || 'Family Friendly', slug: 'family_friendly', min_age: 0 },
-    tones: selectedHumor.map((h, i) => ({ id: i, name: h, slug: h.toLowerCase().replace(/ /g, '_') })),
-    context_tags: selectedContextTags.map((c, i) => ({ id: i, name: c, slug: c.toLowerCase().replace(/ /g, '_') })),
-    culture_tags: [],
-    language: { id: 1, name: 'English', code: 'en' },
-    source: source || 'original',
-    share_image_url: null,
-    created_at: new Date().toISOString(),
+  const previewJoke: FlowJokeData = useMemo(() => {
+    const base: FlowJokeData = {
+      id: 'preview',
+      fmt: format,
+      themeLabel: tones.size > 0 ? [...tones][0] : undefined,
+      catLabel: tones.size > 1 ? [...tones][1] : undefined,
+      saves: '—',
+      laughs: '—',
+    }
+    if (format === 'setup' || format === 'anti') {
+      return { ...base, setup: setupText || 'Your setup goes here…', punch: punchText || 'And the punchline.' }
+    }
+    if (format === 'knock') {
+      return { ...base, lines: knockLines.filter((l) => l.trim()).length > 0 ? knockLines.filter((l) => l.trim()) : ['Knock, knock.', "Who's there?", '…', 'Who?', '…'] }
+    }
+    return { ...base, text: oneLineText || 'Your joke goes here…' }
+  }, [format, setupText, punchText, oneLineText, knockLines, tones])
+
+  const validate = (): string | null => {
+    if (format === 'setup' || format === 'anti') {
+      if (!setupText.trim()) return 'Setup is required'
+      if (!punchText.trim()) return 'Punchline is required'
+    } else if (format === 'knock') {
+      if (knockLines.filter((l) => l.trim()).length < 2) return 'Knock-knock needs at least 2 lines'
+    } else {
+      if (!oneLineText.trim()) return 'Joke text is required'
+    }
+    if (tones.size === 0) return 'Pick at least one tone'
+    return null
   }
 
-  const canSubmit = format === 'One-Liner' ? text.trim().length > 0 : (setup.trim().length > 0 && punchline.trim().length > 0)
+  const buildPayload = () => ({
+    setup:
+      format === 'setup' || format === 'anti'
+        ? setupText.trim()
+        : '',
+    punchline:
+      format === 'setup' || format === 'anti'
+        ? punchText.trim()
+        : '',
+    text:
+      format === 'oneliner' || format === 'observ' || format === 'story'
+        ? oneLineText.trim()
+        : format === 'knock'
+        ? knockLines.filter((l) => l.trim()).join(' / ')
+        : `${setupText.trim()} ${punchText.trim()}`.trim(),
+    format: FORMAT_LABELS[format],
+    status: 'draft' as const,
+    tones: Array.from(tones),
+    lastEditedAt: new Date().toISOString(),
+  })
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#F8F6F6] flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <span className="text-6xl block mb-6">🎉</span>
-          <h1 className="font-display font-black text-3xl text-[#2E2F2F] mb-3">Joke Submitted!</h1>
-          <p className="text-[#6B7280] mb-8">
-            Your joke has been submitted for review. Our team will check it out and publish it if it passes the vibe check.
-          </p>
-          <div className="flex flex-col gap-3">
-            <Button variant="pill" size="xl" onClick={() => { setSubmitted(false); setSetup(''); setPunchline(''); setText(''); setSelectedHumor([]); }}>
-              Submit Another
-            </Button>
-            <Button variant="pill-outline" size="xl" asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
+  const handleSaveDraft = () => {
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError(null)
+    createDraft.mutate(buildPayload(), {
+      onSuccess: () => navigate('/drafts'),
+      onError: () => setError('Could not save draft. Try again?'),
+    })
   }
+
+  const handleSubmitForReview = () => {
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError(null)
+    createDraft.mutate(buildPayload(), {
+      onSuccess: (created) => {
+        if (created?.id) {
+          submitDraft.mutate(created.id, {
+            onSuccess: () => navigate('/drafts'),
+            onError: () => setError('Saved as draft, but submit-for-review failed. Try from the drafts page.'),
+          })
+        } else {
+          navigate('/drafts')
+        }
+      },
+      onError: () => setError('Could not save. Try again?'),
+    })
+  }
+
+  const updateKnockLine = (i: number, v: string) => {
+    setKnockLines((prev) => prev.map((line, idx) => (idx === i ? v : line)))
+  }
+
+  const toggleTone = (t: string) =>
+    setTones((prev) => {
+      const next = new Set(prev)
+      if (next.has(t)) next.delete(t)
+      else next.add(t)
+      return next
+    })
 
   return (
-    <div className="min-h-screen bg-[#F8F6F6]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass shadow-[var(--shadow-header)] h-16 flex items-center justify-between px-6">
-        <Link to="/">
-          <img src="/Logos/compact_light.svg" alt="Jokes For" className="h-9" />
-        </Link>
-        <Button variant="pill" size="sm" disabled={!canSubmit} onClick={() => setSubmitted(true)}>
-          <Sparkles className="size-4 mr-1.5" /> Submit for Review
-        </Button>
-      </header>
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="library">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1200, margin: '0 auto' }}>
+          <Link
+            to="/drafts"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 14,
+              color: '#52525B',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 16,
+            }}
+          >
+            <ArrowLeft size={14} /> Back to drafts
+          </Link>
 
-      <div className="max-w-6xl mx-auto px-4 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="font-display font-black text-3xl lg:text-4xl text-[#2E2F2F] mb-2">
-            Submit a Joke
-          </h1>
-          <p className="text-[#6B7280]">Share your humor with the world. Every great punchline starts here.</p>
-        </div>
+          {/* Hero */}
+          <div>
+            <span className="eyebrow-mono">Submit · craft your joke</span>
+            <h2
+              style={{
+                marginTop: 8,
+                fontFamily: 'var(--font-display)',
+                fontWeight: 900,
+                fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+                letterSpacing: '-0.02em',
+                color: '#1A1A1A',
+                lineHeight: 1.05,
+              }}
+            >
+              Got a <em className="wink">good one?</em>
+            </h2>
+            <p style={{ marginTop: 6, fontSize: 18, color: '#52525B', maxWidth: 600 }}>
+              Pick the format, write the joke, watch the preview. Submit for review when it's ready to land.
+            </p>
+          </div>
 
-        <div className="lg:grid lg:grid-cols-5 lg:gap-8">
-          {/* Form — 3 cols */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Format */}
-            <div>
-              <label className="block text-sm font-semibold text-[#2E2F2F] mb-3">Format</label>
-              <div className="flex gap-2">
-                {formats.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFormat(f)}
-                    className={cn(
-                      'px-4 py-2.5 rounded-full text-sm font-medium transition-all border-2',
-                      format === f
-                        ? 'bg-[#6A1CF6] text-white border-[#6A1CF6]'
-                        : 'border-[#E9E8E7] text-[#52525B] hover:border-[#AC8EFF]'
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
+          {/* Two-pane */}
+          <div
+            style={{
+              marginTop: 36,
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)',
+              gap: 32,
+              alignItems: 'start',
+            }}
+          >
+            {/* Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Format picker */}
+              <FormSection title="Format" subtitle="How does it land? Different formats render differently in the catalog.">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+                  {FORMAT_OPTIONS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFormat(f.id)}
+                      aria-pressed={format === f.id}
+                      style={{
+                        padding: '14px 12px',
+                        background: format === f.id ? '#F2E9FF' : '#fff',
+                        color: '#1A1A1A',
+                        border: `1px solid ${format === f.id ? '#6A1CF6' : '#E9E8E7'}`,
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{f.label}</span>
+                      <span style={{ fontSize: 11, color: '#6B7280' }}>{f.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </FormSection>
+
+              {/* Joke fields — vary by format */}
+              <FormSection title="Joke" subtitle="Type. The preview updates as you go.">
+                {format === 'setup' || format === 'anti' ? (
+                  <>
+                    <TextField label="Setup" value={setupText} onChange={setSetupText} placeholder={format === 'anti' ? 'Why did the chicken cross the road?' : "Why don't scientists trust atoms?"} />
+                    <TextField label="Punchline" value={punchText} onChange={setPunchText} placeholder={format === 'anti' ? 'To get to the other side.' : 'Because they make up everything.'} />
+                  </>
+                ) : format === 'knock' ? (
+                  <>
+                    <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 10 }}>
+                      Knock-knocks alternate speakers — odd lines for the visitor, even lines for the door.
+                    </p>
+                    {knockLines.map((line, i) => (
+                      <TextField
+                        key={i}
+                        label={`Line ${i + 1}`}
+                        value={line}
+                        onChange={(v) => updateKnockLine(i, v)}
+                        placeholder={['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing."][i] ?? ''}
+                      />
+                    ))}
+                  </>
+                ) : (
+                  <TextArea
+                    label={format === 'story' ? 'Story' : format === 'observ' ? 'Observation' : 'Joke text'}
+                    value={oneLineText}
+                    onChange={setOneLineText}
+                    placeholder={
+                      format === 'observ'
+                        ? "Adulthood is just emailing 'Sounds good!' until one of you dies."
+                        : format === 'story'
+                        ? 'A man walks into a library and asks…'
+                        : 'I told my wife she was drawing her eyebrows too high. She seemed surprised.'
+                    }
+                    rows={format === 'story' ? 6 : 3}
+                  />
+                )}
+              </FormSection>
+
+              {/* Tones */}
+              <FormSection title="Tones" subtitle="Pick one or more. We use these for filtering and recommendations.">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {TONE_OPTIONS.map((t) => {
+                    const active = tones.has(t)
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleTone(t)}
+                        aria-pressed={active}
+                        style={{
+                          height: 32,
+                          padding: '0 14px',
+                          fontSize: 13,
+                          background: active ? '#6A1CF6' : '#fff',
+                          color: active ? '#fff' : '#1A1A1A',
+                          border: `1px solid ${active ? '#6A1CF6' : '#E9E8E7'}`,
+                          borderRadius: 9999,
+                          fontFamily: 'inherit',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+              </FormSection>
+
+              {/* Error */}
+              {error && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: 14,
+                    borderRadius: 12,
+                    background: 'rgba(214, 67, 43, 0.08)',
+                    border: '1px solid rgba(214, 67, 43, 0.2)',
+                    color: '#A02B16',
+                    fontSize: 14,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={createDraft.isPending}
+                  className="btn-flow-ghost"
+                  style={{ height: 48, fontSize: 14 }}
+                >
+                  {createDraft.isPending && !submitDraft.isPending ? 'Saving…' : 'Save as draft'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitForReview}
+                  disabled={createDraft.isPending || submitDraft.isPending}
+                  className="btn-flow-primary"
+                  style={{ height: 48, flex: 1, fontSize: 14, justifyContent: 'center' }}
+                >
+                  <Send size={14} />
+                  {submitDraft.isPending ? 'Submitting…' : createDraft.isPending ? 'Saving…' : 'Submit for review'}
+                </button>
               </div>
             </div>
 
-            {/* Joke Input */}
-            {format === 'One-Liner' ? (
-              <div>
-                <label className="block text-sm font-semibold text-[#2E2F2F] mb-2">Your Joke</label>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Type your one-liner here..."
-                  className="w-full h-32 rounded-[24px] border border-[#E9E8E7] bg-white p-5 text-base outline-none focus:border-[#6A1CF6] focus:ring-2 focus:ring-[#6A1CF6]/20 resize-none"
+            {/* Preview pane */}
+            <aside
+              style={{
+                position: 'sticky',
+                top: 88,
+              }}
+            >
+              <div
+                style={{
+                  padding: 24,
+                  background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
+                  border: '1px solid #E9E8E7',
+                  borderRadius: 24,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    top: -60,
+                    right: -60,
+                    width: 200,
+                    height: 200,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #F2E9FF, transparent 70%)',
+                  }}
                 />
-              </div>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-sm font-semibold text-[#2E2F2F] mb-2">Setup</label>
-                  <textarea
-                    value={setup}
-                    onChange={(e) => setSetup(e.target.value)}
-                    placeholder="Set the scene... (e.g., 'Why did the chicken cross the road?')"
-                    className="w-full h-24 rounded-[24px] border border-[#E9E8E7] bg-white p-5 text-base outline-none focus:border-[#6A1CF6] focus:ring-2 focus:ring-[#6A1CF6]/20 resize-none"
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, position: 'relative' }}>
+                  <Eye size={14} color="#6A1CF6" />
+                  <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+                    Live preview
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#2E2F2F] mb-2">Punchline</label>
-                  <textarea
-                    value={punchline}
-                    onChange={(e) => setPunchline(e.target.value)}
-                    placeholder="Drop the punchline..."
-                    className="w-full h-24 rounded-[24px] border border-[#E9E8E7] bg-white p-5 text-base outline-none focus:border-[#6A1CF6] focus:ring-2 focus:ring-[#6A1CF6]/20 resize-none"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Humor Type */}
-            <div>
-              <label className="block text-sm font-semibold text-[#2E2F2F] mb-3">Humor Type</label>
-              <div className="flex flex-wrap gap-2">
-                {humorTypes.map((h) => (
-                  <Chip key={h} selected={selectedHumor.includes(h)} onClick={() => toggleHumor(h)}>{h}</Chip>
-                ))}
+                <FlowJokeCard joke={previewJoke} />
+                <p style={{ marginTop: 14, fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
+                  <Sparkles size={11} style={{ marginRight: 4 }} />
+                  This is exactly how it'll show up in the catalog.
+                </p>
               </div>
-            </div>
-
-            {/* Age Rating */}
-            <div>
-              <label className="block text-sm font-semibold text-[#2E2F2F] mb-3">Age Rating</label>
-              <div className="flex flex-wrap gap-2">
-                {ageRatings.map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => setSelectedAge(a)}
-                    className={cn(
-                      'px-4 py-2 rounded-full text-sm font-medium border-2 transition-all',
-                      selectedAge === a
-                        ? 'bg-[#CAFD00]/20 border-[#CAFD00] text-[#3A4A00]'
-                        : 'border-[#E9E8E7] text-[#52525B] hover:border-[#AC8EFF]'
-                    )}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Context Tags */}
-            <div>
-              <label className="block text-sm font-semibold text-[#2E2F2F] mb-3">Context Tags <span className="font-normal text-[#6B7280]">(optional)</span></label>
-              <div className="flex flex-wrap gap-2">
-                {contextTags.map((c) => (
-                  <Chip key={c} selected={selectedContextTags.includes(c)} onClick={() => toggleContext(c)}>{c}</Chip>
-                ))}
-              </div>
-            </div>
-
-            {/* Source */}
-            <div>
-              <label className="block text-sm font-semibold text-[#2E2F2F] mb-2">Source <span className="font-normal text-[#6B7280]">(optional)</span></label>
-              <input
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="Credit the original author if not your own"
-                className="w-full h-10 rounded-full border border-[#E9E8E7] bg-white px-5 text-sm outline-none focus:border-[#6A1CF6]"
-              />
-            </div>
-
-            {/* Submit (mobile) */}
-            <div className="lg:hidden pt-2">
-              <Button variant="pill" size="xl" className="w-full gap-2" disabled={!canSubmit} onClick={() => setSubmitted(true)}>
-                <Sparkles className="size-5" /> Submit for Review
-              </Button>
-            </div>
-
-            {/* Guidelines */}
-            <Card radius="md" className="p-5 bg-[#F7F0FF] lg:hidden">
-              <h3 className="font-semibold text-sm text-[#6A1CF6] mb-2">Submission Guidelines</h3>
-              <ul className="text-xs text-[#52525B] space-y-1.5">
-                <li>• Jokes must be original or properly attributed</li>
-                <li>• Tag age ratings accurately — kid safety is non-negotiable</li>
-                <li>• Reviews take 24-48 hours</li>
-              </ul>
-            </Card>
-          </div>
-
-          {/* Preview — 2 cols */}
-          <div className="hidden lg:block lg:col-span-2 sticky top-24">
-            <div className="flex items-center gap-2 mb-4">
-              <Eye className="size-5 text-[#6B7280]" />
-              <h3 className="font-display font-bold text-lg text-[#2E2F2F]">Live Preview</h3>
-            </div>
-            <JokeCard joke={previewJoke} />
-
-            {/* Guidelines */}
-            <Card radius="md" className="p-5 bg-[#F7F0FF] mt-6">
-              <h3 className="font-semibold text-sm text-[#6A1CF6] mb-2">Submission Guidelines</h3>
-              <ul className="text-xs text-[#52525B] space-y-1.5">
-                <li>• Jokes must be original or properly attributed</li>
-                <li>• Tag age ratings accurately — kid safety is non-negotiable</li>
-                <li>• Reviews typically take 24-48 hours</li>
-                <li>• Published jokes earn you creator karma!</li>
-              </ul>
-            </Card>
+            </aside>
           </div>
         </div>
-      </div>
+      </FlowAppShell>
     </div>
   )
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Form atoms
+// ──────────────────────────────────────────────────────────────────────────
+
+function FormSection({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <section
+      style={{
+        padding: 24,
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 18,
+      }}
+    >
+      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: '#1A1A1A', letterSpacing: '-0.01em' }}>
+        {title}
+      </h3>
+      <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2, marginBottom: 14 }}>{subtitle}</p>
+      {children}
+    </section>
+  )
+}
+
+function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label className="eyebrow-mono" style={{ display: 'block', marginBottom: 6 }}>
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="flow-input"
+      />
+    </div>
+  )
+}
+
+function TextArea({ label, value, onChange, placeholder, rows }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
+  return (
+    <div>
+      <label className="eyebrow-mono" style={{ display: 'block', marginBottom: 6 }}>
+        {label}
+      </label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows ?? 3}
+        style={{
+          width: '100%',
+          padding: 14,
+          borderRadius: 12,
+          border: '1px solid #E9E8E7',
+          background: '#fff',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 15,
+          color: '#1A1A1A',
+          outline: 'none',
+          resize: 'vertical',
+          lineHeight: 1.5,
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = '#6A1CF6'
+          e.target.style.boxShadow = '0 0 0 4px #F2E9FF'
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = '#E9E8E7'
+          e.target.style.boxShadow = 'none'
+        }}
+      />
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Static data
+// ──────────────────────────────────────────────────────────────────────────
+
+const FORMAT_OPTIONS: { id: FlowJokeFormat; label: string; hint: string }[] = [
+  { id: 'oneliner', label: 'One-liner', hint: 'Single punch.' },
+  { id: 'setup', label: 'Setup → Punch', hint: 'Two-beat classic.' },
+  { id: 'knock', label: 'Knock-knock', hint: 'Conversational.' },
+  { id: 'story', label: 'Story', hint: 'Long-form, slow burn.' },
+  { id: 'anti', label: 'Anti-joke', hint: 'Refuses to land.' },
+  { id: 'observ', label: 'Observational', hint: 'Quote-style.' },
+]
+
+const FORMAT_LABELS: Record<FlowJokeFormat, string> = {
+  oneliner: 'One-liner',
+  setup: 'Setup & Punchline',
+  knock: 'Knock-knock',
+  story: 'Story',
+  anti: 'Anti-joke',
+  observ: 'Observational',
+}
+
+const TONE_OPTIONS = [
+  'Wholesome',
+  'Office-proper',
+  'Dad',
+  'Kid-safe',
+  'Nerd',
+  'Surreal',
+  'Dark',
+  'Edgy',
+  'Witty',
+  'Punny',
+]

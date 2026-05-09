@@ -1,3 +1,4 @@
+// Redesigned pages (current design system, FlowAppShell)
 export { HomePage } from './HomePage'
 export { SearchPage } from './SearchPage'
 export { DailyJokePage } from './DailyJokePage'
@@ -7,7 +8,6 @@ export { GoogleCallbackPage } from './GoogleCallbackPage'
 export { FlowPage } from './FlowPage'
 export { FlowCanvasPage } from './FlowCanvasPage'
 export { ExplorePage } from './ExplorePage'
-export { OnboardingPage } from './OnboardingPage'
 export { LibraryPage } from './LibraryPage'
 export { TrendingPage } from './TrendingPage'
 export { FavoritesPage } from './FavoritesPage'
@@ -16,3 +16,14 @@ export { ProfilePage } from './ProfilePage'
 export { SettingsPage } from './SettingsPage'
 export { SubmitJokePage } from './SubmitJokePage'
 export { NotFoundPage } from './NotFoundPage'
+
+// Legacy components — preserved at /legacy/<path> mirror routes for reference.
+// Will retire once the redesigned versions are reviewed and approved.
+export { OnboardingPage } from './OnboardingPage'
+export { HomePageLegacy } from './HomePageLegacy'
+export { TrendingPageLegacy } from './TrendingPageLegacy'
+export { FavoritesPageLegacy } from './FavoritesPageLegacy'
+export { DraftsPageLegacy } from './DraftsPageLegacy'
+export { ProfilePageLegacy } from './ProfilePageLegacy'
+export { SettingsPageLegacy } from './SettingsPageLegacy'
+export { SubmitJokePageLegacy } from './SubmitJokePageLegacy'

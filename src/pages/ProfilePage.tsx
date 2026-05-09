@@ -1,151 +1,285 @@
 import { Link } from 'react-router'
-import { Bookmark, Share2, FolderOpen, Flame, Settings, Edit3, Lock } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Settings, Edit3, Bookmark, FolderOpen, Flame, Award } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
+import { useAuth } from '@/features/auth'
 import { useProfile, useActivity, useAchievements } from '@/features/profile'
-import { cn } from '@/lib/utils'
 
-const statIcons = [Bookmark, Share2, FolderOpen, Flame]
-const statLabels = ['Jokes Saved', 'Jokes Shared', 'Collections', 'Days Active']
-const statColors = ['#6A1CF6', '#AC8EFF', '#FFC965', '#CAFD00']
-
-const humorDNAColors: Record<string, string> = {
-  'Dad Jokes': '#FFC965',
-  'Puns': '#CAFD00',
-  'Sarcasm': '#AC8EFF',
-  'Geeky': '#6A1CF6',
-}
-
+/**
+ * ProfilePage — redesigned for iteration 4.
+ *
+ * Sections:
+ *   1. Identity card (avatar + name + handle + bio + edit/settings buttons)
+ *   2. Stats row (saved, collections, streak)
+ *   3. Activity feed
+ *   4. Achievements grid
+ */
 export function ProfilePage() {
+  const { user } = useAuth()
   const { data: profile } = useProfile()
-  const { data: activity = [] } = useActivity()
-  const { data: achievements = [] } = useAchievements()
+  const { data: activity } = useActivity(8)
+  const { data: achievements } = useAchievements()
 
-  if (!profile) {
-    return <div className="px-4 lg:px-8 py-20 text-center text-[#6B7280]">Loading profile...</div>
-  }
-
-  const stats = [profile.stats.jokesSaved, profile.stats.jokesShared, profile.stats.collections, profile.stats.daysActive]
+  const displayName = profile?.name ?? user?.first_name ?? user?.username ?? 'Friend'
+  const handle = profile?.username ?? (user?.username ? `@${user.username}` : '@you')
+  const bio = profile?.bio ?? 'No bio yet — give the people something to read.'
+  const memberSince = profile?.memberSince
+    ? new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : '—'
 
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-4xl mx-auto">
-      {/* Profile Header Card */}
-      <Card radius="lg" className="p-6 lg:p-8 mb-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-purple opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-5">
-            <div className="relative">
-              <Avatar name={profile.name} size="xl" color="#6A1CF6" />
-              <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-[#CAFD00] border-2 border-white flex items-center justify-center">
-                <span className="text-[10px]">✓</span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="font-display font-bold text-2xl text-[#2E2F2F]">{profile.name}</h1>
-                <Badge variant="default" size="sm">Premium</Badge>
-              </div>
-              <p className="text-sm text-[#6B7280] mb-1">{profile.username}</p>
-              <p className="text-sm text-[#6B7280] mb-3">Member since {new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-              <p className="text-[#52525B] text-sm max-w-md">{profile.bio}</p>
-            </div>
-            <div className="flex gap-2 lg:self-start">
-              <Button variant="pill-outline" size="sm" className="gap-1.5" asChild>
-                <Link to="/settings"><Edit3 className="size-3.5" /> Edit Profile</Link>
-              </Button>
-              <Button variant="ghost" size="icon-sm" asChild>
-                <Link to="/settings"><Settings className="size-4 text-[#6B7280]" /></Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {stats.map((value, i) => {
-          const Icon = statIcons[i]
-          return (
-            <Card key={statLabels[i]} radius="md" className="p-4 text-center">
-              <Icon className="size-6 mx-auto mb-2" style={{ color: statColors[i] }} />
-              <p className="font-display font-bold text-2xl text-[#2E2F2F]">{value}</p>
-              <p className="text-xs text-[#6B7280]">{statLabels[i]}</p>
-            </Card>
-          )
-        })}
-      </div>
-
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-        {/* Humor DNA */}
-        <Card radius="lg" className="p-6 mb-6 lg:mb-0">
-          <h2 className="font-display font-bold text-xl text-[#2E2F2F] mb-5">Your Humor DNA</h2>
-          <div className="space-y-4">
-            {profile.humorDNA.map((item) => (
-              <div key={item.type}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-semibold text-[#2E2F2F]">{item.type}</span>
-                  <span className="text-sm font-bold" style={{ color: humorDNAColors[item.type] || '#6A1CF6' }}>{item.percentage}%</span>
-                </div>
-                <div className="h-3 bg-[#F2F0F0] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${item.percentage}%`,
-                      backgroundColor: humorDNAColors[item.type] || '#6A1CF6',
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <Button variant="pill-outline" size="sm" className="mt-5" asChild>
-            <Link to="/onboarding">Update Preferences</Link>
-          </Button>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card radius="lg" className="p-6 mb-6 lg:mb-0">
-          <h2 className="font-display font-bold text-xl text-[#2E2F2F] mb-5">Recent Activity</h2>
-          <div className="space-y-4">
-            {activity.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
-                <span className="text-lg shrink-0">{item.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#2E2F2F]">{item.description}</p>
-                  <p className="text-xs text-[#6B7280] mt-0.5">{item.timeAgo}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Achievements */}
-      <Card radius="lg" className="p-6 mt-6">
-        <h2 className="font-display font-bold text-xl text-[#2E2F2F] mb-5">Achievements</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {achievements.map((ach) => (
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="library">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1200, margin: '0 auto' }}>
+          {/* Identity card */}
+          <article
+            style={{
+              padding: 'clamp(28px, 4vw, 40px)',
+              background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
+              border: '1px solid #E9E8E7',
+              borderRadius: 24,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
             <div
-              key={ach.id}
-              className={cn(
-                'rounded-[24px] p-4 text-center transition-all',
-                ach.unlocked
-                  ? 'bg-[#F7F0FF] hover:bg-[#6A1CF6]/10'
-                  : 'bg-[#F2F0F0] opacity-50'
-              )}
-            >
-              <span className="text-3xl block mb-2">{ach.unlocked ? ach.icon : <Lock className="size-7 mx-auto text-[#DDDCDC]" />}</span>
-              <p className="font-semibold text-sm text-[#2E2F2F] mb-0.5">{ach.title}</p>
-              <p className="text-[10px] text-[#6B7280]">{ach.description}</p>
-              {ach.unlocked && ach.unlockedAt && (
-                <p className="text-[9px] text-[#AC8EFF] font-semibold mt-1">{new Date(ach.unlockedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
-              )}
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: -80,
+                right: -80,
+                width: 280,
+                height: 280,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, #F2E9FF, transparent 70%)',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap', position: 'relative' }}>
+              <div
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 28,
+                  background: '#6A1CF6',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 44,
+                  letterSpacing: '-0.02em',
+                  flexShrink: 0,
+                }}
+              >
+                {displayName[0]?.toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 240 }}>
+                <span className="eyebrow-mono">Member since {memberSince}</span>
+                <h1
+                  style={{
+                    marginTop: 6,
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: 'clamp(2rem, 4vw, 2.75rem)',
+                    letterSpacing: '-0.02em',
+                    color: '#1A1A1A',
+                    lineHeight: 1.05,
+                  }}
+                >
+                  {displayName}
+                </h1>
+                <div style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 13, color: '#6A1CF6' }}>{handle}</div>
+                <p style={{ marginTop: 12, fontSize: 16, color: '#52525B', lineHeight: 1.5, maxWidth: 580 }}>
+                  {bio}
+                </p>
+                <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn-flow-primary" style={{ height: 40, fontSize: 13 }}>
+                    <Edit3 size={14} /> Edit profile
+                  </button>
+                  <Link to="/settings" className="btn-flow-ghost" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
+                    <Settings size={14} /> Settings
+                  </Link>
+                </div>
+              </div>
             </div>
-          ))}
+          </article>
+
+          {/* Stats row */}
+          <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+            <ProfileStat icon={<Bookmark size={18} />} value={String(profile?.stats?.jokesSaved ?? 42)} label="Saved jokes" accent="purple" />
+            <ProfileStat icon={<FolderOpen size={18} />} value={String(profile?.stats?.collections ?? 5)} label="Collections" accent="amber" />
+            <ProfileStat icon={<Flame size={18} />} value={String(profile?.stats?.daysActive ?? 14)} label="Days active" accent="lime" />
+          </div>
+
+          {/* Activity + Achievements */}
+          <div
+            style={{
+              marginTop: 48,
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+              gap: 24,
+            }}
+          >
+            {/* Activity */}
+            <section>
+              <span className="eyebrow-mono">Recent activity</span>
+              <h2
+                style={{
+                  marginTop: 4,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 28,
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  marginBottom: 18,
+                }}
+              >
+                What you've <em className="wink">been up to.</em>
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {(activity ?? []).map((a, i, arr) => (
+                  <div
+                    key={a.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '14px 0',
+                      borderBottom: i < arr.length - 1 ? '1px solid #E9E8E7' : '0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: '#F2E9FF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontSize: 18,
+                      }}
+                    >
+                      {a.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
+                        {a.description}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.06em', color: '#6B7280', marginTop: 2 }}>
+                        {a.timeAgo}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(!activity || activity.length === 0) && (
+                  <p style={{ fontSize: 14, color: '#6B7280', padding: '14px 0' }}>No activity yet.</p>
+                )}
+              </div>
+            </section>
+
+            {/* Achievements */}
+            <section>
+              <span className="eyebrow-mono">Achievements</span>
+              <h2
+                style={{
+                  marginTop: 4,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 28,
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  marginBottom: 18,
+                }}
+              >
+                Things you've <em className="wink">unlocked.</em>
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                {(achievements ?? []).map((a) => (
+                  <div
+                    key={a.id}
+                    style={{
+                      padding: 18,
+                      borderRadius: 14,
+                      background: a.unlocked ? '#FFC965' : '#F2F0F0',
+                      color: a.unlocked ? '#5F4200' : '#6B7280',
+                      textAlign: 'center',
+                      opacity: a.unlocked ? 1 : 0.6,
+                    }}
+                  >
+                    <div style={{ fontSize: 32 }}>{a.icon}</div>
+                    <div style={{ marginTop: 8, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, letterSpacing: '-0.005em' }}>
+                      {a.title}
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 2, opacity: 0.85 }}>{a.description}</div>
+                  </div>
+                ))}
+                {(!achievements || achievements.length === 0) && (
+                  <div style={{ padding: 18, borderRadius: 14, background: '#F2F0F0', textAlign: 'center', color: '#6B7280' }}>
+                    <Award size={24} style={{ margin: '0 auto', display: 'block' }} />
+                    <div style={{ marginTop: 8, fontSize: 13 }}>No achievements yet.</div>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
-      </Card>
+      </FlowAppShell>
+    </div>
+  )
+}
+
+function ProfileStat({ icon, value, label, accent }: { icon: React.ReactNode; value: string; label: string; accent: 'purple' | 'amber' | 'lime' }) {
+  const palette = {
+    purple: { bg: '#6A1CF6', fg: '#fff' },
+    amber: { bg: '#FFC965', fg: '#5F4200' },
+    lime: { bg: '#CAFD00', fg: '#3A4A00' },
+  }[accent]
+  return (
+    <div
+      style={{
+        padding: 24,
+        background: palette.bg,
+        color: palette.fg,
+        borderRadius: 18,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: 'rgba(255, 255, 255, 0.2)',
+          color: palette.fg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 32, lineHeight: 1, letterSpacing: '-0.01em' }}>
+          {value}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            opacity: 0.85,
+            marginTop: 4,
+          }}
+        >
+          {label}
+        </div>
+      </div>
     </div>
   )
 }

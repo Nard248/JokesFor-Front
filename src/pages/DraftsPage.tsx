@@ -1,155 +1,318 @@
-import { useNavigate } from 'react-router'
-import { PenLine, Clock, Check, AlertCircle, ThumbsUp, Trash2, Edit3, Lightbulb } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Link } from 'react-router'
+import { PenLine, Plus, Send, Trash2, Clock, ArrowRight } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
 import { useDrafts, useSubmitDraft, useDeleteDraft } from '@/features/drafts'
 
-const statusConfig = {
-  draft: { label: 'Draft', color: 'bg-[#E9E8E7] text-[#52525B]', icon: PenLine },
-  pending: { label: 'Pending Review', color: 'bg-[#FFC965]/20 text-[#5F4200]', icon: Clock },
-  published: { label: 'Published', color: 'bg-[#CAFD00]/20 text-[#3A4A00]', icon: Check },
-  rejected: { label: 'Rejected', color: 'bg-red-50 text-red-600', icon: AlertCircle },
-}
-
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 1) return 'Just now'
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
+/**
+ * DraftsPage — redesigned for iteration 4.
+ *
+ * Sections:
+ *   1. Hero (greeting + count)
+ *   2. New-draft CTA
+ *   3. Draft list with status badges + submit/delete actions
+ *
+ * Status palette (per mock-data shape):
+ *   - draft     → gray
+ *   - pending   → amber (under review)
+ *   - published → lime (live in catalog)
+ *   - rejected  → ink (with note in legacy; not surfaced here yet)
+ */
 export function DraftsPage() {
-  const navigate = useNavigate()
-  const { data: draftsData } = useDrafts()
-  const submitMutation = useSubmitDraft()
-  const deleteMutation = useDeleteDraft()
+  const { data: draftsData, isLoading } = useDrafts()
+  const submit = useSubmitDraft()
+  const remove = useDeleteDraft()
 
-  const drafts = draftsData?.results || []
+  const drafts = draftsData?.results ?? []
+  const inProgress = drafts.filter((d) => d.status === 'draft').length
+  const pending = drafts.filter((d) => d.status === 'pending').length
+  const published = drafts.filter((d) => d.status === 'published').length
 
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-6xl">
-      {/* Header */}
-      <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <PenLine className="size-8 text-[#6A1CF6]" />
-            <h1 className="font-display font-black text-3xl lg:text-5xl text-[#2E2F2F]">
-              Your Drafts
-            </h1>
-          </div>
-          <p className="text-[#6B7280] text-base lg:text-lg">
-            Works in progress. Every punchline starts somewhere.
-          </p>
-        </div>
-        <Button variant="pill-lime" size="xl" className="gap-2" onClick={() => navigate('/submit')}>
-          <PenLine className="size-5" /> Create New Draft
-        </Button>
-      </section>
-
-      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
-        {/* Drafts List */}
-        <div className="lg:col-span-2 space-y-4 mb-8 lg:mb-0">
-          {drafts.map((draft) => {
-            const status = statusConfig[draft.status]
-            const StatusIcon = status.icon
-            return (
-              <Card key={draft.id} radius="lg" hover className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${status.color}`}>
-                      <StatusIcon className="size-3" />
-                      {status.label}
-                    </span>
-                    <Badge variant="muted" size="sm">{draft.format}</Badge>
-                  </div>
-                  <span className="text-xs text-[#6B7280]">{timeAgo(draft.lastEditedAt)}</span>
-                </div>
-
-                <div className="mb-4">
-                  <p className="font-semibold text-[#2E2F2F] text-base mb-1">{draft.setup}</p>
-                  {draft.punchline && (
-                    <div className="flex gap-3 mt-2">
-                      <div className="w-[3px] bg-[#6A1CF6] rounded-full shrink-0" />
-                      <p className="font-display font-bold italic text-base text-[#6A1CF6]">{draft.punchline}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Tones */}
-                <div className="flex items-center gap-2 mb-4 flex-wrap">
-                  {draft.tones.map((tone) => (
-                    <Badge key={tone} variant="muted" size="sm">{tone}</Badge>
-                  ))}
-                </div>
-
-                {/* Published likes */}
-                {draft.status === 'published' && draft.likes && (
-                  <div className="flex items-center gap-1.5 mb-4 text-sm text-[#6B7280]">
-                    <ThumbsUp className="size-4 text-[#CAFD00]" />
-                    <span className="font-semibold text-[#2E2F2F]">{draft.likes} likes</span> since published
-                  </div>
-                )}
-
-                {/* Rejection reason */}
-                {draft.status === 'rejected' && draft.rejectionReason && (
-                  <div className="bg-red-50 rounded-2xl p-3 mb-4 text-sm text-red-600">
-                    <span className="font-semibold">Feedback:</span> {draft.rejectionReason}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  {(draft.status === 'draft' || draft.status === 'rejected') && (
-                    <Button variant="pill-outline" size="sm" className="gap-1.5">
-                      <Edit3 className="size-3.5" /> Edit
-                    </Button>
-                  )}
-                  {draft.status === 'draft' && (
-                    <Button variant="pill" size="sm" onClick={() => submitMutation.mutate(draft.id)}>Submit for Review</Button>
-                  )}
-                  {draft.status === 'rejected' && (
-                    <Button variant="pill" size="sm" onClick={() => submitMutation.mutate(draft.id)}>Resubmit</Button>
-                  )}
-                  <Button variant="ghost" size="icon-sm" className="ml-auto text-[#6B7280] hover:text-red-500" onClick={() => deleteMutation.mutate(draft.id)}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-
-        {/* Sidebar: Tips */}
-        <div className="hidden lg:block">
-          <Card radius="lg" className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="size-5 text-[#FFC965]" />
-              <h3 className="font-display font-bold text-lg text-[#2E2F2F]">Pro Tips</h3>
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="library">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+          {/* Hero */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <span className="eyebrow-mono">Drafts · {drafts.length} total</span>
+              <h2
+                style={{
+                  marginTop: 8,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  lineHeight: 1.05,
+                }}
+              >
+                Things you're <em className="wink">working on.</em>
+              </h2>
+              <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
+                Polish, submit, ship. Drafts you don't ship are jokes that don't land.
+              </p>
             </div>
-            <ul className="space-y-4 text-sm text-[#52525B]">
-              <li className="flex gap-3">
-                <span className="shrink-0 size-6 rounded-full bg-[#F7F0FF] text-[#6A1CF6] flex items-center justify-center text-xs font-bold">1</span>
-                <span><strong>Keep it tight.</strong> The best jokes are under 3 sentences. Trim the fat.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="shrink-0 size-6 rounded-full bg-[#F7F0FF] text-[#6A1CF6] flex items-center justify-center text-xs font-bold">2</span>
-                <span><strong>Surprise them.</strong> The punchline should go where they least expect.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="shrink-0 size-6 rounded-full bg-[#F7F0FF] text-[#6A1CF6] flex items-center justify-center text-xs font-bold">3</span>
-                <span><strong>Tag wisely.</strong> Good tags help the right audience find your joke.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="shrink-0 size-6 rounded-full bg-[#F7F0FF] text-[#6A1CF6] flex items-center justify-center text-xs font-bold">4</span>
-                <span><strong>Read it aloud.</strong> If it doesn't land spoken, rewrite it.</span>
-              </li>
-            </ul>
-          </Card>
+            <Link
+              to="/submit"
+              className="btn-flow-primary"
+              style={{ height: 48, fontSize: 14, textDecoration: 'none' }}
+            >
+              <Plus size={16} /> Start a new draft
+            </Link>
+          </div>
+
+          {/* Status counts */}
+          <div
+            style={{
+              marginTop: 32,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 16,
+            }}
+          >
+            <CountCard count={inProgress} label="In progress" accent="purple" />
+            <CountCard count={pending} label="Awaiting review" accent="amber" />
+            <CountCard count={published} label="Published" accent="lime" />
+          </div>
+
+          {/* Drafts list */}
+          <section style={{ marginTop: 48 }}>
+            <span className="eyebrow-mono">All drafts</span>
+            <h3
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 28,
+                marginTop: 4,
+                marginBottom: 18,
+                letterSpacing: '-0.02em',
+                color: '#1A1A1A',
+              }}
+            >
+              Your <em className="wink">workshop.</em>
+            </h3>
+
+            {isLoading ? (
+              <DraftsSkeleton />
+            ) : drafts.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {drafts.map((d) => (
+                  <DraftRow
+                    key={d.id}
+                    setup={d.setup}
+                    punchline={d.punchline}
+                    format={d.format}
+                    status={d.status}
+                    lastEditedAt={d.lastEditedAt}
+                    onSubmit={d.status === 'draft' ? () => submit.mutate(d.id) : undefined}
+                    onDelete={() => remove.mutate(d.id)}
+                    submitting={submit.isPending}
+                    deleting={remove.isPending}
+                  />
+                ))}
+              </div>
+            ) : (
+              <DraftsEmpty />
+            )}
+          </section>
         </div>
+      </FlowAppShell>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ──────────────────────────────────────────────────────────────────────────
+
+function CountCard({ count, label, accent }: { count: number; label: string; accent: 'purple' | 'amber' | 'lime' }) {
+  const palette = {
+    purple: { fg: '#6A1CF6', tint: '#F2E9FF' },
+    amber: { fg: '#5F4200', tint: 'rgba(255, 201, 101, 0.18)' },
+    lime: { fg: '#3A4A00', tint: 'rgba(202, 253, 0, 0.18)' },
+  }[accent]
+  return (
+    <div
+      style={{
+        padding: 24,
+        background: palette.tint,
+        borderRadius: 18,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      <div className="eyebrow-mono" style={{ color: palette.fg }}>
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: 48,
+          color: palette.fg,
+          lineHeight: 1,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {count}
       </div>
     </div>
   )
+}
+
+interface DraftRowProps {
+  setup: string
+  punchline: string
+  format: string
+  status: 'draft' | 'pending' | 'published' | 'rejected'
+  lastEditedAt: string
+  onSubmit?: () => void
+  onDelete: () => void
+  submitting: boolean
+  deleting: boolean
+}
+
+function DraftRow({ setup, punchline, format, status, lastEditedAt, onSubmit, onDelete, submitting, deleting }: DraftRowProps) {
+  const statusPill = {
+    draft: { bg: '#F2F0F0', fg: '#52525B', label: 'Draft' },
+    pending: { bg: 'rgba(255, 201, 101, 0.3)', fg: '#5F4200', label: 'Pending review' },
+    published: { bg: '#CAFD00', fg: '#3A4A00', label: 'Published' },
+    rejected: { bg: '#1A1A1A', fg: '#fff', label: 'Rejected' },
+  }[status]
+
+  const dateText = formatRelative(lastEditedAt)
+
+  return (
+    <article
+      style={{
+        padding: 24,
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 18,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: 6,
+              background: statusPill.bg,
+              color: statusPill.fg,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+            }}
+          >
+            {statusPill.label}
+          </span>
+          <span className="eyebrow-mono">{format}</span>
+        </div>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.06em', color: '#6B7280', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <Clock size={11} /> {dateText}
+        </span>
+      </div>
+      <div>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 18, color: '#1A1A1A', lineHeight: 1.3 }}>
+          {setup}
+        </div>
+        <div style={{ marginTop: 6, fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 22, color: '#1A1A1A', lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+          {punchline}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        {onSubmit && (
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting}
+            className="btn-flow-primary"
+            style={{ height: 36, fontSize: 13, padding: '0 16px' }}
+          >
+            <Send size={13} /> {submitting ? 'Submitting…' : 'Submit for review'}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="btn-flow-ghost"
+          style={{ height: 36, fontSize: 13, padding: '0 16px' }}
+        >
+          <Trash2 size={13} /> {deleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function DraftsEmpty() {
+  return (
+    <div
+      style={{
+        padding: '56px 32px',
+        border: '1px dashed #E9E8E7',
+        borderRadius: 18,
+        textAlign: 'center',
+        background: '#fff',
+      }}
+    >
+      <div style={{ width: 56, height: 56, borderRadius: 14, background: '#F2E9FF', color: '#6A1CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+        <PenLine size={22} />
+      </div>
+      <div style={{ marginTop: 16, fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 28, color: '#1A1A1A', letterSpacing: '-0.02em' }}>
+        Got a <em className="wink">good one?</em>
+      </div>
+      <p style={{ marginTop: 8, fontSize: 18, color: '#52525B', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
+        Drafts you save here can be polished, previewed, and submitted to the catalog when they're ready.
+      </p>
+      <Link to="/submit" className="btn-flow-primary" style={{ display: 'inline-flex', marginTop: 16, height: 44, fontSize: 14, textDecoration: 'none' }}>
+        Start a new draft <ArrowRight size={16} />
+      </Link>
+    </div>
+  )
+}
+
+function DraftsSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            padding: 24,
+            background: '#fff',
+            border: '1px solid #E9E8E7',
+            borderRadius: 18,
+            minHeight: 100,
+          }}
+        >
+          <div style={{ height: 14, width: 80, background: '#F2F0F0', borderRadius: 4 }} />
+          <div style={{ height: 24, background: '#F2F0F0', borderRadius: 6, marginTop: 12 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────
+
+function formatRelative(iso: string): string {
+  const d = new Date(iso)
+  const ms = Date.now() - d.getTime()
+  const minutes = Math.floor(ms / 60000)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

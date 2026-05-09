@@ -1,176 +1,435 @@
-import { useNavigate } from 'react-router'
-import { Flame, TrendingUp, ArrowUpRight, ThumbsUp, Share2, MessageCircle } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Avatar } from '@/components/ui/avatar'
-import { TopJokesterItem } from '@/components/TopJokesterItem'
-import { FreshArrivalCard } from '@/components/FreshArrivalCard'
-import { useTrendingJokes, useTrendingTags, useRisingTopics, useTopJokesters } from '@/features/trending'
-import { mockAuthors } from '@/lib/mock-data'
+import { useState } from 'react'
+import { Link } from 'react-router'
+import { Flame, TrendingUp, ArrowRight } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
+import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import {
+  useTrendingJokes,
+  useTrendingTags,
+  useRisingTopics,
+  useTopJokesters,
+  usePopularThemes,
+} from '@/features/trending'
 
+/**
+ * TrendingPage — redesigned for iteration 4.
+ *
+ * Sections:
+ *   1. Hero with period selector (24h / week / month)
+ *   2. Trending jokes masonry (top 6-9 in selected period)
+ *   3. Rising topics (lime band)
+ *   4. Top jokesters list (mirrors FlowCanvas pattern)
+ *   5. Trending tags + popular themes (combined chip cloud)
+ */
 export function TrendingPage() {
-  const navigate = useNavigate()
-  const { data: trendingJokes = [] } = useTrendingJokes()
-  const { data: trendingTags = [] } = useTrendingTags()
-  const { data: risingTopics = [] } = useRisingTopics()
-  const { data: topJokesters = [] } = useTopJokesters(5)
+  const [period, setPeriod] = useState<'24h' | 'week' | 'month'>('week')
 
-  const topJoke = trendingJokes[0]
-  const restJokes = trendingJokes.slice(1)
-  const author = mockAuthors[1]
+  const { data: trendingJokes } = useTrendingJokes(period)
+  const { data: trendingTags } = useTrendingTags()
+  const { data: risingTopics } = useRisingTopics()
+  const { data: jokesters } = useTopJokesters(5)
+  const { data: themes } = usePopularThemes()
 
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-6xl">
-      {/* Hero */}
-      <section className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Flame className="size-8 text-orange-500" />
-          <h1 className="font-display font-black text-3xl lg:text-5xl text-[#2E2F2F]">
-            What's Trending
-          </h1>
-        </div>
-        <p className="text-[#6B7280] text-base lg:text-lg">
-          The hottest punchlines heating up the community right now.
-        </p>
-      </section>
-
-      {/* Trending Tags Row */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {trendingTags.map((tag) => (
-            <button
-              key={tag.name}
-              onClick={() => navigate(`/search?q=${encodeURIComponent(tag.name)}`)}
-              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-[#E9E8E7] hover:border-[#6A1CF6] transition-colors"
-            >
-              <span className="text-sm font-semibold text-[#2E2F2F]">{tag.name}</span>
-              <span className="text-xs text-[#6B7280]">🔥 {tag.count >= 1000 ? `${(tag.count / 1000).toFixed(1)}k` : tag.count}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* #1 Trending Joke */}
-      {topJoke && <section className="mb-10">
-        <div className="bg-gradient-to-br from-[#FFC965] to-[#FFB800] rounded-[32px] p-8 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 size-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-5">
-              <Badge variant="default" size="lg" className="bg-[#2E2F2F]">🏆 #1 Trending</Badge>
-            </div>
-            {topJoke.joke.setup ? (
-              <>
-                <p className="font-display font-bold text-xl lg:text-2xl text-[#2E2F2F] mb-2">
-                  "{topJoke.joke.setup}"
-                </p>
-                {topJoke.joke.punchline && (
-                  <p className="font-display font-bold italic text-xl lg:text-2xl text-[#5F4200] mb-6">
-                    "{topJoke.joke.punchline}"
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="font-display font-bold text-xl lg:text-2xl text-[#2E2F2F] mb-6">
-                "{topJoke.joke.text}"
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="explore">
+        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+          {/* Hero */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <span className="eyebrow-mono">Trending · what's landing right now</span>
+              <h2
+                style={{
+                  marginTop: 8,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 'clamp(2.25rem, 5vw, 3.5rem)',
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  lineHeight: 1.05,
+                }}
+              >
+                What's <em className="wink">hitting hard.</em>
+              </h2>
+              <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
+                The community's funniest, most-saved, most-shared. Updated continuously.
               </p>
-            )}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar initials={author.initials} color={author.color} size="sm" />
-                <span className="text-sm font-medium text-[#5F4200]">{author.username}</span>
-                <span className="text-sm text-[#5F4200]/60">• {topJoke.trendingSince}</span>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#5F4200]">
-                <span className="flex items-center gap-1"><ThumbsUp className="size-4" /> {(topJoke.likes / 1000).toFixed(1)}k</span>
-                <span className="flex items-center gap-1"><Share2 className="size-4" /> {(topJoke.shares / 1000).toFixed(1)}k</span>
-                <span className="flex items-center gap-1"><MessageCircle className="size-4" /> {topJoke.comments}</span>
-              </div>
             </div>
+            <Link
+              to="/explore"
+              style={{
+                color: '#6A1CF6',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 14,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              Filter all of Explore <ArrowRight size={14} />
+            </Link>
           </div>
-        </div>
-      </section>}
 
-      {/* Main Content: Trending Grid + Sidebar */}
-      <section className="lg:grid lg:grid-cols-3 lg:gap-8">
-        {/* Trending Jokes */}
-        <div className="lg:col-span-2">
-          <h2 className="font-display font-bold text-2xl text-[#2E2F2F] mb-5">Climbing the Charts</h2>
-          <div className="space-y-4">
-            {restJokes.map((item) => (
-              <div key={item.rank} className="relative">
-                {/* Rank badge */}
-                <div className="absolute -left-2 top-6 z-10 size-8 rounded-full bg-[#6A1CF6] text-white flex items-center justify-center font-bold text-sm shadow-lg">
-                  #{item.rank}
-                </div>
-                <FreshArrivalCard
-                  joke={item.joke}
-                  likes={item.likes}
-                  comments={item.comments}
-                  timeAgo={item.trendingSince}
-                />
-              </div>
-            ))}
+          {/* Period selector */}
+          <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span className="eyebrow-mono">Period</span>
+            <PeriodChip label="Last 24h" active={period === '24h'} onClick={() => setPeriod('24h')} />
+            <PeriodChip label="This week" active={period === 'week'} onClick={() => setPeriod('week')} />
+            <PeriodChip label="This month" active={period === 'month'} onClick={() => setPeriod('month')} />
           </div>
-        </div>
 
-        {/* Sidebar */}
-        <div className="hidden lg:flex flex-col gap-6 mt-0">
-          {/* Rising Topics */}
-          <Card radius="lg" className="p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="size-5 text-[#6A1CF6]" />
-              <h3 className="font-display font-bold text-lg text-[#2E2F2F]">Rising Topics</h3>
-            </div>
-            <div className="space-y-3">
-              {risingTopics.map((topic) => (
-                <button
-                  key={topic.name}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
-                  className="w-full flex items-center justify-between py-2 hover:bg-[#F7F0FF] rounded-xl px-2 -mx-2 transition-colors"
-                >
-                  <span className="text-sm font-medium text-[#2E2F2F]">{topic.name}</span>
-                  <span className="flex items-center gap-1 text-xs font-bold text-green-600">
-                    <ArrowUpRight className="size-3" /> +{topic.growth}%
-                  </span>
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Jokesters on Fire */}
-          <Card radius="lg" className="p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Flame className="size-5 text-orange-500" />
-              <h3 className="font-display font-bold text-lg text-[#2E2F2F]">Jokesters on Fire</h3>
-            </div>
-            <div className="divide-y divide-[#E9E8E7]">
-              {topJokesters.map((jokester) => (
-                <TopJokesterItem key={jokester.id} jokester={jokester} />
-              ))}
-            </div>
-          </Card>
-
-          {/* Trending Collections */}
-          <Card radius="lg" className="p-5">
-            <h3 className="font-display font-bold text-lg text-[#2E2F2F] mb-4">Hot Collections</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'Monday Meeting Survival', count: 38, emoji: '💼' },
-                { name: 'Science Fair Icebreakers', count: 24, emoji: '🔬' },
-                { name: 'Wedding Toast Gems', count: 52, emoji: '🥂' },
-              ].map((col) => (
-                <button key={col.name} className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-[#F2F0F0] transition-colors">
-                  <span className="text-2xl">{col.emoji}</span>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-[#2E2F2F]">{col.name}</p>
-                    <p className="text-xs text-[#6B7280]">{col.count} jokes</p>
+          {/* Trending jokes */}
+          <section style={{ marginTop: 36 }}>
+            <SectionHeader
+              eyebrow="Trending jokes"
+              title={
+                <>
+                  Top of the <em className="wink">stack.</em>
+                </>
+              }
+            />
+            {trendingJokes && trendingJokes.length > 0 ? (
+              <div style={{ marginTop: 18, columnCount: 3, columnGap: 18 }}>
+                {trendingJokes.slice(0, 9).map((tj, i) => (
+                  <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                    <FlowJokeCard joke={trendingToFlowData(tj, i)} />
                   </div>
-                </button>
-              ))}
+                ))}
+              </div>
+            ) : (
+              <SectionEmpty />
+            )}
+          </section>
+
+          {/* Rising topics + Top jokesters */}
+          <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 24 }}>
+            {/* Rising topics — lime band */}
+            <div style={{ padding: 28, background: '#CAFD00', color: '#3A4A00', borderRadius: 22 }}>
+              <span className="eyebrow-mono" style={{ color: '#3A4A00' }}>
+                Rising fast
+              </span>
+              <h3
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 26,
+                  marginTop: 6,
+                  letterSpacing: '-0.02em',
+                  color: '#3A4A00',
+                  lineHeight: 1.1,
+                }}
+              >
+                Topics with <em className="wink" style={{ color: '#3A4A00' }}>velocity.</em>
+              </h3>
+              <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(risingTopics ?? []).slice(0, 5).map((topic, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '12px 16px',
+                      background: 'rgba(255, 255, 255, 0.4)',
+                      borderRadius: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        background: '#3A4A00',
+                        color: '#CAFD00',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: 900,
+                        fontSize: 12,
+                        flexShrink: 0,
+                      }}
+                    >
+                      #{i + 1}
+                    </div>
+                    <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>
+                      {topic.name}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600 }}>+{topic.growth}%</div>
+                  </div>
+                ))}
+                {(!risingTopics || risingTopics.length === 0) && (
+                  <p style={{ fontSize: 13, opacity: 0.85 }}>Nothing rising yet — quiet week in the catalog.</p>
+                )}
+              </div>
             </div>
-          </Card>
+
+            {/* Top jokesters */}
+            <div style={{ padding: 28, background: '#fff', border: '1px solid #E9E8E7', borderRadius: 22 }}>
+              <span className="eyebrow-mono">Top jokesters · {period === '24h' ? '24h' : period === 'week' ? 'This week' : 'This month'}</span>
+              <h3
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 26,
+                  marginTop: 6,
+                  letterSpacing: '-0.02em',
+                  color: '#1A1A1A',
+                  lineHeight: 1.1,
+                  marginBottom: 18,
+                }}
+              >
+                The five <em className="wink">carrying us.</em>
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {(jokesters ?? []).map((j, i, arr) => (
+                  <div
+                    key={j.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '12px 0',
+                      borderBottom: i < arr.length - 1 ? '1px solid #E9E8E7' : '0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: 900,
+                        fontSize: 22,
+                        color: i === 0 ? '#6A1CF6' : '#52525B',
+                        width: 32,
+                      }}
+                    >
+                      #{j.rank}
+                    </div>
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '50%',
+                        background: i === 0 ? '#6A1CF6' : i === 1 ? '#CAFD00' : i === 2 ? '#FFC965' : '#1A1A1A',
+                        color: i === 1 ? '#3A4A00' : i === 2 ? '#5F4200' : '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: 900,
+                        fontSize: 13,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {(j.name ?? '?').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>{j.name}</div>
+                      <div style={{ fontSize: 11, color: '#6B7280', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+                        Rank #{j.rank}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{j.punchlineCount}</div>
+                      <div style={{ fontSize: 10, color: '#6B7280', fontFamily: 'var(--font-mono)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                        punchlines
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(!jokesters || jokesters.length === 0) && (
+                  <p style={{ fontSize: 13, color: '#6B7280' }}>No jokesters surfaced yet for this period.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Tags + themes cloud */}
+          <section style={{ marginTop: 56 }}>
+            <SectionHeader
+              eyebrow="Tags & themes"
+              title={
+                <>
+                  What's being <em className="wink">talked about.</em>
+                </>
+              }
+            />
+            <div style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(themes ?? []).map((t, i) => (
+                <span
+                  key={i}
+                  style={{
+                    height: 36,
+                    padding: '0 16px',
+                    fontSize: 14,
+                    background: '#6A1CF6',
+                    color: '#fff',
+                    border: 0,
+                    borderRadius: 9999,
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+              {(trendingTags ?? []).map((t, i) => (
+                <span
+                  key={`tag-${i}`}
+                  style={{
+                    height: 30,
+                    padding: '0 12px',
+                    fontSize: 12,
+                    background: '#fff',
+                    color: '#1A1A1A',
+                    border: '1px solid #E9E8E7',
+                    borderRadius: 9999,
+                    fontFamily: 'var(--font-sans)',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  #{t.name ?? t}
+                  {t.count !== undefined && (
+                    <span style={{ opacity: 0.6, fontFamily: 'var(--font-mono)', fontSize: 10 }}>{t.count}</span>
+                  )}
+                </span>
+              ))}
+              {(!themes || themes.length === 0) && (!trendingTags || trendingTags.length === 0) && (
+                <p style={{ fontSize: 14, color: '#6B7280' }}>No tag data yet.</p>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
+      </FlowAppShell>
     </div>
   )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ──────────────────────────────────────────────────────────────────────────
+
+function PeriodChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        cursor: 'pointer',
+        height: 36,
+        padding: '0 16px',
+        fontSize: 13,
+        background: active ? '#1A1A1A' : '#fff',
+        color: active ? '#fff' : '#1A1A1A',
+        border: `1px solid ${active ? '#1A1A1A' : '#E9E8E7'}`,
+        borderRadius: 9999,
+        fontFamily: 'var(--font-sans)',
+        fontWeight: 600,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
+      {active && <Flame size={13} />}
+      {label}
+    </button>
+  )
+}
+
+function SectionHeader({ eyebrow, title }: { eyebrow: string; title: React.ReactNode }) {
+  return (
+    <div>
+      <span className="eyebrow-mono">{eyebrow}</span>
+      <h3
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 28,
+          marginTop: 4,
+          letterSpacing: '-0.02em',
+          color: '#1A1A1A',
+        }}
+      >
+        {title}
+      </h3>
+    </div>
+  )
+}
+
+function SectionEmpty() {
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        padding: '40px 32px',
+        border: '1px dashed #E9E8E7',
+        borderRadius: 18,
+        textAlign: 'center',
+        background: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <TrendingUp size={28} color="#6B7280" />
+      <p style={{ fontSize: 14, color: '#6B7280' }}>Nothing trending yet for this period.</p>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Adapter — TrendingJoke (mock-data) → FlowJokeData
+// ──────────────────────────────────────────────────────────────────────────
+
+function trendingToFlowData(
+  tj: {
+    joke: {
+      id: number
+      text: string
+      setup: string | null
+      punchline: string | null
+      format?: { slug: string; name: string }
+      tones?: { name: string }[]
+    }
+    likes: number
+    shares: number
+  },
+  fallbackId: number,
+): FlowJokeData {
+  const slug = (tj.joke?.format?.slug ?? '').toLowerCase()
+  const fmt: FlowJokeFormat =
+    slug.includes('setup')
+      ? 'setup'
+      : slug.includes('one') || slug.includes('liner')
+      ? 'oneliner'
+      : slug.includes('observ') || slug.includes('quote')
+      ? 'observ'
+      : slug.includes('anti')
+      ? 'anti'
+      : slug.includes('knock')
+      ? 'knock'
+      : slug.includes('story')
+      ? 'story'
+      : tj.joke?.setup && tj.joke?.punchline
+      ? 'setup'
+      : 'oneliner'
+
+  return {
+    id: tj.joke?.id ?? fallbackId,
+    fmt,
+    setup: tj.joke?.setup ?? undefined,
+    punch: tj.joke?.punchline ?? undefined,
+    text: tj.joke?.text,
+    catLabel: tj.joke?.tones?.[0]?.name,
+    saves: String(tj.shares ?? '—'),
+    laughs: String(tj.likes ?? '—'),
+  }
 }

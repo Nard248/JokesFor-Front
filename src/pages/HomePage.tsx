@@ -1,227 +1,467 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import { Search, MapPin, BookOpen, Smile, Briefcase, Lightbulb, Gift, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { JokeOfTheDayCard } from '@/components/JokeOfTheDayCard'
-import { DailyJokeCard } from '@/components/DailyJokeCard'
-import { VibeCard } from '@/components/VibeCard'
-import { FreshArrivalCard } from '@/components/FreshArrivalCard'
-import { TopJokesterItem } from '@/components/TopJokesterItem'
-import { WeeklySpecialCard } from '@/components/WeeklySpecialCard'
-import { useTodaysJoke } from '@/features/daily-joke'
-import { useTopJokesters, usePopularThemes } from '@/features/trending'
-import { useJokeSearch } from '@/features/jokes'
-import { mockHotNowTags } from '@/lib/mock-data'
+import { Link } from 'react-router'
+import { ArrowRight, Sparkles, Search as SearchIcon } from 'lucide-react'
+import { FlowAppShell } from '@/components/FlowAppShell'
+import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { useAuth } from '@/features/auth'
 
-const browseByVibe = [
-  { icon: Smile, label: 'Kid-Safe' },
-  { icon: Briefcase, label: 'Office Proper' },
-  { icon: Lightbulb, label: 'Punny' },
-  { icon: Gift, label: 'Nerd Humor' },
-]
-
+/**
+ * HomePage — anonymous landing.
+ *
+ * Authenticated users get redirected to /flow-canvas via post-login redirect
+ * (LoginPage / RegisterPage onSuccess). HomePage is what an unauthenticated
+ * user sees at `/` — pitch the brand, show a sample of the format-aware
+ * cards, drive sign-up.
+ *
+ * If an authed user lands here directly (deep link, refresh from /), we show
+ * a "Continue to your canvas" CTA.
+ *
+ * Iteration 4: legacy HomePage at /legacy preserves the prior content.
+ */
 export function HomePage() {
-  const navigate = useNavigate()
-  const [searchQuery, setSearchQuery] = useState('')
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
-    }
-  }
-
-  const { data: todayData } = useTodaysJoke()
-  const { data: topJokesters = [] } = useTopJokesters(3)
-  const { data: popularThemes = [] } = usePopularThemes()
-  // Fresh arrivals: recent jokes (page 1, no filters)
-  const { data: freshData } = useJokeSearch({ page: 1 })
-
-  const dailyJoke = todayData?.joke
-  const freshArrivals = (freshData?.results || []).slice(0, 3)
+  const { isAuthenticated, user } = useAuth()
+  const firstName = user?.first_name ?? user?.username
 
   return (
-    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-6xl">
-      {/* ── Hero ── */}
-      <section className="mb-8 lg:mb-12">
-        <h1 className="font-display font-black text-4xl lg:text-7xl text-[#2E2F2F] leading-[1] mb-4">
-          Who are you{' '}
-          <span className="italic text-[#CAFD00]" style={{ WebkitTextStroke: '1px #3A4A00' }}>
-            laughing
-          </span>{' '}
-          for?
-        </h1>
-        <p className="text-[#6B7280] text-base lg:text-lg max-w-xl leading-relaxed">
-          The web's most curated library of punchlines for parents, teachers, and anyone who needs a quick giggle.
-        </p>
-      </section>
-
-      {/* ── Search Bar ── */}
-      <section className="mb-6">
-        <form onSubmit={handleSearch} className="flex items-center gap-3 max-w-2xl">
-          <div className="relative flex-1">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 size-5 text-[#6B7280]" />
-            <input
-              type="text"
-              placeholder="Search by topic, vibe, or occasion..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-12 lg:h-14 pl-13 pr-5 rounded-full border border-[#E9E8E7] bg-white text-base shadow-[var(--shadow-search)] outline-none focus:border-[#6A1CF6] focus:ring-2 focus:ring-[#6A1CF6]/20 transition-all"
-            />
-          </div>
-          <Button variant="pill" size="xl" type="submit" className="shrink-0 hidden lg:flex">
-            Find Jokes
-          </Button>
-        </form>
-
-        {/* Hot Now Tags */}
-        <div className="flex items-center gap-2 mt-4 flex-wrap">
-          <Badge variant="hot" size="default">Hot Now:</Badge>
-          {mockHotNowTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => navigate(`/search?q=${encodeURIComponent(tag)}`)}
-              className="px-4 py-1.5 rounded-full bg-white border border-[#E9E8E7] text-sm text-[#52525B] hover:border-[#6A1CF6] hover:text-[#6A1CF6] transition-colors"
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── JOTD + Vibes (Desktop) ── */}
-      <section className="hidden lg:grid grid-cols-5 gap-5 mb-10">
-        <div className="col-span-3">
-          {dailyJoke && <JokeOfTheDayCard joke={dailyJoke} />}
-        </div>
-        <div className="col-span-2 grid grid-rows-2 gap-5">
-          <VibeCard title="Wholesome & Pure" size="lg" gradient="from-purple-400 to-purple-600" searchQuery="wholesome" />
-          <div className="grid grid-cols-2 gap-5">
-            <VibeCard title="Quick Puns" size="sm" gradient="from-lime-300 to-lime-400" searchQuery="puns" />
-            <VibeCard title="Classic Dad" size="sm" gradient="from-amber-300 to-amber-400" searchQuery="dad jokes" />
-          </div>
-        </div>
-      </section>
-
-      {/* ── JOTD (Mobile) ── */}
-      <section className="lg:hidden mb-6">
-        {dailyJoke && <DailyJokeCard joke={dailyJoke} />}
-      </section>
-
-      {/* ── Morning Kickoff (Mobile) ── */}
-      <section className="lg:hidden mb-6">
-        <Card radius="lg" className="flex items-center gap-4 p-4">
-          <div className="size-10 rounded-full bg-[#CAFD00] flex items-center justify-center shrink-0">
-            <MapPin className="size-5 text-[#3A4A00]" />
-          </div>
-          <div>
-            <h3 className="font-display font-bold text-base text-[#2E2F2F]">Morning Kickoff</h3>
-            <p className="text-sm text-[#6B7280]">Perfect for 8:00 AM meetings</p>
-          </div>
-          <ChevronRight className="size-5 text-[#6B7280] ml-auto" />
-        </Card>
-      </section>
-
-      {/* ── Weekly Curated (Mobile) ── */}
-      <section className="lg:hidden mb-6">
-        <Card radius="lg" className="flex items-center gap-4 p-4">
-          <div className="size-10 rounded-full bg-[#F2F0F0] flex items-center justify-center shrink-0">
-            <BookOpen className="size-5 text-[#52525B]" />
-          </div>
-          <div>
-            <h3 className="font-display font-bold text-base text-[#2E2F2F]">Weekly Curated</h3>
-            <p className="text-sm text-[#6B7280]">Hand-picked by editors</p>
-          </div>
-          <ChevronRight className="size-5 text-[#6B7280] ml-auto" />
-        </Card>
-      </section>
-
-      {/* ── Browse by Vibe (Mobile) ── */}
-      <section className="lg:hidden mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display font-bold text-xl text-[#2E2F2F]">Browse by Vibe</h2>
-          <button className="text-sm font-semibold text-[#6A1CF6] flex items-center gap-1">
-            View all <ChevronRight className="size-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {browseByVibe.map((vibe) => (
-            <button
-              key={vibe.label}
-              onClick={() => navigate(`/search?q=${encodeURIComponent(vibe.label)}`)}
-              className="flex flex-col items-center gap-2 py-5 bg-[#FAFAFA] rounded-[32px] hover:bg-[#F7F0FF] transition-colors"
-            >
-              <div className="size-12 rounded-full bg-[#F2F0F0] flex items-center justify-center">
-                <vibe.icon className="size-6 text-[#52525B]" />
-              </div>
-              <span className="text-sm font-semibold text-[#2E2F2F]">{vibe.label}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Fresh Arrivals + Sidebar (Desktop) ── */}
-      <section className="lg:grid lg:grid-cols-3 lg:gap-8 mb-10">
-        {/* Left: Fresh Arrivals */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-display font-bold text-2xl lg:text-3xl text-[#2E2F2F]">Fresh Arrivals</h2>
-            <button className="text-sm font-semibold text-[#6A1CF6]">Newest ▾</button>
-          </div>
-          <div className="space-y-4">
-            {freshArrivals.map((joke, i) => (
-              <FreshArrivalCard
-                key={joke.id}
-                joke={joke}
-                likes={[412, 1200, 890][i]}
-                comments={[12, 84, 33][i]}
-                timeAgo={['2 mins ago', '1 hour ago', '3 hours ago'][i]}
-              />
-            ))}
-          </div>
-
-          {/* Load More */}
-          <div className="flex justify-center mt-8">
-            <Button variant="pill-outline" size="xl">
-              Load More Laughs
-            </Button>
-          </div>
-        </div>
-
-        {/* Right: Sidebar (Desktop) */}
-        <div className="hidden lg:flex flex-col gap-6">
-          {/* Popular Themes */}
-          <Card radius="lg" className="p-5">
-            <h3 className="font-display font-bold text-lg text-[#2E2F2F] mb-4">Popular Themes</h3>
-            <div className="flex flex-wrap gap-2">
-              {popularThemes.map((theme) => (
-                <button
-                  key={theme}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(theme)}`)}
-                  className="px-3 py-1.5 rounded-full bg-[#F2F0F0] text-sm text-[#52525B] hover:bg-[#F7F0FF] hover:text-[#6A1CF6] transition-colors"
-                >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Top Jokesters */}
-          <Card radius="lg" className="p-5">
-            <h3 className="font-display font-bold text-lg text-[#2E2F2F] mb-4">Top Jokesters</h3>
-            <div className="divide-y divide-[#E9E8E7]">
-              {topJokesters.map((jokester) => (
-                <TopJokesterItem key={jokester.id} jokester={jokester} />
-              ))}
-            </div>
-          </Card>
-
-          {/* Weekly Special */}
-          <WeeklySpecialCard />
-        </div>
-      </section>
+    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <FlowAppShell active="today" hideStreak>
+        <Hero isAuthenticated={isAuthenticated} firstName={firstName} />
+        <SamplesSection />
+        <HowItWorks />
+        <BottomCTA isAuthenticated={isAuthenticated} />
+      </FlowAppShell>
     </div>
   )
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Hero
+// ──────────────────────────────────────────────────────────────────────────
+
+function Hero({ isAuthenticated, firstName }: { isAuthenticated: boolean; firstName?: string | null }) {
+  return (
+    <section
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(180deg, #5D00E4 0%, #6A1CF6 60%, #7B30FF 100%)',
+        color: '#fff',
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: -100,
+          right: -100,
+          width: 480,
+          height: 480,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(202,253,0,0.18), transparent 60%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          bottom: -120,
+          left: -80,
+          width: 360,
+          height: 360,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.08), transparent 60%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(56px, 8vw, 96px) clamp(24px, 4vw, 56px)', position: 'relative' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'rgba(255, 255, 255, 0.7)',
+          }}
+        >
+          Volume I · Issue 042 · 312K daily readers
+        </span>
+        <h1
+          style={{
+            marginTop: 16,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: 'clamp(3rem, 7vw, 5.5rem)',
+            letterSpacing: '-0.025em',
+            lineHeight: 0.98,
+            maxWidth: 880,
+          }}
+        >
+          Find the right joke.{' '}
+          <em className="wink" style={{ color: '#CAFD00' }}>
+            For any moment.
+          </em>
+        </h1>
+        <p
+          style={{
+            marginTop: 24,
+            fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
+            color: 'rgba(255, 255, 255, 0.85)',
+            maxWidth: 600,
+            lineHeight: 1.5,
+          }}
+        >
+          A daily joke that matches your taste. A library to save the keepers. A search engine to find the right
+          line for the moment that's actually in front of you.
+        </p>
+
+        {/* CTAs */}
+        <div style={{ marginTop: 36, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {isAuthenticated ? (
+            <Link
+              to="/flow-canvas"
+              style={{
+                height: 56,
+                padding: '0 28px',
+                background: '#CAFD00',
+                color: '#3A4A00',
+                border: 0,
+                borderRadius: 9999,
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 700,
+                fontSize: 16,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                textDecoration: 'none',
+              }}
+            >
+              {firstName ? `Continue, ${firstName}` : 'Open your canvas'} <ArrowRight size={18} />
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/register"
+                style={{
+                  height: 56,
+                  padding: '0 28px',
+                  background: '#CAFD00',
+                  color: '#3A4A00',
+                  border: 0,
+                  borderRadius: 9999,
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                }}
+              >
+                Get today's joke <ArrowRight size={18} />
+              </Link>
+              <Link
+                to="/search"
+                style={{
+                  height: 56,
+                  padding: '0 28px',
+                  background: 'rgba(255,255,255,0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: 9999,
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 600,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <SearchIcon size={16} /> Or just search
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Samples — show off the format-aware cards
+// ──────────────────────────────────────────────────────────────────────────
+
+function SamplesSection() {
+  return (
+    <section style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) clamp(24px, 4vw, 56px)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <span className="eyebrow-mono">Same library · Different rhythm</span>
+          <h2
+            style={{
+              marginTop: 6,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              fontSize: 'clamp(2rem, 4vw, 3rem)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+              color: '#1A1A1A',
+            }}
+          >
+            Six formats, <em className="wink">six rhythms.</em>
+          </h2>
+          <p style={{ marginTop: 6, fontSize: 18, color: '#52525B', maxWidth: 560 }}>
+            Some jokes need a setup. Some hit best as one breath. We render each format the way it actually lands.
+          </p>
+        </div>
+      </div>
+      <div style={{ marginTop: 32, columnCount: 3, columnGap: 18 }}>
+        {SAMPLES.map((j) => (
+          <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+            <FlowJokeCard joke={j} />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// How it works — Hooked-loop
+// ──────────────────────────────────────────────────────────────────────────
+
+function HowItWorks() {
+  const stages = [
+    { num: 1, eyebrow: '9:00 AM · Trigger', body: "A push arrives. Today's joke is ready.", bg: '#6A1CF6', fg: '#fff' },
+    { num: 2, eyebrow: 'One tap · Action', body: 'Open. Read. Save in 8 seconds flat.', bg: '#CAFD00', fg: '#3A4A00' },
+    { num: 3, eyebrow: 'Variable reward', body: "You don't know which joke — that's the point.", bg: '#FFC965', fg: '#5F4200' },
+    { num: 4, eyebrow: 'Streak grows · Investment', body: "Your taste compounds. Tomorrow's is more 'you'.", bg: '#1A1A1A', fg: '#CAFD00' },
+  ]
+  return (
+    <section
+      style={{
+        maxWidth: 1200,
+        margin: '0 auto',
+        padding: 'clamp(32px, 4vw, 56px) clamp(24px, 4vw, 56px)',
+        paddingBottom: 'clamp(56px, 8vw, 96px)',
+      }}
+    >
+      <div style={{ marginBottom: 32 }}>
+        <span className="eyebrow-mono">How it works</span>
+        <h2
+          style={{
+            marginTop: 6,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: 'clamp(2rem, 4vw, 3rem)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.05,
+            color: '#1A1A1A',
+          }}
+        >
+          One ritual. <em className="wink">Three taps.</em>
+        </h2>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+        {stages.map((s) => (
+          <div
+            key={s.num}
+            style={{
+              padding: 24,
+              background: s.bg,
+              color: s.fg,
+              borderRadius: 18,
+              minHeight: 180,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: s.fg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 900,
+                fontSize: 14,
+              }}
+            >
+              {s.num}
+            </div>
+            <div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  opacity: 0.7,
+                }}
+              >
+                {s.eyebrow}
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  lineHeight: 1.3,
+                }}
+              >
+                {s.body}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Bottom CTA
+// ──────────────────────────────────────────────────────────────────────────
+
+function BottomCTA({ isAuthenticated }: { isAuthenticated: boolean }) {
+  if (isAuthenticated) return null
+  return (
+    <section
+      style={{
+        maxWidth: 1200,
+        margin: '0 auto',
+        padding: '0 clamp(24px, 4vw, 56px) clamp(56px, 8vw, 96px)',
+      }}
+    >
+      <div
+        style={{
+          padding: 'clamp(36px, 5vw, 56px)',
+          background: '#1A1A1A',
+          color: '#fff',
+          borderRadius: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 24,
+        }}
+      >
+        <div>
+          <span className="eyebrow-mono" style={{ color: '#CAFD00' }}>
+            Free · No spam · One push a day
+          </span>
+          <h2
+            style={{
+              marginTop: 8,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+              color: '#fff',
+              maxWidth: 600,
+            }}
+          >
+            Start your <em className="wink" style={{ color: '#CAFD00' }}>streak.</em>
+          </h2>
+        </div>
+        <Link
+          to="/register"
+          style={{
+            height: 56,
+            padding: '0 28px',
+            background: '#CAFD00',
+            color: '#3A4A00',
+            border: 0,
+            borderRadius: 9999,
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 700,
+            fontSize: 16,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            textDecoration: 'none',
+          }}
+        >
+          <Sparkles size={18} /> Sign up free
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Sample joke data — showcases the 6 format rhythms.
+// ──────────────────────────────────────────────────────────────────────────
+
+const SAMPLES: FlowJokeData[] = [
+  {
+    id: 'home-1',
+    fmt: 'setup',
+    setup: "Why don't scientists trust atoms anymore?",
+    punch: 'Because they make up everything.',
+    themeLabel: 'Science',
+    catLabel: 'Nerd',
+    saves: '4.1K',
+    laughs: '612',
+  },
+  {
+    id: 'home-2',
+    fmt: 'oneliner',
+    text: 'I told my wife she was drawing her eyebrows too high. She seemed surprised.',
+    themeLabel: 'Family',
+    catLabel: 'Dad',
+    saves: '2.8K',
+    laughs: '411',
+  },
+  {
+    id: 'home-3',
+    fmt: 'observ',
+    text: "Adulthood is just emailing 'Sounds good!' back and forth until one of you dies.",
+    themeLabel: 'Work',
+    catLabel: 'Office-proper',
+    saves: '4.8K',
+    laughs: '904',
+  },
+  {
+    id: 'home-4',
+    fmt: 'anti',
+    setup: 'Why did the chicken cross the road?',
+    punch: 'To get to the other side.',
+    themeLabel: 'Animals',
+    catLabel: 'Surreal',
+    saves: '771',
+    laughs: '189',
+  },
+  {
+    id: 'home-5',
+    fmt: 'knock',
+    lines: ['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing out here."],
+    themeLabel: 'Weather',
+    catLabel: 'Kid-safe',
+    saves: '1.4K',
+    laughs: '267',
+  },
+  {
+    id: 'home-6',
+    fmt: 'story',
+    text: "A man walks into a library and asks the librarian for a book on paranoia. She whispers, 'They're right behind you.'",
+    themeLabel: 'Work',
+    catLabel: 'Surreal',
+    read: '30 sec',
+    saves: '892',
+    laughs: '341',
+  },
+]

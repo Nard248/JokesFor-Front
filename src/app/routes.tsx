@@ -1,8 +1,9 @@
-import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router'
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from './providers/ProtectedRoute'
 import { GuestOnlyRoute } from './providers/GuestOnlyRoute'
 import {
+  // Redesigned (current design system + FlowAppShell)
   HomePage,
   SearchPage,
   DailyJokePage,
@@ -20,49 +21,78 @@ import {
   FlowPage,
   FlowCanvasPage,
   ExplorePage,
+  // Legacy — preserved at /legacy/<path> mirror routes
+  HomePageLegacy,
+  TrendingPageLegacy,
+  FavoritesPageLegacy,
+  DraftsPageLegacy,
+  ProfilePageLegacy,
+  SettingsPageLegacy,
+  SubmitJokePageLegacy,
 } from '@/pages'
 
 const router = createBrowserRouter([
-  // Search now uses FlowAppShell internally (redesign), so no Layout wrapper.
-  // Public route — utility-first promise: search works for anonymous users.
+  // ─────────────────────────────────────────────────────────────────────
+  // Canonical routes — all redesigned, all using FlowAppShell internally.
+  // None of them get wrapped in the legacy `Layout` anymore.
+  // ─────────────────────────────────────────────────────────────────────
+
+  // Public
+  { path: '/', element: <HomePage /> },
   { path: '/search', element: <SearchPage /> },
-  {
-    path: '/',
-    element: <Layout><Outlet /></Layout>,
-    children: [
-      // Public — anyone can browse
-      { index: true, element: <HomePage /> },
-      { path: 'trending', element: <TrendingPage /> },
-      // Authenticated only
-      { path: 'favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
-      { path: 'drafts', element: <ProtectedRoute><DraftsPage /></ProtectedRoute> },
-      { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
-      { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
-      // Backward compat
-      { path: 'collections', element: <Navigate to="/library" replace /> },
-    ],
-  },
-  // Standalone authenticated pages (no Layout shell)
+  { path: '/daily', element: <DailyJokePage /> },
+  { path: '/library', element: <LibraryPage /> },
+  { path: '/trending', element: <TrendingPage /> },
+
+  // Authenticated
+  { path: '/favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
+  { path: '/drafts', element: <ProtectedRoute><DraftsPage /></ProtectedRoute> },
+  { path: '/profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
+  { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
   { path: '/submit', element: <ProtectedRoute><SubmitJokePage /></ProtectedRoute> },
-  // /onboarding kept as alias for backward compat — points at the redesigned /flow.
-  // OnboardingPage (legacy component) stays in code, no longer routed.
-  { path: '/onboarding', element: <Navigate to="/flow" replace /> },
-  // Redesigned user flow — each provides its own FlowAppShell, no legacy Layout.
+
+  // Redesigned flow
   { path: '/flow', element: <ProtectedRoute><FlowPage /></ProtectedRoute> },
   { path: '/flow-canvas', element: <ProtectedRoute><FlowCanvasPage /></ProtectedRoute> },
   { path: '/explore', element: <ProtectedRoute><ExplorePage /></ProtectedRoute> },
-  // Library + Daily — reskinned in iteration 4 with FlowAppShell. Hoisted out of
-  // the legacy Layout-wrapped subtree so the chrome doesn't double-stack.
-  { path: '/library', element: <LibraryPage /> },
-  { path: '/daily', element: <DailyJokePage /> },
-  // Guest-only — redirect home if already signed in
+
+  // Auth
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
   { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },
-  // OAuth callback — must process even if user state is uncertain (no guard)
   { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
+
+  // Backward compat aliases
+  { path: '/collections', element: <Navigate to="/library" replace /> },
+  { path: '/onboarding', element: <Navigate to="/flow" replace /> },
+
+  // ─────────────────────────────────────────────────────────────────────
+  // /legacy/* — preserved old design versions for reference + reversion.
+  // Wrapped in the legacy `Layout` because that's the chrome they were
+  // designed for. Not linked from any nav; reachable by direct URL only.
+  // Retire these once the redesigned versions are reviewed and approved.
+  // ─────────────────────────────────────────────────────────────────────
+  {
+    path: '/legacy',
+    element: <Layout><LegacyOutlet /></Layout>,
+    children: [
+      { index: true, element: <HomePageLegacy /> },
+      { path: 'trending', element: <TrendingPageLegacy /> },
+      { path: 'favorites', element: <ProtectedRoute><FavoritesPageLegacy /></ProtectedRoute> },
+      { path: 'drafts', element: <ProtectedRoute><DraftsPageLegacy /></ProtectedRoute> },
+      { path: 'profile', element: <ProtectedRoute><ProfilePageLegacy /></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute><SettingsPageLegacy /></ProtectedRoute> },
+    ],
+  },
+  // /legacy/submit — Submit had no Layout wrapper in legacy; keep that.
+  { path: '/legacy/submit', element: <ProtectedRoute><SubmitJokePageLegacy /></ProtectedRoute> },
+
   // Catch-all
   { path: '*', element: <NotFoundPage /> },
 ])
+
+function LegacyOutlet() {
+  return <Outlet />
+}
 
 export function AppRoutes() {
   return <RouterProvider router={router} />
