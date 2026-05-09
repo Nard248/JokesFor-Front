@@ -499,6 +499,13 @@ export interface UserPreferences {
     shareAnalytics: boolean
   }
   theme: 'light' | 'dark' | 'system'
+
+  // Set by the onboarding flow; consumed for personalization in /flow-canvas.
+  // Optional so existing consumers that only care about the older fields
+  // remain compatible.
+  tones?: string[]
+  ageRating?: string
+  languages?: string[]
 }
 
 export const mockPreferences: UserPreferences = {
