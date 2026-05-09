@@ -506,6 +506,13 @@ export interface UserPreferences {
   tones?: string[]
   ageRating?: string
   languages?: string[]
+
+  // P8 — daily-ritual scheduling (camelCase here; converted to snake_case by adapter)
+  notificationEnabled?: boolean
+  notificationTime?: string
+  notificationDays?: string[]
+  streakSaverEnabled?: boolean
+  onboardingCompleted?: boolean
 }
 
 export const mockPreferences: UserPreferences = {

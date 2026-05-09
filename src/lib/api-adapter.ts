@@ -217,6 +217,12 @@ function toDTO(prefs: Partial<UserPreferences>): Partial<PreferencesDTO> {
       share_analytics: prefs.privacy.shareAnalytics,
     },
     theme: prefs.theme,
+    // P8: daily-ritual fields
+    notification_enabled: prefs.notificationEnabled,
+    notification_time: prefs.notificationTime,
+    notification_days: prefs.notificationDays,
+    streak_saver_enabled: prefs.streakSaverEnabled,
+    onboarding_completed: prefs.onboardingCompleted,
   }
 }
 

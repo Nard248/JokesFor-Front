@@ -1,3 +1,8 @@
+// Iteration 5 — pages added for backend handoff integration
+export { JokeDetailPage } from './JokeDetailPage'
+export { ForgotPasswordPage } from './ForgotPasswordPage'
+export { PackDetailPage } from './PackDetailPage'
+
 // Redesigned pages (current design system, FlowAppShell)
 export { HomePage } from './HomePage'
 export { SearchPage } from './SearchPage'

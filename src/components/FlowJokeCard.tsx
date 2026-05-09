@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, Share2, Sparkles } from 'lucide-react'
+import { useReactToJoke, useReactions } from '@/features/reactions'
+import type { Joke, ReactionSlug } from '@/lib/api'
 
 /**
  * FlowJokeCard — format-aware joke card for the redesign.
@@ -135,6 +137,11 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
         knockStep={knockStep}
         onKnockTap={() => setKnockStep((s) => Math.min(s + 1, (joke.lines?.length ?? 1) - 1))}
       />
+
+      {/* Reaction row: only for real jokes with numeric IDs (skip previews/mocks). */}
+      {typeof joke.id === 'number' && (
+        <ReactionRow jokeId={joke.id} isAnti={isAnti} divider={skin.divider} />
+      )}
 
       {/* Footer: stats + actions */}
       <footer
@@ -450,5 +457,129 @@ function tagToneFor(fmt: FlowJokeFormat): string {
     case 'setup':
     default:
       return ''
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ReactionRow — 4 emoji reactions per P4. Toggles via /jokes/{id}/react/.
+// ──────────────────────────────────────────────────────────────────────────
+
+const REACTIONS: { slug: ReactionSlug; emoji: string; label: string }[] = [
+  { slug: 'lol', emoji: '😂', label: 'LOL' },
+  { slug: 'crying', emoji: '🤣', label: 'Dying' },
+  { slug: 'hmm', emoji: '🤔', label: 'Hmm' },
+  { slug: 'eyeroll', emoji: '🙄', label: 'Eyeroll' },
+]
+
+function ReactionRow({ jokeId, isAnti, divider }: { jokeId: number; isAnti: boolean; divider: string }) {
+  const { data: reactions } = useReactions(jokeId, false) // don't fetch eagerly; only when interacted
+  const reactMutation = useReactToJoke(jokeId)
+  const [optimistic, setOptimistic] = useState<ReactionSlug | null>(null)
+
+  const myReaction = optimistic !== null ? optimistic : reactions?.my_reaction ?? null
+  const counts = reactions?.counts
+
+  const handleReact = (slug: ReactionSlug) => {
+    setOptimistic(slug === myReaction ? null : slug)
+    reactMutation.mutate(slug, {
+      onSettled: () => setOptimistic(null),
+    })
+  }
+
+  const baseColor = isAnti ? 'rgba(255,255,255,0.7)' : '#52525B'
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        paddingTop: 10,
+        borderTop: `1px solid ${divider}`,
+        display: 'flex',
+        gap: 6,
+        flexWrap: 'wrap',
+      }}
+    >
+      {REACTIONS.map((r) => {
+        const active = myReaction === r.slug
+        const count = counts?.[r.slug] ?? 0
+        return (
+          <button
+            key={r.slug}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleReact(r.slug)
+            }}
+            aria-pressed={active}
+            aria-label={r.label}
+            style={{
+              height: 28,
+              padding: '0 10px',
+              borderRadius: 9999,
+              background: active ? '#6A1CF6' : 'transparent',
+              color: active ? '#fff' : baseColor,
+              border: `1px solid ${active ? '#6A1CF6' : isAnti ? 'rgba(255,255,255,0.18)' : '#E9E8E7'}`,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'background 0.12s ease, color 0.12s ease',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{r.emoji}</span>
+            {count > 0 && <span style={{ fontWeight: 500, opacity: 0.8 }}>{formatCount(count)}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function formatCount(n: number): string {
+  if (n < 1000) return String(n)
+  if (n < 10_000) return `${(n / 1000).toFixed(1)}K`
+  return `${Math.round(n / 1000)}K`
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Adapter: real Joke (with new schema) → FlowJokeData
+// Use this when you have a Joke from the backend and want to render it.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function jokeToFlowData(joke: Joke): FlowJokeData {
+  const slug = joke.format?.slug?.toLowerCase() ?? ''
+  const fmt: FlowJokeFormat =
+    slug === 'setup_punchline' || slug === 'setup-punchline' || slug === 'setup'
+      ? 'setup'
+      : slug === 'one_liner' || slug === 'one-liner' || slug === 'oneliner'
+      ? 'oneliner'
+      : slug === 'observational' || slug === 'observ'
+      ? 'observ'
+      : slug === 'anti_joke' || slug === 'anti-joke' || slug === 'anti'
+      ? 'anti'
+      : slug === 'knock_knock' || slug === 'knock-knock' || slug === 'knock'
+      ? 'knock'
+      : slug === 'story'
+      ? 'story'
+      : joke.setup && joke.punchline
+      ? 'setup'
+      : 'oneliner'
+
+  // Prefer new vocabulary (themes/categories), fall back to legacy (context_tags/tones).
+  const themeLabel = joke.themes?.[0]?.name ?? joke.context_tags?.[0]?.name
+  const catLabel = joke.categories?.[0]?.name ?? joke.tones?.[0]?.name
+
+  return {
+    id: joke.id,
+    fmt,
+    setup: joke.setup ?? undefined,
+    punch: joke.punchline ?? undefined,
+    text: joke.text,
+    lines: joke.lines ?? undefined,
+    themeLabel,
+    catLabel,
   }
 }

@@ -29,6 +29,10 @@ import {
   ProfilePageLegacy,
   SettingsPageLegacy,
   SubmitJokePageLegacy,
+  // Iteration 5 — new pages
+  JokeDetailPage,
+  ForgotPasswordPage,
+  PackDetailPage,
 } from '@/pages'
 
 const router = createBrowserRouter([
@@ -60,6 +64,15 @@ const router = createBrowserRouter([
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
   { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },
   { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
+  // Forgot/reset password — single component, branches on URL.
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ForgotPasswordPage /> },
+
+  // Joke detail (logs JokeView server-side via ?source=)
+  { path: '/jokes/:id', element: <JokeDetailPage /> },
+
+  // Joke pack detail (editorial bundle)
+  { path: '/packs/:slug', element: <PackDetailPage /> },
 
   // Backward compat aliases
   { path: '/collections', element: <Navigate to="/library" replace /> },

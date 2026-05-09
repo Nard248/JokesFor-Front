@@ -96,16 +96,40 @@ export const authApi = {
 }
 
 // Joke types (from backend models)
+//
+// VOCABULARY: per the Pivot Plan P1 (2026-05-09 backend handout), every
+// joke response includes BOTH legacy (`tones`, `context_tags`) AND new
+// (`categories`, `themes`) field names. They're synonyms — backend
+// guarantees both are present indefinitely. Existing consumers can keep
+// using legacy names; new consumers should prefer new names.
+//
+// P10 polish: knock-knock format jokes now include `lines: string[]`
+// for alternating-bubble UI.
+export interface JokeTaxon {
+  id: number
+  name: string
+  slug: string
+}
+
 export interface Joke {
   id: number
   text: string
   setup: string | null
   punchline: string | null
+  /** P10: array of dialogue lines for `format=knock-knock` jokes; null otherwise.
+   * Optional in the type since legacy mock fixtures pre-date this field. */
+  lines?: string[] | null
   format: { id: number; name: string; slug: string }
   age_rating: { id: number; name: string; slug: string; min_age: number }
-  tones: Array<{ id: number; name: string; slug: string }>
-  context_tags: Array<{ id: number; name: string; slug: string }>
-  culture_tags: Array<{ id: number; name: string; slug: string }>
+  /** Legacy: "how the joke feels" */
+  tones: JokeTaxon[]
+  /** P1 synonym for `tones`. Optional in type for legacy fixtures; backend always returns it. */
+  categories?: JokeTaxon[]
+  /** Legacy: "what the joke is about" */
+  context_tags: JokeTaxon[]
+  /** P1 synonym for `context_tags`. Optional in type for legacy fixtures. */
+  themes?: JokeTaxon[]
+  culture_tags: JokeTaxon[]
   language: { id: number; name: string; code: string }
   source: string
   share_image_url: string | null
@@ -317,9 +341,14 @@ export const profileApi = {
 // /preferences/me/. Both wired here; pick one per backend convention.
 export interface PreferencesDTO {
   tones?: string[]
+  /** P1 synonym for `tones`. Both write paths accepted; new wins on conflict. */
+  categories?: string[]
   age_rating?: string
   languages?: string[]
   humor_types?: string[]
+  /** P1 synonyms */
+  preferred_themes?: string[]
+  preferred_categories?: string[]
   notifications?: {
     daily_joke?: boolean
     trending_alerts?: boolean
@@ -332,6 +361,13 @@ export interface PreferencesDTO {
     share_analytics?: boolean
   }
   theme?: 'light' | 'dark' | 'system'
+  /** P8: scheduling for the daily-joke ritual. */
+  notification_enabled?: boolean
+  notification_time?: string
+  notification_days?: string[]
+  streak_saver_enabled?: boolean
+  /** Set true when /preferences/complete-onboarding/ is called (or directly here). */
+  onboarding_completed?: boolean
 }
 
 export const preferencesApi = {
@@ -359,5 +395,284 @@ export const trendingApi = {
   themes: () => api.get<unknown>('/themes/popular/'),
 
   jokesters: (limit?: number) =>
-    api.get<unknown>('/users/top-jokesters/', { params: { limit } }),
+    api.get<TopJokesterDTO[] | PaginatedResponse<TopJokesterDTO>>('/users/top-jokesters/', { params: { limit } }),
+}
+
+// P10: top-jokester rows include 2 vibe pills.
+export interface TopJokesterDTO {
+  id: number
+  name: string
+  username: string
+  punchline_count: number
+  rank: number
+  top_vibes: { slug: string; label: string; icon: string }[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P2 — Vibes (humor fingerprint)
+// 12 catalog vibes; user picks 3-12 during onboarding.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface Vibe {
+  slug: string
+  label: string
+  subtitle: string
+  icon: string
+  swatch_bg: string
+  swatch_fg: string
+  order: number
+}
+
+export interface UserVibe {
+  vibe: Vibe
+  weight: number
+  created_at: string
+}
+
+export const vibesApi = {
+  /** Catalog of all active vibes — no pagination. Cache for the session. */
+  list: () => api.get<Vibe[]>('/vibes/'),
+
+  /** Single vibe lookup. */
+  get: (slug: string) => api.get<Vibe>(`/vibes/${slug}/`),
+
+  /** Current user's selected vibes. */
+  myVibes: () => api.get<UserVibe[]>('/users/me/vibes/'),
+
+  /** Replace user's vibe selection atomically. Min 3, max 12. */
+  setMyVibes: (slugs: string[]) =>
+    api.put<UserVibe[]>('/users/me/vibes/', { slugs }),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P3 — Mystery Box (variable reward, daily-capped)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface MysteryBoxStatus {
+  rolls_used_today: number
+  rolls_remaining_today: number
+  max_per_day: number
+}
+
+export interface MysteryBoxRollResponse {
+  joke: Joke
+  rolls_remaining_today: number
+  /** Optional: which vibe the joke was pulled from (null if global pool fallback). */
+  source_vibe: { slug: string; label: string } | null
+}
+
+export const mysteryBoxApi = {
+  status: () => api.get<MysteryBoxStatus>('/mystery-box/status/'),
+
+  /** 200 with joke OR 429 (cap reached) OR 404 (pool exhausted). */
+  roll: () => api.post<MysteryBoxRollResponse>('/mystery-box/roll/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P4 — Reactions (4-emoji)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ReactionSlug = 'lol' | 'crying' | 'hmm' | 'eyeroll'
+
+export interface ReactionCounts {
+  lol: number
+  crying: number
+  hmm: number
+  eyeroll: number
+}
+
+export interface ReactionResponse {
+  my_reaction: ReactionSlug | null
+  counts: ReactionCounts
+}
+
+export const reactionsApi = {
+  /** Toggle off if same, switch if different. Returns updated state. */
+  react: (jokeId: number, reaction: ReactionSlug) =>
+    api.post<ReactionResponse>(`/jokes/${jokeId}/react/`, { reaction }),
+
+  /** Get current reaction state — useful for hydrating the joke detail. */
+  get: (jokeId: number) =>
+    api.get<ReactionResponse>(`/jokes/${jokeId}/reactions/`),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P5 — Activity log + recently-viewed
+// Every authenticated GET /jokes/{id}/ logs a JokeView automatically.
+// Pass ?source= so the backend knows the surface for analytics.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type JokeSource = 'daily' | 'search' | 'explore' | 'mystery' | 'pack' | 'saved' | 'share' | 'other'
+
+export interface RecentlyViewedItem {
+  joke: Joke
+  viewed_at: string
+  source: JokeSource | null
+}
+
+export const activityApi = {
+  recentlyViewed: (limit?: number) =>
+    api.get<RecentlyViewedItem[]>('/users/me/recently-viewed/', { params: { limit } }),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P6 — Streak (daily commitment with forgiveness)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type StreakDayStatus = 'read' | 'frozen' | 'missed' | 'pending'
+
+export interface StreakDay {
+  date: string
+  status: StreakDayStatus
+}
+
+export interface StreakState {
+  current_count: number
+  longest_count: number
+  last_active_date: string | null
+  freeze_days_available: number
+  freezes_used_total: number
+  started_at: string | null
+  /** Last 14 days of activity for the streak rail visualization. */
+  last_14_days: StreakDay[]
+  /** True when the user hasn't read today and it's past 8 PM UTC. */
+  streak_at_risk_today: boolean
+}
+
+export const streakApi = {
+  get: () => api.get<StreakState>('/users/me/streak/'),
+
+  /** Manually use a freeze day (vacation mode). 400 if none available. */
+  freeze: () => api.post<StreakState>('/users/me/streak/freeze/'),
+
+  /** Undo today's accidental freeze. 400 if today wasn't frozen. */
+  unfreeze: () => api.post<StreakState>('/users/me/streak/freeze/remove/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P7 — Joke Packs (editorial bundles)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface PackProgress {
+  last_read_entry: number
+  total_entries: number
+  completed_at: string | null
+  started_at: string
+}
+
+export interface JokePack {
+  slug: string
+  title: string
+  subtitle: string
+  description: string
+  cover_color: string
+  is_featured: boolean
+  joke_count: number
+  publish_at: string
+  expires_at: string | null
+  /** Null for anonymous or new-to-pack users. */
+  user_progress: PackProgress | null
+}
+
+export interface JokePackEntry {
+  order: number
+  joke: Joke
+}
+
+export interface JokePackDetail extends JokePack {
+  jokes: JokePackEntry[]
+}
+
+export const packsApi = {
+  list: () => api.get<PaginatedResponse<JokePack>>('/packs/'),
+
+  get: (slug: string) => api.get<JokePackDetail>(`/packs/${slug}/`),
+
+  /** Single featured pack for Today's Weekly Special. 404 if none. */
+  featured: () => api.get<JokePackDetail>('/packs/featured/'),
+
+  /** Record progress at entry N. Last entry sets completed_at. */
+  recordProgress: (slug: string, entryOrder: number) =>
+    api.post<PackProgress>(`/packs/${slug}/progress/`, { entry_order: entryOrder }),
+
+  /** Packs the user has started but not completed (Continue mid-sip surface). */
+  inProgress: () => api.get<JokePack[]>('/users/me/packs/in-progress/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P8 — Today Status (replaces 9 AM cron — no scheduled tasks in CR setup)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface TodayStatus {
+  daily_joke_due: boolean
+  has_read_today: boolean
+  today_is_a_notification_day: boolean
+  now_past_notification_time: boolean
+}
+
+export const todayStatusApi = {
+  get: () => api.get<TodayStatus>('/users/me/today-status/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// P9 — Insights (taste profile + tomorrow teaser)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type TastePeriod = 'month' | 'week' | 'all'
+
+export interface TasteAggregate {
+  label: string
+  count: number
+  slug?: string
+}
+
+export interface TasteProfile {
+  period: TastePeriod
+  jokes_read: number
+  jokes_saved: number
+  /** Hour of day 0-23, null if no reads yet. */
+  peak_read_hour: number | null
+  top_vibe: { slug: string; label: string; icon: string } | null
+  top_themes: TasteAggregate[]
+  top_categories: TasteAggregate[]
+  top_formats: TasteAggregate[]
+  /** 28 ints — daily reads count for the sparkline. */
+  daily_reads_28d: number[]
+}
+
+export interface DailyJokeToday {
+  id: number
+  joke: Joke
+  date: string
+  /** P9: "Vol. I · No. 042" newspaper-style label. */
+  issue_label: string
+  delivered_at: string
+}
+
+export interface TomorrowTeaser {
+  /** 12-word truncated text for the blurred teaser. */
+  preview: string
+  format: { slug: string; name: string }
+  issue_label: string
+}
+
+export const insightsApi = {
+  tasteProfile: (period: TastePeriod = 'month') =>
+    api.get<TasteProfile>('/users/me/taste-profile/', { params: { period } }),
+
+  /** Replaces existing daily-jokes/today/ shape with the augmented one. */
+  todayAugmented: () => api.get<DailyJokeToday>('/daily-jokes/today/'),
+
+  /** Lazy-generates tomorrow's row inline if it doesn't exist yet. */
+  tomorrow: () => api.get<TomorrowTeaser>('/daily-jokes/tomorrow/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Joke retrieval with `?source=` for activity logging.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const jokeDetailApi = {
+  /** Always pass `source` when retrieving a joke from any surface. */
+  get: (id: number, source?: JokeSource) =>
+    api.get<Joke>(`/jokes/${id}/`, { params: source ? { source } : undefined }),
 }

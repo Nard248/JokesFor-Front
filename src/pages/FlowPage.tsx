@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Bell, Check, X } from 'lucide-react'
 import { useUpdatePreferences } from '@/features/preferences'
+import { useVibesCatalog, useMyVibes, useUpdateMyVibes } from '@/features/vibes'
+import type { Vibe } from '@/lib/api'
 
 /**
  * Flow — onboarding journey, redesigned per Docs/JokesFor/Flow.html.
@@ -17,20 +19,58 @@ import { useUpdatePreferences } from '@/features/preferences'
 export function FlowPage() {
   const navigate = useNavigate()
   const updatePreferences = useUpdatePreferences()
+  const updateMyVibes = useUpdateMyVibes()
+
+  // Real vibes catalog + user's existing selection (for resume case).
+  const { data: vibesCatalog } = useVibesCatalog()
+  const { data: myVibes } = useMyVibes()
 
   const [step, setStep] = useState(1)
-  const [vibes, setVibes] = useState<Set<string>>(new Set(['office', 'puns', 'observ', 'oneliner']))
+  const [vibes, setVibes] = useState<Set<string>>(new Set())
   const [formats, setFormats] = useState<Set<string>>(new Set(['setup', 'oneliner', 'observ']))
   const [ritualTime, setRitualTime] = useState('09:00')
   const [ritualDays, setRitualDays] = useState<Set<string>>(new Set(['mon', 'tue', 'wed', 'thu', 'fri']))
+  // streakSaver — set true by default; UI toggle in StepRitual is purely visual today (TODO wire).
+  const [streakSaver] = useState(true)
+  const [vibesError, setVibesError] = useState<string | null>(null)
+
+  // Pre-select user's existing vibes when /users/me/vibes/ resolves.
+  useEffect(() => {
+    if (myVibes && myVibes.length > 0) {
+      setVibes(new Set(myVibes.map((mv) => mv.vibe.slug)))
+    }
+  }, [myVibes])
 
   const skip = () => navigate('/flow-canvas', { replace: true })
+
+  const advanceFromVibes = () => {
+    if (vibes.size < 3) {
+      setVibesError('Pick at least 3 vibes to continue.')
+      return
+    }
+    setVibesError(null)
+    // PUT /users/me/vibes/ — atomically replaces selection.
+    updateMyVibes.mutate(Array.from(vibes), {
+      onSuccess: () => setStep(2),
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        setVibesError(msg ?? 'Could not save vibes. Try again?')
+      },
+    })
+  }
+
   const finish = () => {
     updatePreferences.mutate(
       {
-        tones: Array.from(vibes),
+        tones: Array.from(vibes), // legacy synonym for categories
         humorTypes: Array.from(formats),
         languages: ['english'],
+        // P8: ritual scheduling — converted to snake_case by the adapter.
+        notificationEnabled: true,
+        notificationTime: ritualTime,
+        notificationDays: Array.from(ritualDays),
+        streakSaverEnabled: streakSaver,
+        onboardingCompleted: true,
       },
       {
         onSettled: () => navigate('/flow-canvas', { replace: true }),
@@ -92,7 +132,9 @@ export function FlowPage() {
       <main style={{ flex: 1, padding: '56px 88px', display: 'flex', flexDirection: 'column' }}>
         {step === 1 && (
           <StepVibes
+            catalog={vibesCatalog}
             vibes={vibes}
+            error={vibesError}
             onToggle={(id) =>
               setVibes((prev) => {
                 const next = new Set(prev)
@@ -171,11 +213,18 @@ export function FlowPage() {
           {step < 3 ? (
             <button
               type="button"
-              onClick={() => setStep((s) => s + 1)}
-              disabled={step === 1 ? vibes.size < 3 : formats.size === 0}
+              onClick={() => {
+                if (step === 1) advanceFromVibes()
+                else setStep((s) => s + 1)
+              }}
+              disabled={
+                (step === 1 && (vibes.size < 3 || updateMyVibes.isPending)) ||
+                (step === 2 && formats.size === 0)
+              }
               className="btn-flow-primary"
             >
-              Continue <ArrowRight size={16} />
+              {step === 1 && updateMyVibes.isPending ? 'Saving…' : 'Continue'}{' '}
+              {!(step === 1 && updateMyVibes.isPending) && <ArrowRight size={16} />}
             </button>
           ) : (
             <button
@@ -212,22 +261,17 @@ export function FlowPage() {
 // Step 1 — Vibes
 // ──────────────────────────────────────────────────────────────────────────
 
-const VIBES = [
-  { id: 'office',    label: 'Office',         sub: 'Meetings · Slack',        ico: '💼', c: '#6A1CF6', fg: '#fff' },
-  { id: 'dad',       label: 'Dad jokes',      sub: 'Eye-roll guaranteed',     ico: '🧓', c: '#FFC965', fg: '#5F4200' },
-  { id: 'puns',      label: 'Puns',           sub: 'Wordplay supreme',        ico: '🎯', c: '#CAFD00', fg: '#3A4A00' },
-  { id: 'dark',      label: 'Dark humor',     sub: 'Black coffee, no sugar',  ico: '🌑', c: '#1A1820', fg: '#fff' },
-  { id: 'nerd',      label: 'Nerd',           sub: 'Physics · code · maths',  ico: '🧪', c: '#F2E9FF', fg: '#5D00E4' },
-  { id: 'surreal',   label: 'Surreal',        sub: 'Logic optional',          ico: '🌀', c: '#AC8EFF', fg: '#fff' },
-  { id: 'wholesome', label: 'Wholesome',      sub: 'For the group chat',      ico: '🌼', c: '#FFE6B5', fg: '#5F4200' },
-  { id: 'observ',    label: 'Observational',  sub: 'Adulthood is…',           ico: '👀', c: '#FBFAF7', fg: '#1A1A1A' },
-  { id: 'oneliner',  label: 'One-liners',     sub: 'Hit, run, save',          ico: '⚡', c: '#1A1A1A', fg: '#CAFD00' },
-  { id: 'date',      label: 'Date night',     sub: 'Charm a stranger',        ico: '🍷', c: '#F4E4D7', fg: '#5F2A14' },
-  { id: 'kids',      label: 'Kids OK',        sub: 'School-pickup safe',      ico: '🧃', c: '#D6F2FF', fg: '#003B5C' },
-  { id: 'absurd',    label: 'Absurd',         sub: 'Mostly fruit',            ico: '🍌', c: '#FFC965', fg: '#5F4200' },
-]
-
-function StepVibes({ vibes, onToggle }: { vibes: Set<string>; onToggle: (id: string) => void }) {
+function StepVibes({
+  catalog,
+  vibes,
+  error,
+  onToggle,
+}: {
+  catalog: Vibe[] | undefined
+  vibes: Set<string>
+  error: string | null
+  onToggle: (slug: string) => void
+}) {
   return (
     <StepShell
       step={1}
@@ -239,65 +283,87 @@ function StepVibes({ vibes, onToggle }: { vibes: Set<string>; onToggle: (id: str
       }
       sub="Pick at least 3. We'll tune your daily joke around these — and you can always change them later."
     >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 14,
-        }}
-      >
-        {VIBES.map((v) => {
-          const on = vibes.has(v.id)
-          return (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => onToggle(v.id)}
-              aria-pressed={on}
-              style={{
-                position: 'relative',
-                height: 160,
-                borderRadius: 18,
-                padding: 18,
-                border: `2px solid ${on ? v.c : '#E9E8E7'}`,
-                background: on ? v.c : '#fff',
-                color: on ? v.fg : '#1A1A1A',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'transform 0.12s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ fontSize: 32 }}>{v.ico}</div>
-              <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18 }}>{v.label}</div>
-                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{v.sub}</div>
-              </div>
-              {on && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 12,
-                    right: 12,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
-                    background: v.fg,
-                    color: v.c,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={14} strokeWidth={3} />
+      {!catalog ? (
+        <VibesSkeleton />
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {catalog.map((v) => {
+            const on = vibes.has(v.slug)
+            return (
+              <button
+                key={v.slug}
+                type="button"
+                onClick={() => onToggle(v.slug)}
+                aria-pressed={on}
+                style={{
+                  position: 'relative',
+                  height: 160,
+                  borderRadius: 18,
+                  padding: 18,
+                  border: `2px solid ${on ? v.swatch_bg : '#E9E8E7'}`,
+                  background: on ? v.swatch_bg : '#fff',
+                  color: on ? v.swatch_fg : '#1A1A1A',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'transform 0.12s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ fontSize: 32 }}>{v.icon}</div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18 }}>
+                    {v.label}
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{v.subtitle}</div>
                 </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
+                {on && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      background: v.swatch_fg,
+                      color: v.swatch_bg,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Check size={14} strokeWidth={3} />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {error && (
+        <div
+          role="alert"
+          style={{
+            marginTop: 16,
+            padding: 12,
+            borderRadius: 12,
+            background: 'rgba(214, 67, 43, 0.08)',
+            border: '1px solid rgba(214, 67, 43, 0.2)',
+            color: '#A02B16',
+            fontSize: 13,
+          }}
+        >
+          {error}
+        </div>
+      )}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
         <span className="tag-flow lime">{vibes.size} picked</span>
         <span style={{ fontSize: 13, color: '#6B7280' }}>
@@ -664,5 +730,29 @@ function StepShell({ step, eyebrow, title, sub, children }: StepShellProps) {
       <p style={{ marginTop: 14, fontSize: 18, color: '#52525B', lineHeight: 1.5, maxWidth: 680 }}>{sub}</p>
       <div style={{ marginTop: 36, flex: 1 }}>{children}</div>
     </>
+  )
+}
+
+function VibesSkeleton() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 14,
+      }}
+    >
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            height: 160,
+            borderRadius: 18,
+            background: '#F4F2EE',
+            border: '2px solid #E9E8E7',
+          }}
+        />
+      ))}
+    </div>
   )
 }

@@ -209,7 +209,62 @@ v2 rewrote to match `Docs/JokesFor/`:
 - Extracted `FlowAppShell` shared chrome
 - All 8 designed screens implemented end-to-end
 
-### Iteration 4 (current — on `dev` branch)
+### Iteration 5 (current — on `dev` branch)
+
+**Backend integration per `Frontend_Integration_Handout.md` (96 endpoints, 10 new feature surfaces):**
+
+API client (`src/lib/api.ts`):
+- ✅ `Joke` type updated with `lines: string[] | null` (P10), optional `categories` + `themes` (P1 vocabulary)
+- ✅ Added typed endpoint methods + DTOs for all 10 new surfaces:
+  - **P2 Vibes** (`vibesApi`): list / get / myVibes / setMyVibes
+  - **P3 Mystery Box** (`mysteryBoxApi`): status / roll
+  - **P4 Reactions** (`reactionsApi`): react / get
+  - **P5 Activity** (`activityApi`): recentlyViewed
+  - **P6 Streak** (`streakApi`): get / freeze / unfreeze
+  - **P7 Joke Packs** (`packsApi`): list / get / featured / recordProgress / inProgress
+  - **P8 Today Status** (`todayStatusApi`): get
+  - **P9 Insights** (`insightsApi`): tasteProfile / todayAugmented / tomorrow
+  - **P10 Polish**: TopJokesterDTO with `top_vibes[]`, jokeDetailApi.get with `?source=`
+- ✅ `PreferencesDTO` extended with `notification_enabled/time/days`, `streak_saver_enabled`, `onboarding_completed`, `categories` (P1 synonym)
+
+Feature hooks (`src/features/*/`):
+- ✅ NEW: `vibes/`, `streak/`, `mystery-box/`, `reactions/`, `packs/`, `insights/`, `today-status/`, `recently-viewed/`
+
+UI consumers wired to real backend:
+- ✅ **FlowPage Vibes step** — `useVibesCatalog()` + `useMyVibes()` + `useUpdateMyVibes()`. Real catalog renders + atomic save.
+- ✅ **FlowPage Ritual step** — patches preferences with `notificationEnabled/Time/Days` + `streakSaverEnabled` + `onboardingCompleted` (camelCase → snake_case via converter).
+- ✅ **FlowCanvasPage** — Today hub fully wired:
+  - `useTodayAugmented()` → JOTD hero + issue label + dateline
+  - `useStreak()` → streak rail with last_14_days + at-risk indicator
+  - `useMysteryBoxStatus()` + `useRollMysteryBox()` → mystery box card + roll → navigate to detail
+  - `useTomorrowTeaser()` → tomorrow teaser
+  - `useFeaturedPack()` → Weekly Special card
+  - `usePacksInProgress()` → "you stopped mid-sip" continue banner
+  - `useTasteProfile('month')` → stats card numbers + 28-day sparkline + themes pill cloud
+- ✅ **FlowJokeCard** — `lines[]` rendering for knock-knock, themes/categories preference, 4-emoji reaction row that calls `/jokes/{id}/react/`. New `jokeToFlowData(joke: Joke)` helper for real-API consumers.
+
+New pages (per §13 of handout):
+- ✅ **`/jokes/:id`** — JokeDetailPage with reveal hero, save/share/copy, 4-emoji reaction breakdown, "why you got this one" derived from taste profile, streak rail, "more like this", roll-mystery CTA. Passes `?source=` for analytics.
+- ✅ **`/forgot-password` + `/reset-password`** — single component, branches on URL. Step 1 emails reset link; step 2 reads `?uid=&token=` from URL and saves new password.
+- ✅ **`/packs/:slug`** — PackDetailPage with cover hero (cover_color), progress indicator, ordered joke list using `FlowJokeCard`. Records progress via `useRecordPackProgress()`.
+
+Routes added:
+```
+/jokes/:id              → JokeDetailPage
+/forgot-password        → ForgotPasswordPage (step 1)
+/reset-password         → ForgotPasswordPage (step 2 — same component)
+/packs/:slug            → PackDetailPage
+```
+
+**Still ahead (Iteration 6):**
+- Mystery Box modal component (currently navigates to detail page on roll — works, modal would be UX polish)
+- Wire ExplorePage / SearchPage chip rails to real `/formats/`, `/context-tags/`, `/tones/` lookup endpoints
+- Wire LibraryPage / FavoritesPage / DraftsPage / ProfilePage / TrendingPage adapters to real APIs (each has its own response-shape verification needed)
+- "Three you'll probably save" on FlowCanvasPage — wire to `/jokes/?vibe={top_vibe}&page_size=3` (currently still mock)
+- Activity feed on ProfilePage / recently-viewed surface
+- Account compliance pages (`/reports/`, `/users/me/data-export/`, `/users/me/` DELETE)
+
+### Iteration 4 (previous — on `dev` branch)
 
 The work formerly described as "post-merge" is happening on `dev`. The branch was created by fast-forwarding from `feat/redesign-user-flow` (a strict superset of `main`); `main` is untouched. The `dev` branch is our integration trunk going forward — feature branches PR into `dev`, and `dev` → `main` is the release event.
 

@@ -4,6 +4,10 @@ import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight }
 import { useAuth } from '@/features/auth'
 import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { useTodayAugmented, useTomorrowTeaser, useTasteProfile } from '@/features/insights'
+import { useStreak } from '@/features/streak'
+import { useMysteryBoxStatus, useRollMysteryBox } from '@/features/mystery-box'
+import { useFeaturedPack, usePacksInProgress } from '@/features/packs'
 
 /**
  * Flow Canvas — the "Today" hub, redesigned per Docs/JokesFor/parts/flow-screens.jsx
@@ -33,6 +37,15 @@ export function FlowCanvasPage() {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  // Real-API data sources for the Today hub.
+  const { data: today } = useTodayAugmented()
+  const { data: streak } = useStreak()
+  const { data: mysteryStatus } = useMysteryBoxStatus()
+  const { data: tomorrow } = useTomorrowTeaser()
+  const { data: featuredPack } = useFeaturedPack()
+  const { data: inProgressPacks } = usePacksInProgress()
+  const { data: tasteProfile } = useTasteProfile('month')
+
   const firstName = user?.first_name || user?.username || 'friend'
 
   return (
@@ -42,7 +55,9 @@ export function FlowCanvasPage() {
           {/* ── Hero strip ─────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <span className="eyebrow-mono">{formatDateline()} · Vol. I · No. 042</span>
+              <span className="eyebrow-mono">
+                {formatDateline()} · {today?.issue_label ?? 'Vol. I'}
+              </span>
               <h2
                 style={{
                   marginTop: 8,
@@ -65,7 +80,10 @@ export function FlowCanvasPage() {
                 <History size={14} /> Yesterday
               </button>
               <button type="button" className="btn-flow-ghost">
-                <Dice5 size={14} /> Mystery box <span className="tag-flow lime" style={{ marginLeft: 6 }}>3 LEFT</span>
+                <Dice5 size={14} /> Mystery box{' '}
+                <span className="tag-flow lime" style={{ marginLeft: 6 }}>
+                  {(mysteryStatus?.rolls_remaining_today ?? 3)} LEFT
+                </span>
               </button>
             </div>
           </div>
@@ -105,8 +123,14 @@ export function FlowCanvasPage() {
                   gap: 8,
                 }}
               >
-                <span className="tag-flow">Joke of the day · Setup → Punchline</span>
-                <span className="eyebrow-mono">Nerd · Pun</span>
+                <span className="tag-flow">
+                  Joke of the day · {today?.joke?.format?.name ?? 'Setup → Punchline'}
+                </span>
+                <span className="eyebrow-mono">
+                  {(today?.joke?.themes?.[0]?.name ?? today?.joke?.context_tags?.[0]?.name) || 'Today'}
+                  {' · '}
+                  {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) || 'JokesFor'}
+                </span>
               </header>
               <div style={{ marginTop: 32, position: 'relative' }}>
                 <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>Setup</span>
@@ -121,7 +145,7 @@ export function FlowCanvasPage() {
                     maxWidth: 640,
                   }}
                 >
-                  Why don't scientists trust atoms anymore?
+                  {today?.joke?.setup ?? today?.joke?.text ?? "Today's joke is brewing — check back in a moment."}
                 </div>
                 <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
                   Punchline
@@ -140,7 +164,7 @@ export function FlowCanvasPage() {
                     lineHeight: 1.02,
                   }}
                 >
-                  Because they make up <em className="wink">everything.</em>
+                  {today?.joke?.punchline ?? '…'}
                 </div>
                 {!revealed && (
                   <button
@@ -191,14 +215,14 @@ export function FlowCanvasPage() {
 
             {/* Right rail: streak + mystery box + tomorrow teaser */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <StreakRail days={14} />
-              <MysteryBox left={3} />
-              <TomorrowTeaser />
+              <StreakRail days={streak?.current_count ?? 0} streakState={streak} />
+              <MysteryBox status={mysteryStatus} />
+              <TomorrowTeaser tomorrow={tomorrow} />
             </div>
           </div>
 
           {/* ── You stopped mid-sip · continue yesterday's set ─── */}
-          <ContinueBanner />
+          <ContinueBanner pack={inProgressPacks?.[0]} />
 
           {/* ── Three you'll probably save (3-up) ──────────────── */}
           <div style={{ marginTop: 48, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -247,10 +271,10 @@ export function FlowCanvasPage() {
           <MixedFormatShowcase />
 
           {/* ── Top jokesters + Weekly special ─────────────────── */}
-          <TopJokestersAndSpecial />
+          <TopJokestersAndSpecial featuredPack={featuredPack} />
 
           {/* ── Stats + Themes + Test on a friend ──────────────── */}
-          <StatsRow />
+          <StatsRow tasteProfile={tasteProfile} todayText={today?.joke?.text ?? today?.joke?.punchline ?? ''} />
 
           {/* ── Brand pull-quote footer ─────────────────────────── */}
           <BrandQuoteFooter />
@@ -264,41 +288,80 @@ export function FlowCanvasPage() {
 // Right-rail components
 // ──────────────────────────────────────────────────────────────────────────
 
-function StreakRail({ days }: { days: number }) {
+function StreakRail({ days, streakState }: { days: number; streakState: ReturnType<typeof useStreak>['data'] }) {
+  // Use last_14_days from real backend if available; otherwise approximate.
+  const cells = streakState?.last_14_days ?? Array.from({ length: 14 }).map(() => ({ status: 'pending' as const }))
+  const cellColor = (status: string) => {
+    if (status === 'read') return '#3A4A00'
+    if (status === 'frozen') return '#7B5A00'
+    if (status === 'missed') return 'rgba(58, 74, 0, 0.2)'
+    return 'transparent' // pending
+  }
+  const cellBorder = (status: string) => (status === 'pending' ? '1px dashed #3A4A00' : '0')
+
+  const atRisk = streakState?.streak_at_risk_today ?? false
+
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#CAFD00', color: '#3A4A00' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span className="eyebrow-mono" style={{ color: '#3A4A00' }}>
-          Streak
+          Streak{atRisk ? ' · at risk today' : ''}
         </span>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.18em' }}>
           {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
         </span>
       </div>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 64, lineHeight: 1, marginTop: 8 }}>
-        {days} <span style={{ fontSize: 20 }}>days</span>
+        {days} <span style={{ fontSize: 20 }}>{days === 1 ? 'day' : 'days'}</span>
       </div>
-      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `repeat(${days}, 1fr)`, gap: 3 }}>
-        {Array.from({ length: days }).map((_, i) => (
+      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `repeat(${cells.length}, 1fr)`, gap: 3 }}>
+        {cells.map((cell, i) => (
           <div
             key={i}
             style={{
               height: 14,
               borderRadius: 3,
-              background: i < days - 1 ? '#3A4A00' : 'transparent',
-              border: i < days - 1 ? 0 : '1px dashed #3A4A00',
+              background: cellColor(cell.status),
+              border: cellBorder(cell.status),
             }}
+            aria-label={cell.status}
           />
         ))}
       </div>
       <div style={{ marginTop: 14, fontSize: 13, fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-        One more lands you in the <em className="wink" style={{ color: '#3A4A00' }}>Top 10%.</em>
+        {atRisk ? (
+          <>
+            Read today to <em className="wink" style={{ color: '#3A4A00' }}>save it.</em>
+          </>
+        ) : days > 0 ? (
+          <>
+            Longest: <em className="wink" style={{ color: '#3A4A00' }}>{streakState?.longest_count ?? days} days.</em>
+          </>
+        ) : (
+          <>
+            Read today to <em className="wink" style={{ color: '#3A4A00' }}>start a streak.</em>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-function MysteryBox({ left }: { left: number }) {
+function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>['data'] }) {
+  const roll = useRollMysteryBox()
+  const left = status?.rolls_remaining_today ?? 0
+  const exhausted = left === 0
+
+  const handleRoll = () => {
+    if (exhausted || roll.isPending) return
+    roll.mutate(undefined, {
+      onSuccess: (data) => {
+        // For now, just navigate to the joke detail. Phase 7 introduces a modal.
+        window.location.href = `/jokes/${data.joke.id}?source=mystery`
+      },
+    })
+  }
+
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#FFC965', color: '#5F4200', position: 'relative', overflow: 'hidden' }}>
       <span className="eyebrow-mono" style={{ color: '#5F4200' }}>
@@ -322,6 +385,8 @@ function MysteryBox({ left }: { left: number }) {
       </p>
       <button
         type="button"
+        onClick={handleRoll}
+        disabled={exhausted || roll.isPending}
         style={{
           background: '#5F4200',
           color: '#FFC965',
@@ -332,19 +397,22 @@ function MysteryBox({ left }: { left: number }) {
           fontFamily: 'var(--font-sans)',
           fontWeight: 700,
           fontSize: 14,
-          cursor: 'pointer',
+          cursor: exhausted ? 'not-allowed' : 'pointer',
+          opacity: exhausted ? 0.5 : 1,
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
         }}
       >
-        <Dice5 size={14} /> Roll
+        <Dice5 size={14} /> {roll.isPending ? 'Rolling…' : exhausted ? 'No rolls left' : 'Roll'}
       </button>
     </div>
   )
 }
 
-function TomorrowTeaser() {
+function TomorrowTeaser({ tomorrow }: { tomorrow: ReturnType<typeof useTomorrowTeaser>['data'] }) {
+  const previewText = tomorrow?.preview ?? 'Tomorrow\'s joke is brewing…'
+  const formatName = tomorrow?.format?.name ?? 'TBD'
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#0F0E12', color: '#fff' }}>
       <span className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>
@@ -361,16 +429,20 @@ function TomorrowTeaser() {
           color: 'rgba(255,255,255,0.85)',
         }}
       >
-        A man walks into a library and asks for a book on…
+        {previewText}
       </div>
       <div style={{ marginTop: 14, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-        Format: <span style={{ color: '#CAFD00' }}>Story · 2-min read</span>
+        Format: <span style={{ color: '#CAFD00' }}>{formatName}</span>
       </div>
     </div>
   )
 }
 
-function ContinueBanner() {
+function ContinueBanner({ pack }: { pack?: { slug: string; title: string; joke_count: number; user_progress: { last_read_entry: number; total_entries: number } | null } }) {
+  if (!pack || !pack.user_progress) return null
+  const { last_read_entry, total_entries } = pack.user_progress
+  const remaining = total_entries - last_read_entry
+
   return (
     <div
       style={{
@@ -400,23 +472,23 @@ function ContinueBanner() {
           fontSize: 22,
         }}
       >
-        2/4
+        {last_read_entry}/{total_entries}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
-          You stopped mid-sip · Yesterday
+          You stopped mid-sip
         </span>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, marginTop: 4 }}>
-          Finish the <em className="wink">"Office Proper"</em> set — 2 jokes left.
+          Finish <em className="wink">"{pack.title}"</em> — {remaining} {remaining === 1 ? 'joke' : 'jokes'} left.
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="btn-flow-ghost" style={{ height: 42, fontSize: 13 }}>
           <History size={14} /> Skip
         </button>
-        <button type="button" className="btn-flow-primary" style={{ height: 42, fontSize: 13 }}>
+        <Link to={`/packs/${pack.slug}`} className="btn-flow-primary" style={{ height: 42, fontSize: 13, textDecoration: 'none' }}>
           Continue <ArrowRight size={14} />
-        </button>
+        </Link>
       </div>
     </div>
   )
@@ -610,7 +682,7 @@ function MixedFormatShowcase() {
 // Top jokesters (left, 1fr) + Weekly special (right, 1.4fr).
 // ──────────────────────────────────────────────────────────────────────────
 
-function TopJokestersAndSpecial() {
+function TopJokestersAndSpecial({ featuredPack }: { featuredPack: ReturnType<typeof useFeaturedPack>['data'] }) {
   const jokesters = [
     { rank: 1, name: 'Maya Okonkwo',  handle: '@mayatypes', punchlines: '1,204', desc: 'Office · Observ.', avatarBg: '#6A1CF6', avatarFg: '#fff' },
     { rank: 2, name: 'Dev Patel',     handle: '@devpuns',   punchlines: '982',   desc: 'Pun · Dad',        avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
@@ -759,15 +831,17 @@ function TopJokestersAndSpecial() {
                 letterSpacing: '-0.02em',
               }}
             >
-              Back-to-school <em className="wink" style={{ color: '#5F4200' }}>survival kit.</em>
+              {featuredPack ? renderTitle(featuredPack.title) : (
+                <>Back-to-school <em className="wink" style={{ color: '#5F4200' }}>survival kit.</em></>
+              )}
             </h3>
             <p style={{ marginTop: 10, fontSize: 14, color: '#5F4200', opacity: 0.85, maxWidth: 280 }}>
-              45 jokes engineered to win over a Monday-morning classroom. Tested on actual teenagers.
+              {featuredPack?.description ?? '45 jokes engineered to win over a Monday-morning classroom.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-            <button
-              type="button"
+            <Link
+              to={featuredPack ? `/packs/${featuredPack.slug}` : '/library'}
               style={{
                 height: 44,
                 padding: '0 24px',
@@ -782,10 +856,11 @@ function TopJokestersAndSpecial() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
+                textDecoration: 'none',
               }}
             >
               Read collection <ArrowRight size={14} />
-            </button>
+            </Link>
             <button
               type="button"
               style={{
@@ -865,21 +940,45 @@ function TopJokestersAndSpecial() {
 // "Test on a friend"
 // ──────────────────────────────────────────────────────────────────────────
 
-function StatsRow() {
-  const themes: { t: string; s: number; big?: boolean }[] = [
-    { t: 'Office life', s: 42, big: true },
-    { t: 'Puns', s: 38, big: true },
-    { t: 'Wholesome', s: 24 },
-    { t: 'One-liners', s: 21, big: true },
-    { t: 'Dad', s: 18 },
-    { t: 'Surreal', s: 14 },
-    { t: 'Anti-joke', s: 11 },
-    { t: 'Tech', s: 9 },
-    { t: 'Coffee', s: 7 },
-    { t: 'Mondays', s: 6 },
-    { t: 'Email', s: 5 },
-  ]
-  const barHeights = [12, 18, 8, 22, 14, 28, 16, 24, 20, 30, 18, 26, 14, 32, 22, 28, 18, 34, 26, 32, 22, 38, 28, 36, 30, 32, 40, 28]
+function StatsRow({
+  tasteProfile,
+  todayText,
+}: {
+  tasteProfile: ReturnType<typeof useTasteProfile>['data']
+  todayText: string
+}) {
+  // Combine themes + categories + formats into a single pill cloud, biggest first.
+  const themesData =
+    tasteProfile
+      ? [
+          ...tasteProfile.top_themes,
+          ...tasteProfile.top_categories,
+          ...tasteProfile.top_formats,
+        ]
+      : []
+
+  // Mark top 3 as "big" pills.
+  const sortedThemes = themesData
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12)
+    .map((p, i) => ({ t: p.label, s: p.count, big: i < 3 }))
+
+  // Fallback to mock pills if no data yet.
+  const themes: { t: string; s: number; big?: boolean }[] =
+    sortedThemes.length > 0
+      ? sortedThemes
+      : [
+          { t: 'Office life', s: 42, big: true },
+          { t: 'Puns', s: 38, big: true },
+          { t: 'Wholesome', s: 24 },
+          { t: 'One-liners', s: 21, big: true },
+          { t: 'Dad', s: 18 },
+        ]
+  // Use real 28-day reads from taste-profile if available; otherwise mock.
+  const barHeights = tasteProfile?.daily_reads_28d && tasteProfile.daily_reads_28d.length === 28
+    ? tasteProfile.daily_reads_28d
+    : [12, 18, 8, 22, 14, 28, 16, 24, 20, 30, 18, 26, 14, 32, 22, 28, 18, 34, 26, 32, 22, 38, 28, 36, 30, 32, 40, 28]
+  const barMax = Math.max(1, ...barHeights)
 
   return (
     <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
@@ -910,10 +1009,14 @@ function StatsRow() {
           This month, in numbers.
         </h4>
         <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <StatCell value="168" label="JOKES READ" valueColor="#CAFD00" />
-          <StatCell value="42" label="SAVED" valueColor="#fff" />
-          <StatCell value="9 AM" label="PEAK READ" valueColor="#FFC965" />
-          <StatCell value="Pun" label="TOP VIBE" valueColor="#fff" />
+          <StatCell value={String(tasteProfile?.jokes_read ?? '—')} label="JOKES READ" valueColor="#CAFD00" />
+          <StatCell value={String(tasteProfile?.jokes_saved ?? '—')} label="SAVED" valueColor="#fff" />
+          <StatCell
+            value={tasteProfile?.peak_read_hour !== null && tasteProfile?.peak_read_hour !== undefined ? formatHour(tasteProfile.peak_read_hour) : '—'}
+            label="PEAK READ"
+            valueColor="#FFC965"
+          />
+          <StatCell value={tasteProfile?.top_vibe?.label ?? '—'} label="TOP VIBE" valueColor="#fff" />
         </div>
         <div style={{ marginTop: 20, display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
           {barHeights.map((h, i) => (
@@ -921,7 +1024,7 @@ function StatsRow() {
               key={i}
               style={{
                 flex: 1,
-                height: `${(h * 100) / 40}%`,
+                height: `${(h * 100) / barMax}%`,
                 background: i >= 21 ? '#CAFD00' : 'rgba(202, 253, 0, 0.3)',
                 borderRadius: 1,
               }}
@@ -1057,7 +1160,7 @@ function StatsRow() {
             TO · SAM
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, marginTop: 6, lineHeight: 1.4 }}>
-            "Why don't scientists trust atoms? Because they make up everything." 😂
+            "{todayText}" 😂
           </div>
           <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
             <span className="tag-flow" style={{ background: '#CAFD00', color: '#3A4A00' }}>
@@ -1206,6 +1309,27 @@ function greetingTime() {
   if (h < 12) return 'morning'
   if (h < 18) return 'afternoon'
   return 'evening'
+}
+
+/** Format hour 0-23 as "9 AM" / "10 PM" */
+function formatHour(h: number): string {
+  if (h === 0) return '12 AM'
+  if (h === 12) return '12 PM'
+  if (h < 12) return `${h} AM`
+  return `${h - 12} PM`
+}
+
+/** Wrap the last word of a pack title in a `wink` italic for the brand pattern. */
+function renderTitle(title: string) {
+  const words = title.split(' ')
+  if (words.length < 2) return title
+  const last = words[words.length - 1]
+  const prefix = words.slice(0, -1).join(' ')
+  return (
+    <>
+      {prefix} <em className="wink" style={{ color: '#5F4200' }}>{last}</em>
+    </>
+  )
 }
 
 // Sample jokes — local mock data shaped to FlowJokeData. Replace with real
