@@ -1,17 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { streakApi } from '@/lib/api'
+import { useAuth } from '@/features/auth'
 
 export const streakKeys = {
   all: ['streak'] as const,
   state: () => [...streakKeys.all, 'state'] as const,
 }
 
-/** GET /users/me/streak/ — current streak + 14-day rail. */
+/** GET /users/me/streak/ — current streak + 14-day rail.
+ *  Only fires when user is authenticated (avoids 401 noise). */
 export function useStreak() {
+  const { isAuthenticated } = useAuth()
   return useQuery({
     queryKey: streakKeys.state(),
     queryFn: () => streakApi.get().then((r) => r.data),
-    staleTime: 1000 * 60, // 1 min — refetched on Today open
+    staleTime: 1000 * 60,
+    enabled: isAuthenticated,
   })
 }
 

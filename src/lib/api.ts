@@ -28,6 +28,10 @@ export interface AuthResponse {
 
 export interface GoogleAuthRequest {
   code: string
+  /** Optional — backend may use this to override its env var (django-allauth's
+   * SocialLoginSerializer accepts it). Send it from the frontend so origin-aware
+   * OAuth works on localhost without backend changes. */
+  redirect_uri?: string
 }
 
 export interface PasswordResetRequest {
@@ -149,9 +153,17 @@ export interface JokeSearchParams {
   age_rating?: string
   tones?: string
   context_tags?: string
+  /** P1 synonyms — backend accepts either name. */
+  categories?: string
+  themes?: string
   culture_tags?: string
   language?: string
   page?: number
+  page_size?: number
+  /** P2 — filter by vibe slug; resolves to format/theme/category constraints server-side. */
+  vibe?: string
+  /** Default ordering is relevance when q is set; otherwise -created_at. */
+  ordering?: string
 }
 
 // Jokes API
@@ -652,8 +664,10 @@ export interface DailyJokeToday {
 export interface TomorrowTeaser {
   /** 12-word truncated text for the blurred teaser. */
   preview: string
-  format: { slug: string; name: string }
+  /** Format slug only — backend returns a plain string (e.g. "anti", "story"). */
+  format: string
   issue_label: string
+  date: string
 }
 
 export const insightsApi = {

@@ -1,24 +1,38 @@
 // Google OAuth helper — builds the consent screen URL.
 //
-// IMPORTANT: the redirect URI sent here must EXACTLY match the backend's
-// GOOGLE_OAUTH_CALLBACK_URL env var on the Cloud Run service. The backend
-// re-sends this URI to Google when redeeming the auth code; Google rejects
-// the exchange with `redirect_uri_mismatch` if they differ.
+// REDIRECT URI RESOLUTION (in priority order):
+//   1. VITE_GOOGLE_OAUTH_REDIRECT_URI env var if set (used in CI/prod deploys
+//      to lock the URI to web.app, since the backend's GOOGLE_OAUTH_CALLBACK_URL
+//      is currently fixed to that one origin).
+//   2. window.location.origin + '/auth/google/callback' — dynamic. Used in
+//      local dev. If the backend's hardcoded callback URL doesn't match,
+//      Google will reject with `redirect_uri_mismatch` AND the user stays on
+//      localhost (they see an error instead of being bounced to prod).
 //
-// Backend currently has GOOGLE_OAUTH_CALLBACK_URL=https://jokesforfront.web.app/auth/google/callback
-// so we hardcode the same default here. If the backend setting changes, update
-// VITE_GOOGLE_OAUTH_REDIRECT_URI in the workflow + .env to match.
-
-const DEFAULT_REDIRECT_URI = 'https://jokesforfront.web.app/auth/google/callback'
-
-export const GOOGLE_OAUTH_REDIRECT_URI =
-  import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URI || DEFAULT_REDIRECT_URI
+// Per the backend handout §5.3, the OAuth client config in GCP already has
+// localhost variants registered, so Google itself accepts localhost as a
+// valid redirect_uri.
 
 const GOOGLE_OAUTH_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth'
-
 const SCOPES = ['openid', 'email', 'profile']
-
 const RETURN_TO_KEY = 'auth.returnTo'
+
+/**
+ * Compute the canonical redirect URI for OAuth.
+ * - Env var override wins (used in prod to lock to web.app)
+ * - Otherwise, current origin (works on localhost AND any deployed origin)
+ */
+export function getOAuthRedirectUri(): string {
+  const fromEnv = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URI
+  if (fromEnv) return fromEnv
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/auth/google/callback`
+  }
+  return 'https://jokesforfront.web.app/auth/google/callback'
+}
+
+// Back-compat export for places that still read this constant.
+export const GOOGLE_OAUTH_REDIRECT_URI = getOAuthRedirectUri()
 
 /**
  * Build the URL to redirect the user to Google's consent screen.
@@ -39,7 +53,8 @@ export function getGoogleAuthUrl(returnTo?: string): string {
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: GOOGLE_OAUTH_REDIRECT_URI,
+    // Resolve dynamically every time so we follow the current origin.
+    redirect_uri: getOAuthRedirectUri(),
     response_type: 'code',
     scope: SCOPES.join(' '),
     access_type: 'offline',

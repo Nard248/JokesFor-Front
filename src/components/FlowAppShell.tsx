@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Bell } from 'lucide-react'
 import { useAuth } from '@/features/auth'
+import { useStreak } from '@/features/streak'
 
 /**
  * FlowAppShell — top chrome for the redesigned authenticated experience.
@@ -8,17 +9,15 @@ import { useAuth } from '@/features/auth'
  * Used by /flow-canvas, /explore, /search. Provides logo + nav + streak
  * + bell + avatar. Replaces the legacy Layout for these pages.
  *
- * Falls back gracefully for anonymous users (e.g. when /search is hit
- * without login): default avatar, no personalized data shown.
+ * Falls back gracefully for anonymous users: default avatar, no streak
+ * shown. Streak chip pulls real data from /users/me/streak/.
  */
 export type FlowNavKey = 'today' | 'explore' | 'search' | 'library'
 
 interface FlowAppShellProps {
   active: FlowNavKey
   children: React.ReactNode
-  /** Override streak count if you have one; default 14 (mock). */
-  streakDays?: number
-  /** Hide the streak chip (e.g. for anonymous routes) */
+  /** Hide the streak chip (e.g. for pages where it's irrelevant) */
   hideStreak?: boolean
 }
 
@@ -29,8 +28,11 @@ const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
   ['library', 'Library', '/library'],
 ]
 
-export function FlowAppShell({ active, children, streakDays = 14, hideStreak }: FlowAppShellProps) {
+export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps) {
   const { user, isAuthenticated } = useAuth()
+  // Real streak data — only fetched if authenticated (hook handles unauth gracefully).
+  const { data: streak } = useStreak()
+  const streakDays = streak?.current_count ?? 0
   const initial = (user?.first_name?.[0] ?? user?.username?.[0] ?? 'A').toUpperCase()
 
   return (
@@ -83,7 +85,7 @@ export function FlowAppShell({ active, children, streakDays = 14, hideStreak }: 
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {!hideStreak && isAuthenticated && (
+          {!hideStreak && isAuthenticated && streakDays > 0 && (
             <span className="streak-chip">
               <span className="dot">🔥</span>
               {streakDays}-day streak

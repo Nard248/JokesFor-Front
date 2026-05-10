@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router'
 import { Loader2, AlertCircle } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import { useGoogleAuth } from '@/features/auth'
-import { consumeReturnTo } from '@/features/auth/google-oauth'
+import { consumeReturnTo, getOAuthRedirectUri } from '@/features/auth/google-oauth'
 import { Button } from '@/components/ui/button'
 
 interface ApiError {
@@ -56,7 +56,10 @@ export function GoogleCallbackPage() {
 
     exchanged.current = true
     googleAuth.mutate(
-      { code },
+      // Send redirect_uri too — backend may use it to override its env var.
+      // The URI MUST match what we sent to Google in step 1, or Google will
+      // reject the code exchange.
+      { code, redirect_uri: getOAuthRedirectUri() },
       {
         onSuccess: () => {
           const returnTo = consumeReturnTo()

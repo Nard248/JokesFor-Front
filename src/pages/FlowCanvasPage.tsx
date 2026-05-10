@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/features/auth'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { FlowJokeCard, jokeToFlowData, type FlowJokeData } from '@/components/FlowJokeCard'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodayAugmented, useTomorrowTeaser, useTasteProfile } from '@/features/insights'
 import { useStreak } from '@/features/streak'
 import { useMysteryBoxStatus, useRollMysteryBox } from '@/features/mystery-box'
 import { useFeaturedPack, usePacksInProgress } from '@/features/packs'
+import { useJokeSearch } from '@/features/jokes'
+import { useDailyJokeHistory } from '@/features/daily-joke'
+import { useTopJokesters } from '@/features/trending'
 
 /**
  * Flow Canvas — the "Today" hub, redesigned per Docs/JokesFor/parts/flow-screens.jsx
@@ -45,6 +48,11 @@ export function FlowCanvasPage() {
   const { data: featuredPack } = useFeaturedPack()
   const { data: inProgressPacks } = usePacksInProgress()
   const { data: tasteProfile } = useTasteProfile('month')
+  const { data: history } = useDailyJokeHistory()
+  const { data: jokesters } = useTopJokesters(5)
+  // "Three you'll probably save" — filter by user's top vibe; fall back to recent.
+  const topVibe = tasteProfile?.top_vibe?.slug
+  const { data: forYouJokes } = useJokeSearch(topVibe ? { vibe: topVibe, page_size: 3 } : { page_size: 3, ordering: '-created_at' })
 
   const firstName = user?.first_name || user?.username || 'friend'
 
@@ -124,59 +132,19 @@ export function FlowCanvasPage() {
                 }}
               >
                 <span className="tag-flow">
-                  Joke of the day · {today?.joke?.format?.name ?? 'Setup → Punchline'}
+                  Joke of the day · {today?.joke?.format?.name ?? 'Loading…'}
                 </span>
                 <span className="eyebrow-mono">
-                  {(today?.joke?.themes?.[0]?.name ?? today?.joke?.context_tags?.[0]?.name) || 'Today'}
-                  {' · '}
-                  {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) || 'JokesFor'}
+                  {(today?.joke?.themes?.[0]?.name ?? today?.joke?.context_tags?.[0]?.name) || ' '}
+                  {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) ? ' · ' : ''}
+                  {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) || ''}
                 </span>
               </header>
-              <div style={{ marginTop: 32, position: 'relative' }}>
-                <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>Setup</span>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 600,
-                    fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
-                    color: '#1A1A1A',
-                    lineHeight: 1.25,
-                    marginTop: 8,
-                    maxWidth: 640,
-                  }}
-                >
-                  {today?.joke?.setup ?? today?.joke?.text ?? "Today's joke is brewing — check back in a moment."}
-                </div>
-                <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
-                  Punchline
-                </span>
-                <div
-                  onClick={() => setRevealed(true)}
-                  className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
-                  style={{
-                    cursor: revealed ? 'default' : 'pointer',
-                    marginTop: 8,
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
-                    fontSize: 'clamp(2rem, 5vw, 4rem)',
-                    letterSpacing: '-0.025em',
-                    color: '#1A1A1A',
-                    lineHeight: 1.02,
-                  }}
-                >
-                  {today?.joke?.punchline ?? '…'}
-                </div>
-                {!revealed && (
-                  <button
-                    type="button"
-                    onClick={() => setRevealed(true)}
-                    className="btn-flow-reward"
-                    style={{ marginTop: 24 }}
-                  >
-                    <Sparkles size={16} /> Reveal punchline
-                  </button>
-                )}
-              </div>
+              <JotdBody
+                joke={today?.joke}
+                revealed={revealed}
+                onReveal={() => setRevealed(true)}
+              />
               <footer
                 style={{
                   marginTop: 32,
@@ -259,19 +227,21 @@ export function FlowCanvasPage() {
             </Link>
           </div>
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-            {SAMPLE_JOKES.slice(0, 3).map((j) => (
-              <FlowJokeCard key={j.id} joke={j} />
-            ))}
+            {forYouJokes && forYouJokes.results.length > 0
+              ? forYouJokes.results.slice(0, 3).map((j) => (
+                  <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} />
+                ))
+              : SAMPLE_JOKES.slice(0, 3).map((j) => <FlowJokeCard key={j.id} joke={j} />)}
           </div>
 
           {/* ── 7-day archive · newspaper strip ────────────────── */}
-          <SevenDayArchive />
+          <SevenDayArchive history={history?.results} />
 
           {/* ── Mixed-format showcase ──────────────────────────── */}
           <MixedFormatShowcase />
 
           {/* ── Top jokesters + Weekly special ─────────────────── */}
-          <TopJokestersAndSpecial featuredPack={featuredPack} />
+          <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} />
 
           {/* ── Stats + Themes + Test on a friend ──────────────── */}
           <StatsRow tasteProfile={tasteProfile} todayText={today?.joke?.text ?? today?.joke?.punchline ?? ''} />
@@ -280,6 +250,227 @@ export function FlowCanvasPage() {
           <BrandQuoteFooter />
         </div>
       </FlowAppShell>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// JOTD body — format-aware. Handles all 6 formats correctly.
+// ──────────────────────────────────────────────────────────────────────────
+
+interface JotdBodyProps {
+  joke?: {
+    setup: string | null
+    punchline: string | null
+    text: string
+    lines?: string[] | null
+    format?: { slug: string }
+  }
+  revealed: boolean
+  onReveal: () => void
+}
+
+function JotdBody({ joke, revealed, onReveal }: JotdBodyProps) {
+  // Loading / no joke yet
+  if (!joke) {
+    return (
+      <div style={{ marginTop: 32 }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+            color: '#52525B',
+            lineHeight: 1.25,
+          }}
+        >
+          Today's joke is brewing — check back in a moment.
+        </div>
+      </div>
+    )
+  }
+
+  const slug = (joke.format?.slug ?? '').toLowerCase()
+  const isSetupPunch = slug === 'setup' || slug === 'setup-punchline' || slug === 'setup_punchline' || slug === 'anti' || slug === 'anti-joke' || slug === 'anti_joke'
+  const isKnock = slug === 'knock' || slug === 'knock-knock' || slug === 'knock_knock'
+  const isAnti = slug === 'anti' || slug === 'anti-joke' || slug === 'anti_joke'
+
+  // Setup → Punchline (and anti-joke, which has the same shape)
+  if (isSetupPunch && joke.setup && joke.punchline) {
+    return (
+      <div style={{ marginTop: 32, position: 'relative' }}>
+        <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+          Setup
+        </span>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+            color: '#1A1A1A',
+            lineHeight: 1.25,
+            marginTop: 8,
+            maxWidth: 640,
+          }}
+        >
+          {joke.setup}
+        </div>
+        <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+          Punchline
+        </span>
+        <div
+          onClick={onReveal}
+          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          style={{
+            cursor: revealed ? 'default' : 'pointer',
+            marginTop: 8,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: 'clamp(2rem, 5vw, 4rem)',
+            letterSpacing: '-0.025em',
+            color: '#1A1A1A',
+            lineHeight: 1.02,
+          }}
+        >
+          {joke.punchline}
+        </div>
+        {isAnti && revealed && (
+          <div
+            style={{
+              marginTop: 16,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.22em',
+              color: '#52525B',
+              textTransform: 'uppercase',
+            }}
+          >
+            * That's it. That's the joke.
+          </div>
+        )}
+        {!revealed && (
+          <button
+            type="button"
+            onClick={onReveal}
+            className="btn-flow-reward"
+            style={{ marginTop: 24 }}
+          >
+            <Sparkles size={16} /> Reveal punchline
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Knock-knock — alternating bubbles
+  if (isKnock && joke.lines && joke.lines.length > 0) {
+    return (
+      <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 540 }}>
+        {joke.lines.map((line, i) => (
+          <div
+            key={i}
+            style={{
+              alignSelf: i % 2 === 0 ? 'flex-start' : 'flex-end',
+              maxWidth: '85%',
+              padding: '12px 18px',
+              borderRadius: 18,
+              background: i % 2 === 0 ? '#F2E9FF' : '#1A1A1A',
+              color: i % 2 === 0 ? '#6A1CF6' : '#fff',
+              fontFamily: 'var(--font-display)',
+              fontWeight: i === joke.lines!.length - 1 ? 800 : 600,
+              fontSize: 'clamp(1rem, 1.6vw, 1.25rem)',
+              lineHeight: 1.3,
+            }}
+          >
+            {line}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // One-liner / Observational / Story — single text
+  // For observational, render in serif italic with a giant decorative quote.
+  const isObserv = slug === 'observ' || slug === 'observational'
+  const isStory = slug === 'story'
+
+  if (isObserv) {
+    return (
+      <div style={{ marginTop: 32, position: 'relative', maxWidth: 760 }}>
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: -24,
+            left: -8,
+            fontFamily: 'var(--font-serif)',
+            fontStyle: 'italic',
+            fontSize: 96,
+            lineHeight: 1,
+            color: '#6A1CF6',
+            opacity: 0.3,
+          }}
+        >
+          “
+        </span>
+        <div
+          style={{
+            paddingLeft: 32,
+            fontFamily: 'var(--font-serif)',
+            fontStyle: 'italic',
+            fontWeight: 500,
+            fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
+            color: '#1A1A1A',
+            lineHeight: 1.3,
+            textWrap: 'balance' as const,
+          }}
+        >
+          {joke.text}
+        </div>
+      </div>
+    )
+  }
+
+  if (isStory) {
+    return (
+      <div style={{ marginTop: 32, maxWidth: 720 }}>
+        <span className="tag-flow amber" style={{ marginBottom: 16, display: 'inline-block' }}>
+          📖 Story
+        </span>
+        <div
+          style={{
+            marginTop: 12,
+            fontFamily: 'var(--font-serif)',
+            fontWeight: 400,
+            fontSize: 'clamp(1.125rem, 2vw, 1.375rem)',
+            color: '#1A1A1A',
+            lineHeight: 1.55,
+            textWrap: 'pretty' as const,
+          }}
+        >
+          {joke.text}
+        </div>
+      </div>
+    )
+  }
+
+  // Default / one-liner: single big headline
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: 'clamp(2rem, 5vw, 4rem)',
+          letterSpacing: '-0.025em',
+          color: '#1A1A1A',
+          lineHeight: 1.05,
+          textWrap: 'balance' as const,
+          maxWidth: 880,
+        }}
+      >
+        {joke.text}
+      </div>
     </div>
   )
 }
@@ -411,8 +602,8 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
 }
 
 function TomorrowTeaser({ tomorrow }: { tomorrow: ReturnType<typeof useTomorrowTeaser>['data'] }) {
-  const previewText = tomorrow?.preview ?? 'Tomorrow\'s joke is brewing…'
-  const formatName = tomorrow?.format?.name ?? 'TBD'
+  const previewText = tomorrow?.preview ?? "Tomorrow's joke is brewing…"
+  const formatName = tomorrow?.format ? formatLabel(tomorrow.format) : 'TBD'
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#0F0E12', color: '#fff' }}>
       <span className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>
@@ -499,16 +690,32 @@ function ContinueBanner({ pack }: { pack?: { slug: string; title: string; joke_c
 // /daily-jokes/history/ when the page transitions to real data.
 // ──────────────────────────────────────────────────────────────────────────
 
-function SevenDayArchive() {
-  const days = [
-    { d: 'Wed', n: '041', t: 'On scientists trusting atoms.', v: 'Nerd', bg: 'transparent' },
-    { d: 'Tue', n: '040', t: 'On eyebrows drawn too high.', v: 'One-liner', bg: 'rgba(202, 253, 0, 0.12)' },
-    { d: 'Mon', n: '039', t: 'On adulthood as email reply chain.', v: 'Observ.', bg: 'transparent' },
-    { d: 'Sun', n: '038', t: 'On hippos vs. Zippos.', v: 'Pun', bg: '#F2E9FF' },
-    { d: 'Sat', n: '037', t: 'On facial hair growing on you.', v: 'Pun', bg: 'transparent' },
-    { d: 'Fri', n: '036', t: 'On the outstanding scarecrow.', v: 'Dad', bg: 'rgba(255, 201, 101, 0.18)' },
-    { d: 'Thu', n: '035', t: 'On the chicken & the road.', v: 'Anti', bg: 'transparent' },
-  ]
+function SevenDayArchive({ history }: { history?: { joke: { text: string; format?: { name: string } }; date: string }[] }) {
+  const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)', 'transparent', '#F2E9FF', 'transparent']
+
+  // Build the days array from real history. If history is empty, show placeholder.
+  const days = history && history.length > 0
+    ? history.slice(0, 7).map((h, i) => {
+        const d = new Date(h.date)
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' })
+        const num = String(99 - i).padStart(3, '0') // crude — backend should expose issue_label per entry
+        return {
+          d: dayLabel,
+          n: num,
+          t: (h.joke?.text ?? '').slice(0, 60),
+          v: h.joke?.format?.name ?? '',
+          bg: tints[i % tints.length],
+        }
+      })
+    : [
+        { d: 'Wed', n: '041', t: 'On scientists trusting atoms.', v: 'Nerd', bg: 'transparent' },
+        { d: 'Tue', n: '040', t: 'On eyebrows drawn too high.', v: 'One-liner', bg: 'rgba(202, 253, 0, 0.12)' },
+        { d: 'Mon', n: '039', t: 'On adulthood as email reply chain.', v: 'Observ.', bg: 'transparent' },
+        { d: 'Sun', n: '038', t: 'On hippos vs. Zippos.', v: 'Pun', bg: '#F2E9FF' },
+        { d: 'Sat', n: '037', t: 'On facial hair growing on you.', v: 'Pun', bg: 'transparent' },
+        { d: 'Fri', n: '036', t: 'On the outstanding scarecrow.', v: 'Dad', bg: 'rgba(255, 201, 101, 0.18)' },
+        { d: 'Thu', n: '035', t: 'On the chicken & the road.', v: 'Anti', bg: 'transparent' },
+      ]
   return (
     <div style={{ marginTop: 56 }}>
       <div
@@ -682,14 +889,48 @@ function MixedFormatShowcase() {
 // Top jokesters (left, 1fr) + Weekly special (right, 1.4fr).
 // ──────────────────────────────────────────────────────────────────────────
 
-function TopJokestersAndSpecial({ featuredPack }: { featuredPack: ReturnType<typeof useFeaturedPack>['data'] }) {
-  const jokesters = [
-    { rank: 1, name: 'Maya Okonkwo',  handle: '@mayatypes', punchlines: '1,204', desc: 'Office · Observ.', avatarBg: '#6A1CF6', avatarFg: '#fff' },
-    { rank: 2, name: 'Dev Patel',     handle: '@devpuns',   punchlines: '982',   desc: 'Pun · Dad',        avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
-    { rank: 3, name: 'Sara Rumi',     handle: '@srumi',     punchlines: '844',   desc: 'Wholesome',        avatarBg: '#FFC965', avatarFg: '#5F4200' },
-    { rank: 4, name: 'Kai Bennett',   handle: '@kaib',      punchlines: '712',   desc: 'Anti · Surreal',   avatarBg: '#1A1A1A', avatarFg: '#fff' },
-    { rank: 5, name: 'Lena Park',     handle: '@lenap',     punchlines: '611',   desc: 'One-liners',       avatarBg: '#1A1A1A', avatarFg: '#fff' },
+function TopJokestersAndSpecial({
+  featuredPack,
+  jokesters: realJokesters,
+}: {
+  featuredPack: ReturnType<typeof useFeaturedPack>['data']
+  jokesters: unknown // adapter currently returns mock TopJokester[]; backend returns {results: TopJokesterDTO[]}
+}) {
+  // Backend returns either {results: [...]} or [...] directly. Normalize.
+  type Row = { name: string; username?: string; punchlineCount?: number; punchline_count?: number; rank?: number; top_vibes?: { slug: string; label: string; icon: string }[] }
+  let realList: Row[] = []
+  if (Array.isArray(realJokesters)) {
+    realList = realJokesters as Row[]
+  } else if (realJokesters && typeof realJokesters === 'object' && 'results' in realJokesters) {
+    realList = ((realJokesters as { results: Row[] }).results ?? [])
+  }
+
+  const palettes = [
+    { avatarBg: '#6A1CF6', avatarFg: '#fff' },
+    { avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
+    { avatarBg: '#FFC965', avatarFg: '#5F4200' },
+    { avatarBg: '#1A1A1A', avatarFg: '#fff' },
+    { avatarBg: '#1A1A1A', avatarFg: '#fff' },
   ]
+
+  const jokesters = realList.length > 0
+    ? realList.slice(0, 5).map((j, i) => ({
+        rank: j.rank ?? i + 1,
+        name: j.name,
+        handle: j.username ? `@${j.username}` : '',
+        // Backend uses `punchline_count`; legacy mock uses `punchlineCount` (camelCase).
+        punchlines: String(j.punchline_count ?? j.punchlineCount ?? 0),
+        desc: (j.top_vibes ?? []).slice(0, 2).map((v) => v.label).join(' · ') || '—',
+        avatarBg: palettes[i].avatarBg,
+        avatarFg: palettes[i].avatarFg,
+      }))
+    : [
+        { rank: 1, name: 'Maya Okonkwo',  handle: '@mayatypes', punchlines: '1,204', desc: 'Office · Observ.', avatarBg: '#6A1CF6', avatarFg: '#fff' },
+        { rank: 2, name: 'Dev Patel',     handle: '@devpuns',   punchlines: '982',   desc: 'Pun · Dad',        avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
+        { rank: 3, name: 'Sara Rumi',     handle: '@srumi',     punchlines: '844',   desc: 'Wholesome',        avatarBg: '#FFC965', avatarFg: '#5F4200' },
+        { rank: 4, name: 'Kai Bennett',   handle: '@kaib',      punchlines: '712',   desc: 'Anti · Surreal',   avatarBg: '#1A1A1A', avatarFg: '#fff' },
+        { rank: 5, name: 'Lena Park',     handle: '@lenap',     punchlines: '611',   desc: 'One-liners',       avatarBg: '#1A1A1A', avatarFg: '#fff' },
+      ]
   const specialJokes = [
     "Why don't teachers ever get bored?",
     'I asked my pencil for advice…',
@@ -1309,6 +1550,28 @@ function greetingTime() {
   if (h < 12) return 'morning'
   if (h < 18) return 'afternoon'
   return 'evening'
+}
+
+/** Map a format slug to a human label. */
+function formatLabel(slug: string): string {
+  const map: Record<string, string> = {
+    setup: 'Setup → Punchline',
+    'setup-punchline': 'Setup → Punchline',
+    setup_punchline: 'Setup → Punchline',
+    oneliner: 'One-liner',
+    one_liner: 'One-liner',
+    'one-liner': 'One-liner',
+    observ: 'Observational',
+    observational: 'Observational',
+    anti: 'Anti-joke',
+    anti_joke: 'Anti-joke',
+    'anti-joke': 'Anti-joke',
+    knock: 'Knock-knock',
+    knock_knock: 'Knock-knock',
+    'knock-knock': 'Knock-knock',
+    story: 'Story',
+  }
+  return map[slug.toLowerCase()] ?? slug
 }
 
 /** Format hour 0-23 as "9 AM" / "10 PM" */
