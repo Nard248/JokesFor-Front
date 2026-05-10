@@ -66,6 +66,7 @@ export function LoginPage() {
 
   return (
     <div
+      className="page-enter"
       style={{
         minHeight: '100vh',
         display: 'grid',

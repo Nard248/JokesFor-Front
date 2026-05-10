@@ -32,6 +32,7 @@ export function ForgotPasswordPage() {
 
   return (
     <div
+      className="page-enter"
       style={{
         minHeight: '100vh',
         display: 'flex',

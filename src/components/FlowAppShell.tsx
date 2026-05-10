@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { Bell } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
@@ -39,6 +39,13 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
   const { data: streak } = useStreak()
   const streakDays = streak?.current_count ?? 0
   const initial = (user?.first_name?.[0] ?? user?.username?.[0] ?? 'A').toUpperCase()
+
+  // Pathname becomes the React key for <main>. When the user navigates between
+  // FlowAppShell-wrapped pages, React would normally reuse the <main> element
+  // (same parent, same tag) and only diff its children — meaning the .page-enter
+  // animation wouldn't re-fire. Keying by pathname forces a fresh mount per
+  // route, which restarts the CSS animation. Costs ~one extra mount/unmount.
+  const { pathname } = useLocation()
 
   // Mutually-exclusive dropdown state. Click bell or avatar → open one,
   // close the other. Outside-click + Escape closes (handled by each panel).
@@ -97,7 +104,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {!hideStreak && isAuthenticated && streakDays > 0 && (
-            <span className="streak-chip">
+            <span className="streak-chip streak-chip-enter">
               <span className="dot">🔥</span>
               {streakDays}-day streak
             </span>
@@ -167,7 +174,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           )}
         </div>
       </header>
-      <main>{children}</main>
+      <main key={pathname} className="page-enter">{children}</main>
 
       {/* Local button styles — duplicated across Flow* pages, kept here so
           the shell renders cleanly even if a page forgot to inline them. */}

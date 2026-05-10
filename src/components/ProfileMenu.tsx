@@ -62,6 +62,7 @@ export function ProfileMenu({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="menu"
       aria-label="Account"
+      className="dropdown-enter"
       style={{
         position: 'absolute',
         top: 'calc(100% + 8px)',

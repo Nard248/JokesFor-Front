@@ -7,7 +7,7 @@ export function NotFoundPage() {
   const randomJoke = mockJokes[Math.floor(Math.random() * mockJokes.length)]
 
   return (
-    <div className="min-h-screen bg-[#F8F6F6] flex flex-col items-center justify-center px-4 text-center">
+    <div className="page-enter min-h-screen bg-[#F8F6F6] flex flex-col items-center justify-center px-4 text-center">
       {/* Logo */}
       <Link to="/" className="mb-8">
         <img src="/Logos/compact_light.svg" alt="Jokes For" className="h-10" />

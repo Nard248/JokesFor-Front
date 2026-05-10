@@ -79,7 +79,7 @@ export function FlowPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
+    <div className="page-enter" style={{ minHeight: '100vh', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
       {/* Header — logo, progress, skip */}
       <header
         style={{

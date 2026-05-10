@@ -41,6 +41,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-label="Notifications"
+      className="dropdown-enter"
       style={{
         position: 'absolute',
         top: 'calc(100% + 8px)',
