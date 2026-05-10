@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Bell } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
+import { ProfileMenu } from './ProfileMenu'
+import { NotificationsPanel } from './NotificationsPanel'
 
 /**
  * FlowAppShell — top chrome for the redesigned authenticated experience.
@@ -28,12 +31,20 @@ const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
   ['library', 'Library', '/library'],
 ]
 
+type OpenMenu = 'profile' | 'notifications' | null
+
 export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps) {
   const { user, isAuthenticated } = useAuth()
   // Real streak data — only fetched if authenticated (hook handles unauth gracefully).
   const { data: streak } = useStreak()
   const streakDays = streak?.current_count ?? 0
   const initial = (user?.first_name?.[0] ?? user?.username?.[0] ?? 'A').toUpperCase()
+
+  // Mutually-exclusive dropdown state. Click bell or avatar → open one,
+  // close the other. Outside-click + Escape closes (handled by each panel).
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
+  const toggle = (which: Exclude<OpenMenu, null>) =>
+    setOpenMenu((prev) => (prev === which ? null : which))
 
   return (
     <>
@@ -93,42 +104,56 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           )}
           {isAuthenticated ? (
             <>
+              {/* Notifications */}
               <div style={{ position: 'relative' }}>
                 <button
                   type="button"
                   className="btn-flow-ghost"
                   aria-label="Notifications"
+                  aria-haspopup="dialog"
+                  aria-expanded={openMenu === 'notifications'}
+                  onClick={() => toggle('notifications')}
                   style={{ height: 40, width: 40, padding: 0, borderRadius: 12 }}
                 >
                   <Bell size={16} />
                 </button>
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: 6,
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    background: '#6A1CF6',
-                  }}
-                />
+                {openMenu === 'notifications' && (
+                  <NotificationsPanel onClose={() => setOpenMenu(null)} />
+                )}
               </div>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  background: '#6A1CF6',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                }}
-              >
-                {initial}
+
+              {/* Profile / account */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  aria-label="Account menu"
+                  aria-haspopup="menu"
+                  aria-expanded={openMenu === 'profile'}
+                  onClick={() => toggle('profile')}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: '#6A1CF6',
+                    color: '#fff',
+                    border: 0,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    transition: 'box-shadow 0.12s ease, transform 0.12s ease',
+                    boxShadow: openMenu === 'profile' ? '0 0 0 4px #F2E9FF' : 'none',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 0 0 4px #F2E9FF')}
+                  onMouseLeave={(e) => {
+                    if (openMenu !== 'profile') e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  {initial}
+                </button>
+                {openMenu === 'profile' && <ProfileMenu onClose={() => setOpenMenu(null)} />}
               </div>
             </>
           ) : (
