@@ -213,3 +213,83 @@ test('setup: valid payload → no errors', () => {
   }
   expect(validate(payload, setupRule)).toEqual({})
 })
+
+// ── observ format ──
+
+const observRule: FormatRule = {
+  id: 6,
+  slug: 'observ',
+  name: 'Observational',
+  description: "A wry observation about everyday life.",
+  required_fields: ['text'],
+  forbidden_fields: ['setup', 'punchline', 'lines'],
+  constraints: {},
+}
+
+test('observ: valid payload with text → no errors', () => {
+  const payload: JokePayload = {
+    format: 'observ',
+    text: 'Have you ever noticed how airports have moving walkways but everyone still sprints?',
+    setup: '',
+    punchline: '',
+    lines: null,
+  }
+  expect(validate(payload, observRule)).toEqual({})
+})
+
+test('observ: blank text → error on "text"', () => {
+  const payload: JokePayload = {
+    format: 'observ',
+    text: '',
+    setup: '',
+    punchline: '',
+    lines: null,
+  }
+  const errors = validate(payload, observRule)
+  expect(errors).toHaveProperty('text')
+})
+
+// ── forbidden-field for setup format ──
+
+test('setup: payload with text populated (forbidden) → error on "text"', () => {
+  const payload: JokePayload = {
+    format: 'setup',
+    text: 'This text should not be here',
+    setup: "Why don't scientists trust atoms?",
+    punchline: 'Because they make up everything!',
+    lines: null,
+  }
+  const errors = validate(payload, setupRule)
+  expect(errors).toHaveProperty('text')
+})
+
+// ── message precedence: required wins over constraint ──
+
+test('knock: null lines → "required" message wins over constraint message', () => {
+  const payload: JokePayload = {
+    format: 'knock',
+    text: '',
+    setup: '',
+    punchline: '',
+    lines: null,
+  }
+  const errors = validate(payload, knockRule)
+  expect(errors).toHaveProperty('lines')
+  expect(errors['lines']).toMatch(/required/)
+  // constraint message should NOT overwrite the required message
+  expect(errors['lines']).not.toMatch(/at least 4 lines/i)
+})
+
+test('story: empty text → "required" message wins over min_text_words constraint', () => {
+  const payload: JokePayload = {
+    format: 'story',
+    text: '',
+    setup: '',
+    punchline: '',
+    lines: null,
+  }
+  const errors = validate(payload, storyRule)
+  expect(errors).toHaveProperty('text')
+  expect(errors['text']).toMatch(/required/)
+  expect(errors['text']).not.toMatch(/30 words/i)
+})

@@ -51,8 +51,9 @@ export function useSubmitDraft() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => contentAdapter.submitDraft(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: createKeys.drafts.list })
+      queryClient.invalidateQueries({ queryKey: createKeys.drafts.detail(id) })
       queryClient.invalidateQueries({ queryKey: ['profile'] })
     },
   })

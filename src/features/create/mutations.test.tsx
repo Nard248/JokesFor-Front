@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
-import { useCreateDraft, usePatchDraft } from './mutations'
+import { useCreateDraft, usePatchDraft, useSubmitDraft, useDeleteDraft } from './mutations'
 import { createKeys } from './queries'
 import { resetMockStore } from './mock'
 import type { ContentDraft } from './types'
@@ -90,4 +90,26 @@ test('usePatchDraft optimistically updates the detail cache before settling', as
 
   // Wait for the mutation to finish
   await waitFor(() => expect(settled).toBe(true))
+})
+
+test('useSubmitDraft().mutateAsync(id) resolves without throwing', async () => {
+  resetMockStore()
+  const { wrapper } = makeWrapper()
+  const { result } = renderHook(() => useSubmitDraft(), { wrapper })
+
+  await act(async () => {
+    // Draft id 1 exists in the seed store
+    await expect(result.current.mutateAsync(1)).resolves.not.toThrow()
+  })
+})
+
+test('useDeleteDraft().mutateAsync(id) resolves without throwing', async () => {
+  resetMockStore()
+  const { wrapper } = makeWrapper()
+  const { result } = renderHook(() => useDeleteDraft(), { wrapper })
+
+  await act(async () => {
+    // Draft id 2 exists in the seed store
+    await expect(result.current.mutateAsync(2)).resolves.not.toThrow()
+  })
 })

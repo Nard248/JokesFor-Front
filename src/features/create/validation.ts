@@ -65,7 +65,7 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
   const { min_lines, max_lines, max_line_chars, min_text_words } = rule.constraints
 
   // knock-style: line count + per-line length
-  if (min_lines !== undefined || max_lines !== undefined || max_line_chars !== undefined) {
+  if (!errors['lines'] && (min_lines !== undefined || max_lines !== undefined || max_line_chars !== undefined)) {
     const lines = Array.isArray(payload.lines) ? payload.lines : []
 
     if (min_lines !== undefined && lines.length < min_lines) {
@@ -81,7 +81,7 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
   }
 
   // story-style: word count on text
-  if (min_text_words !== undefined) {
+  if (!errors['text'] && min_text_words !== undefined) {
     const text = typeof payload.text === 'string' ? payload.text : ''
     const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length
     if (wordCount < min_text_words) {
