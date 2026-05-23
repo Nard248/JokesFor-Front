@@ -1,4 +1,5 @@
 import { contentAdapter } from './adapter'
+import { resetMockStore } from './mock'
 
 // The adapter defaults to the mock path (VITE_USE_REAL_CREATE is not 'true' in tests)
 
@@ -42,4 +43,9 @@ test('submitDraft flips status to pending', async () => {
   const created = await contentAdapter.createDraft('anti')
   const result = await contentAdapter.submitDraft(created.id)
   expect(result.status).toBe('pending')
+})
+
+test('deleteDraft resolves without throwing for an existing seed draft', async () => {
+  resetMockStore()
+  await expect(contentAdapter.deleteDraft(1)).resolves.toBeUndefined()
 })

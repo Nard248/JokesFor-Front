@@ -84,7 +84,7 @@ export interface ContentDraftDTO {
   last_edited_at: string
   created_at: string
   likes: number | null
-  rejection_reason: string
+  rejection_reason?: string
   stats?: PublishedStats | null
 }
 

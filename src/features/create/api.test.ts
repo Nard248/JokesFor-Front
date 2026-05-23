@@ -121,4 +121,10 @@ describe('toPatchBody', () => {
     expect(body.lines).toEqual(['a', 'b'])
     expect(body.format).toBe('knock')
   })
+
+  test('toPatchBody passes through explicit lines:null (knock clear)', () => {
+    const body = toPatchBody({ lines: null } as Parameters<typeof toPatchBody>[0])
+    expect('lines' in body).toBe(true)
+    expect(body.lines).toBeNull()
+  })
 })

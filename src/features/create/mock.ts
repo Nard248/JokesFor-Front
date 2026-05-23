@@ -31,7 +31,7 @@ const FORMAT_CATALOG: FormatRule[] = [
     name: 'Setup → Punchline',
     description: 'A classic two-part joke: a setup that raises a question and a punchline that resolves it.',
     required_fields: ['setup', 'punchline'],
-    forbidden_fields: ['lines'],
+    forbidden_fields: ['text', 'lines'],
     constraints: {},
   },
   {
@@ -58,7 +58,7 @@ const FORMAT_CATALOG: FormatRule[] = [
     name: 'Anti-joke',
     description: 'Subverts expectations by following the setup with a deadpan literal answer.',
     required_fields: ['setup', 'punchline'],
-    forbidden_fields: ['lines'],
+    forbidden_fields: ['text', 'lines'],
     constraints: {},
   },
   {
