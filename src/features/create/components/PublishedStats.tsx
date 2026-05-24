@@ -1,4 +1,4 @@
-import type { PublishedStats as PublishedStatsType } from '@/features/create'
+import type { PublishedStats as PublishedStatsType } from '../types'
 
 interface PublishedStatsProps {
   stats: PublishedStatsType | null | undefined
