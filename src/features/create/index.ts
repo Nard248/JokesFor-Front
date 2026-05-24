@@ -9,3 +9,12 @@ export { validate, isBlank } from './validation'
 
 // All types
 export * from './types'
+
+// Phase 3: Editor state + autosave engine
+export { emptyEditorDraft, editorReducer, toJokePayload } from './editor-state'
+export type { EditorDraft, EditorAction } from './editor-state'
+export { useAutosave } from './autosave'
+export type { SaveState, UseAutosave } from './autosave'
+
+// Phase 3: Components
+export { SaveIndicator } from './components/SaveIndicator'
