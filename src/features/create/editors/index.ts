@@ -4,6 +4,7 @@ import type { EditorProps } from './types'
 
 export type { EditorProps }
 export { formatIcon, FORMAT_ICON, FORMAT_EXAMPLE } from './formatIcon'
+export { FormatIcon } from './FormatIconComponent'
 
 export const EDITOR_BY_FORMAT: Record<
   FormatSlug,

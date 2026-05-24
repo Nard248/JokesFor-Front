@@ -138,7 +138,6 @@ export function useAutosave(args: {
       }
     }
     // runPatch is intentionally stable — all shared state is via refs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient])
 
   // ── Schedule debounced PATCH ────────────────────────────────────────────────

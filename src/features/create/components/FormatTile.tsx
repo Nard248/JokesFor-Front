@@ -1,5 +1,5 @@
 import type { FormatRule } from '../types'
-import { formatIcon } from '@/features/create/editors/formatIcon'
+import { FormatIcon } from '@/features/create/editors/FormatIconComponent'
 
 interface FormatTileProps {
   format: FormatRule
@@ -8,8 +8,6 @@ interface FormatTileProps {
 }
 
 export function FormatTile({ format, example, onClick }: FormatTileProps) {
-  const Icon = formatIcon(format.slug)
-
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -55,8 +53,7 @@ export function FormatTile({ format, example, onClick }: FormatTileProps) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {Icon && (
-          <span
+        <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -69,9 +66,8 @@ export function FormatTile({ format, example, onClick }: FormatTileProps) {
               flexShrink: 0,
             }}
           >
-            <Icon size={18} />
+            <FormatIcon slug={format.slug} size={18} />
           </span>
-        )}
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: '#1A1A1A', fontFamily: 'var(--font-display)' }}>
             {format.name}

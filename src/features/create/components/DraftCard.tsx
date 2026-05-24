@@ -1,5 +1,5 @@
 import type { ContentDraft } from '../types'
-import { formatIcon } from '@/features/create/editors/formatIcon'
+import { FormatIcon } from '@/features/create/editors/FormatIconComponent'
 import { StatusBadge } from './StatusBadge'
 
 interface DraftCardProps {
@@ -26,7 +26,6 @@ function getExcerpt(draft: ContentDraft, maxChars = 100): string {
 }
 
 export function DraftCard({ draft, onClick }: DraftCardProps) {
-  const Icon = formatIcon(draft.format)
   const excerpt = getExcerpt(draft)
   const relativeTime = formatRelativeTime(draft.lastEditedAt)
   const labels = [...draft.themes, ...draft.categories].slice(0, 3)
@@ -51,11 +50,9 @@ export function DraftCard({ draft, onClick }: DraftCardProps) {
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Icon && (
-            <span style={{ color: '#6A1CF6', display: 'inline-flex', alignItems: 'center' }}>
-              <Icon size={16} />
+          <span style={{ color: '#6A1CF6', display: 'inline-flex', alignItems: 'center' }}>
+              <FormatIcon slug={draft.format} size={16} />
             </span>
-          )}
           <StatusBadge status={draft.status} />
         </div>
         <span style={{ fontSize: 12, color: '#52525B' }}>{relativeTime}</span>
