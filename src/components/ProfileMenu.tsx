@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { User as UserIcon, Settings, Bookmark, LogOut, ChevronRight } from 'lucide-react'
+import { User as UserIcon, Settings, Bookmark, LogOut, ChevronRight, PenLine } from 'lucide-react'
 import { useAuth, useLogout } from '@/features/auth'
 
 /**
@@ -134,6 +134,9 @@ export function ProfileMenu({ onClose }: { onClose: () => void }) {
         </MenuLink>
         <MenuLink to="/library" onClick={onClose} icon={<Bookmark size={16} />}>
           Your library
+        </MenuLink>
+        <MenuLink to="/create" onClick={onClose} icon={<PenLine size={16} />}>
+          My submissions
         </MenuLink>
         <MenuLink to="/settings" onClick={onClose} icon={<Settings size={16} />}>
           Settings

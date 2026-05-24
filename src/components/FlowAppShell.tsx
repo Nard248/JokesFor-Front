@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { Bell } from 'lucide-react'
+import { Bell, Plus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
 import { ProfileMenu } from './ProfileMenu'
@@ -18,7 +18,7 @@ import { NotificationsPanel } from './NotificationsPanel'
 export type FlowNavKey = 'today' | 'explore' | 'search' | 'library'
 
 interface FlowAppShellProps {
-  active: FlowNavKey
+  active?: FlowNavKey
   children: React.ReactNode
   /** Hide the streak chip (e.g. for pages where it's irrelevant) */
   hideStreak?: boolean
@@ -111,6 +111,17 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           )}
           {isAuthenticated ? (
             <>
+              {/* Create / submit a joke */}
+              <Link
+                to="/create"
+                className="btn-flow-ghost"
+                aria-label="Submit a joke"
+                title="Submit a joke"
+                style={{ height: 40, width: 40, padding: 0, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#1A1A1A' }}
+              >
+                <Plus size={16} />
+              </Link>
+
               {/* Notifications */}
               <div style={{ position: 'relative' }}>
                 <button

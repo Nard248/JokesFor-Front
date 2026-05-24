@@ -200,7 +200,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell active="library">
+      <FlowAppShell>
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
           {/* Back navigation */}
           <Link
@@ -314,7 +314,7 @@ function ExistingEditor({ draftId }: ExistingEditorProps) {
   if (isLoading) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-        <FlowAppShell active="library">
+        <FlowAppShell>
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
             <Skeleton style={{ height: 40, borderRadius: 10, marginBottom: 24, width: 80 }} />
             <Skeleton style={{ height: 52, borderRadius: 14, marginBottom: 16 }} />
@@ -329,7 +329,7 @@ function ExistingEditor({ draftId }: ExistingEditorProps) {
   if (isError || !draft) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-        <FlowAppShell active="library">
+        <FlowAppShell>
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 720, margin: '0 auto' }}>
             <div
               style={{

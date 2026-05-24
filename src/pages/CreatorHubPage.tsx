@@ -48,7 +48,7 @@ export function CreatorHubPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell active="library">
+      <FlowAppShell>
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 800, margin: '0 auto' }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>

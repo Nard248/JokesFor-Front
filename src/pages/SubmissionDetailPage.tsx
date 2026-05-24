@@ -47,7 +47,7 @@ export function SubmissionDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell active="library">
+      <FlowAppShell>
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 720, margin: '0 auto' }}>
           {/* Back link */}
           <Link
