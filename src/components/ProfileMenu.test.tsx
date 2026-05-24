@@ -6,7 +6,6 @@
  *  - useNavigate is mocked so logout navigation doesn't fail.
  *  - Wrapped in MemoryRouter because ProfileMenu uses <Link>.
  */
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'

@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router'
+import type { RouteObject } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from './providers/ProtectedRoute'
 import { GuestOnlyRoute } from './providers/GuestOnlyRoute'
@@ -13,14 +14,17 @@ import {
   LibraryPage,
   TrendingPage,
   FavoritesPage,
-  DraftsPage,
   ProfilePage,
   SettingsPage,
-  SubmitJokePage,
   NotFoundPage,
   FlowPage,
   FlowCanvasPage,
   ExplorePage,
+  // Content creation (Phase 5)
+  CreatorHubPage,
+  FormatPickerPage,
+  EditorPage,
+  SubmissionDetailPage,
   // Legacy — preserved at /legacy/<path> mirror routes
   HomePageLegacy,
   TrendingPageLegacy,
@@ -35,7 +39,7 @@ import {
   PackDetailPage,
 } from '@/pages'
 
-const router = createBrowserRouter([
+export const routes: RouteObject[] = [
   // ─────────────────────────────────────────────────────────────────────
   // Canonical routes — all redesigned, all using FlowAppShell internally.
   // None of them get wrapped in the legacy `Layout` anymore.
@@ -50,10 +54,19 @@ const router = createBrowserRouter([
 
   // Authenticated
   { path: '/favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
-  { path: '/drafts', element: <ProtectedRoute><DraftsPage /></ProtectedRoute> },
   { path: '/profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
   { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
-  { path: '/submit', element: <ProtectedRoute><SubmitJokePage /></ProtectedRoute> },
+
+  // Content creation — /create/* (new-first to avoid "new" matching :draftId)
+  { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
+  { path: '/create/new', element: <ProtectedRoute><FormatPickerPage /></ProtectedRoute> },
+  { path: '/create/new/:formatSlug', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },
+  { path: '/create/:draftId', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },
+  { path: '/create/:draftId/view', element: <ProtectedRoute><SubmissionDetailPage /></ProtectedRoute> },
+
+  // Legacy submit/drafts redirects → new create routes
+  { path: '/submit', element: <Navigate to="/create/new" replace /> },
+  { path: '/drafts', element: <Navigate to="/create" replace /> },
 
   // Redesigned flow
   { path: '/flow', element: <ProtectedRoute><FlowPage /></ProtectedRoute> },
@@ -101,7 +114,9 @@ const router = createBrowserRouter([
 
   // Catch-all
   { path: '*', element: <NotFoundPage /> },
-])
+]
+
+const router = createBrowserRouter(routes)
 
 function LegacyOutlet() {
   return <Outlet />
