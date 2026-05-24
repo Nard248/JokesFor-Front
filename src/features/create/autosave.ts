@@ -73,6 +73,15 @@ export function useAutosave(args: {
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Always read the latest draft state inside async callbacks
   const draftRef = useRef<EditorDraft>(draft)
+  // Fix 4: guard post-await state setters against stale updates after unmount
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     draftRef.current = draft
@@ -88,8 +97,10 @@ export function useAutosave(args: {
     if (id === null) return
 
     inFlightRef.current = true
-    setSaveState('saving')
+    if (mountedRef.current) setSaveState('saving')
 
+    // Fix 2: track success explicitly so the dirty-retry only fires on success
+    let ok = false
     try {
       const current = draftRef.current
       await contentAdapter.patchDraft(id, {
@@ -105,15 +116,22 @@ export function useAutosave(args: {
         language: current.language,
         source: current.source,
       })
+      ok = true
       // Keep the TanStack Query cache fresh
       queryClient.invalidateQueries({ queryKey: createKeys.drafts.detail(id) })
-      setLastSavedAt(Date.now())
-      setSaveState('saved')
+      // Fix 4: guard against stale state updates after unmount
+      if (mountedRef.current) {
+        setLastSavedAt(Date.now())
+        setSaveState('saved')
+      }
     } catch {
-      setSaveState('error')
+      ok = false
+      // Fix 2: on error, leave dirtyRef as-is; recovery is via retry()
+      if (mountedRef.current) setSaveState('error')
     } finally {
       inFlightRef.current = false
-      if (dirtyRef.current) {
+      // Fix 2: only flush queued dirty changes after a SUCCESSFUL patch
+      if (ok && dirtyRef.current) {
         dirtyRef.current = false
         runPatch()
       }
@@ -184,10 +202,16 @@ export function useAutosave(args: {
   }, [runPatch])
 
   // ── flush ───────────────────────────────────────────────────────────────────
+  // Fix 3: if a PATCH is already in-flight, do NOT start a second concurrent one.
+  // Instead, mark dirty so the in-flight success path will flush the changes.
   const flush = useCallback(async () => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = null
+    }
+    if (inFlightRef.current) {
+      dirtyRef.current = true
+      return
     }
     await runPatch()
   }, [runPatch])
@@ -201,8 +225,10 @@ export function useAutosave(args: {
     }
   }, [])
 
+  // Fix 1: hasPendingChanges must be true during a clean in-flight save,
+  // not only when both in-flight AND dirty. dirtyRef captures queued changes.
   const hasPendingChanges =
-    saveState === 'debouncing' || (inFlightRef.current && dirtyRef.current)
+    saveState === 'debouncing' || saveState === 'saving' || dirtyRef.current
 
   return {
     draft,

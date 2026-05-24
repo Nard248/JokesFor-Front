@@ -12,19 +12,20 @@ describe('SaveIndicator', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it('renders "Saved" when saveState is saved', () => {
+  it('renders "Saved" with relative time when saveState is saved', () => {
     render(
       <SaveIndicator saveState="saved" lastSavedAt={Date.now()} onRetry={vi.fn()} />
     )
-    expect(screen.getByText(/saved/i)).toBeInTheDocument()
+    // Text starts with "Saved" followed by relative time (e.g. "Saved just now")
+    expect(screen.getByText(/^saved/i)).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it('renders "Saved" for idle when lastSavedAt is set', () => {
+  it('renders "Saved" with relative time for idle when lastSavedAt is set', () => {
     render(
       <SaveIndicator saveState="idle" lastSavedAt={Date.now()} onRetry={vi.fn()} />
     )
-    expect(screen.getByText(/saved/i)).toBeInTheDocument()
+    expect(screen.getByText(/^saved/i)).toBeInTheDocument()
   })
 
   it('renders "…" (ellipsis) when saveState is debouncing', () => {

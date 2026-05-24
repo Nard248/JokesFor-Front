@@ -329,6 +329,47 @@ describe('useAutosave — hasPendingChanges', () => {
     expect(result.current.saveState).toBe('saved')
     expect(result.current.hasPendingChanges).toBe(false)
   })
+
+  it('is true while saving (Fix 1: clean in-flight save with empty queue)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    let resolvePatch!: () => void
+    ;(contentAdapter.patchDraft as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      (_id: number) =>
+        new Promise<object>((resolve) => {
+          resolvePatch = () => resolve(makeDraftResult(_id))
+        })
+    )
+
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useAutosave({ draftId: 42, formatSlug: 'oneliner' }),
+      { wrapper }
+    )
+
+    // Trigger dispatch and advance past debounce so PATCH starts
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'Hello' })
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900)
+    })
+    await act(async () => {})
+
+    // PATCH is now in-flight with an empty dirty queue
+    expect(result.current.saveState).toBe('saving')
+    // Fix 1: hasPendingChanges must be true even with empty dirty queue during save
+    expect(result.current.hasPendingChanges).toBe(true)
+
+    // Resolve the PATCH
+    await act(async () => {
+      resolvePatch()
+    })
+    await act(async () => {})
+
+    expect(result.current.saveState).toBe('saved')
+    expect(result.current.hasPendingChanges).toBe(false)
+  })
 })
 
 // ── Test 6: flush() ───────────────────────────────────────────────────────────
@@ -354,5 +395,166 @@ describe('useAutosave — flush', () => {
 
     expect(result.current.saveState).toBe('saved')
     expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ── Test 7: in-flight dispatch captured in eventual PATCH body ─────────────────
+
+describe('useAutosave — in-flight dispatch captured in subsequent PATCH', () => {
+  it('a dispatch made while a create is in-flight is captured in the eventual PATCH body', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    let resolveCreate!: (v: object) => void
+    ;(contentAdapter.createDraft as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () => new Promise<object>((resolve) => { resolveCreate = resolve })
+    )
+
+    const { wrapper } = makeWrapper()
+    const onCreated = vi.fn()
+
+    const { result } = renderHook(
+      () => useAutosave({ draftId: null, formatSlug: 'oneliner', onCreated }),
+      { wrapper }
+    )
+
+    // First dispatch triggers draft creation
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'A' })
+    })
+
+    // Second dispatch while create is still in-flight
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'AB' })
+    })
+
+    // Resolve create → schedulePatch fires → advance past debounce
+    await act(async () => {
+      resolveCreate(makeDraftResult(101))
+    })
+    await act(async () => {})
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900)
+    })
+    await act(async () => {})
+
+    expect(result.current.saveState).toBe('saved')
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(1)
+    // The PATCH must reflect the latest content ("AB"), not the first ("A")
+    const patchCall = (contentAdapter.patchDraft as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(patchCall[1]).toMatchObject({ text: 'AB' })
+  })
+})
+
+// ── Test 8: flush() does NOT start a second concurrent PATCH ──────────────────
+
+describe('useAutosave — flush race guard (Fix 3)', () => {
+  it('flush() while a PATCH is in-flight does NOT start a second concurrent PATCH', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    let resolveFirst!: () => void
+    ;(contentAdapter.patchDraft as ReturnType<typeof vi.fn>)
+      .mockImplementationOnce((_id: number) =>
+        new Promise<object>((resolve) => {
+          resolveFirst = () => resolve(makeDraftResult(_id))
+        })
+      )
+      // Second call (queued dirty flush) resolves immediately
+      .mockImplementationOnce((_id: number) => Promise.resolve(makeDraftResult(_id)))
+
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useAutosave({ draftId: 42, formatSlug: 'oneliner' }),
+      { wrapper }
+    )
+
+    // Dispatch and advance to start first PATCH
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'First' })
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900)
+    })
+    await act(async () => {})
+
+    expect(result.current.saveState).toBe('saving')
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(1)
+
+    // Call flush() while first PATCH is still in-flight
+    // Fix 3: must NOT start a second PATCH; should only mark dirty
+    let flushPromise!: Promise<void>
+    await act(async () => {
+      flushPromise = result.current.flush()
+    })
+
+    // Still only one PATCH call — no race
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(1)
+
+    // Resolve the in-flight PATCH — dirty flush should now trigger the second
+    await act(async () => {
+      resolveFirst()
+    })
+    await act(async () => {
+      await flushPromise
+    })
+    await act(async () => {})
+
+    // Second PATCH should have fired (from dirty flush in success path)
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(2)
+    expect(result.current.saveState).toBe('saved')
+  })
+})
+
+// ── Test 9: error state preserved; retry() recovers with dirty changes ─────────
+
+describe('useAutosave — error no auto-retry (Fix 2)', () => {
+  it('a failing PATCH with dirty changes keeps saveState=error (no silent retry)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    let resolveSecond!: (v: object) => void
+    let callCount = 0
+    ;(contentAdapter.patchDraft as ReturnType<typeof vi.fn>).mockImplementation(
+      (_id: number) => {
+        callCount++
+        if (callCount === 1) return Promise.reject(new Error('Network error'))
+        return new Promise<object>((resolve) => { resolveSecond = () => resolve(makeDraftResult(_id)) })
+      }
+    )
+
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useAutosave({ draftId: 42, formatSlug: 'oneliner' }),
+      { wrapper }
+    )
+
+    // Dispatch and advance to trigger first (failing) PATCH
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'Will fail' })
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900)
+    })
+    await act(async () => {})
+
+    expect(result.current.saveState).toBe('error')
+    // Fix 2: must stay 'error' — no silent auto-retry after failure
+    expect(callCount).toBe(1)
+
+    // Queue a dirty change while in error state
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'Recovered' })
+    })
+
+    // Retry — should re-run PATCH and succeed
+    await act(async () => {
+      result.current.retry()
+    })
+    await act(async () => {
+      resolveSecond(makeDraftResult(42))
+    })
+    await act(async () => {})
+
+    expect(result.current.saveState).toBe('saved')
+    expect(callCount).toBe(2)
   })
 })
