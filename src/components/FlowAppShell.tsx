@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router'
 import { Bell, Plus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
+import { useUnseenSubmissionChange } from '@/features/create/store'
 import { ProfileMenu } from './ProfileMenu'
 import { NotificationsPanel } from './NotificationsPanel'
 
@@ -39,6 +40,8 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
   const { data: streak } = useStreak()
   const streakDays = streak?.current_count ?? 0
   const initial = (user?.first_name?.[0] ?? user?.username?.[0] ?? 'A').toUpperCase()
+  // Always call unconditionally (hooks rules); hook is safe when no drafts exist.
+  const hasUnseenChange = useUnseenSubmissionChange()
 
   // Pathname becomes the React key for <main>. When the user navigates between
   // FlowAppShell-wrapped pages, React would normally reuse the <main> element
@@ -112,15 +115,34 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           {isAuthenticated ? (
             <>
               {/* Create / submit a joke */}
-              <Link
-                to="/create"
-                className="btn-flow-ghost"
-                aria-label="Submit a joke"
-                title="Submit a joke"
-                style={{ height: 40, width: 40, padding: 0, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#1A1A1A' }}
-              >
-                <Plus size={16} />
-              </Link>
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                <Link
+                  to="/create"
+                  className="btn-flow-ghost"
+                  aria-label="Submit a joke"
+                  title="Submit a joke"
+                  style={{ height: 40, width: 40, padding: 0, borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#1A1A1A' }}
+                >
+                  <Plus size={16} />
+                </Link>
+                {isAuthenticated && hasUnseenChange && (
+                  <span
+                    data-testid="creator-dot"
+                    aria-label="New submission status update"
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#6A1CF6',
+                      border: '1.5px solid #fff',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
+              </div>
 
               {/* Notifications */}
               <div style={{ position: 'relative' }}>

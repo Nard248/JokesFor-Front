@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useDrafts, DraftCard } from '@/features/create'
 import type { ContentDraft, SubmissionStatus } from '@/features/create'
 import { track } from '@/features/create/analytics'
+import { useCreatorStore } from '@/features/create/store'
 
 type TabId = 'all' | SubmissionStatus
 
@@ -33,10 +34,12 @@ export function CreatorHubPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError, refetch } = useDrafts()
   const [activeTab, setActiveTab] = useState<TabId>('all')
+  const { markSeen } = useCreatorStore()
 
-  // Analytics: track hub viewed once on mount
+  // Analytics: track hub viewed once on mount; also clear the header dot
   useEffect(() => {
     track('creator_hub_viewed', { tab: activeTab })
+    markSeen()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

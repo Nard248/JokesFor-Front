@@ -5,6 +5,7 @@
  *  - useAuth is mocked (via vi.mock) so the component doesn't need real auth
  *    context; we can flip isAuthenticated on/off per test.
  *  - useStreak is mocked to return no data (avoiding HTTP calls).
+ *  - useUnseenSubmissionChange is mocked to control dot visibility.
  *  - Wrapped in MemoryRouter because FlowAppShell uses <Link> and useLocation.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -20,6 +21,13 @@ vi.mock('@/features/auth', () => ({
 // ── Mock useStreak ────────────────────────────────────────────────────────────
 vi.mock('@/features/streak', () => ({
   useStreak: () => ({ data: null }),
+}))
+
+// ── Mock useUnseenSubmissionChange ────────────────────────────────────────────
+const mockUseUnseenSubmissionChange = vi.fn(() => false)
+vi.mock('@/features/create/store', () => ({
+  useCreatorStore: () => ({ lastSeenAt: 0, markSeen: vi.fn() }),
+  useUnseenSubmissionChange: () => mockUseUnseenSubmissionChange(),
 }))
 
 // ── Mock ProfileMenu + NotificationsPanel to avoid their own deps ─────────────
@@ -81,5 +89,64 @@ describe('FlowAppShell', () => {
         </MemoryRouter>
       )
     ).not.toThrow()
+  })
+})
+
+describe('FlowAppShell — creator dot', () => {
+  it('renders creator-dot when authenticated and useUnseenSubmissionChange returns true', () => {
+    mockUseUnseenSubmissionChange.mockReturnValue(true)
+    mockUseAuth.mockReturnValue({
+      user: { first_name: 'Test', username: 'testuser', email: 'test@example.com' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+
+    render(
+      <MemoryRouter>
+        <FlowAppShell>
+          <div>content</div>
+        </FlowAppShell>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId('creator-dot')).toBeInTheDocument()
+  })
+
+  it('does NOT render creator-dot when useUnseenSubmissionChange returns false', () => {
+    mockUseUnseenSubmissionChange.mockReturnValue(false)
+    mockUseAuth.mockReturnValue({
+      user: { first_name: 'Test', username: 'testuser', email: 'test@example.com' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+
+    render(
+      <MemoryRouter>
+        <FlowAppShell>
+          <div>content</div>
+        </FlowAppShell>
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByTestId('creator-dot')).toBeNull()
+  })
+
+  it('does NOT render creator-dot for unauthenticated users even if hook returns true', () => {
+    mockUseUnseenSubmissionChange.mockReturnValue(true)
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    })
+
+    render(
+      <MemoryRouter>
+        <FlowAppShell>
+          <div>content</div>
+        </FlowAppShell>
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByTestId('creator-dot')).toBeNull()
   })
 })

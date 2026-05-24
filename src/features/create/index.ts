@@ -2,6 +2,9 @@
 export { track } from './analytics'
 export type { CreateEvent } from './analytics'
 
+// Creator store + unseen change hook
+export { useCreatorStore, useUnseenSubmissionChange } from './store'
+
 // Query hooks + key factory
 export { createKeys, useFormats, useAgeRatings, useTones, useContextTags, useCultureTags, useLanguages, useDrafts, useDraft } from './queries'
 
