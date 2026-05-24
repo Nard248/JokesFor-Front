@@ -1,4 +1,4 @@
-import type { SubmissionStatus } from '@/features/create'
+import type { SubmissionStatus } from '../types'
 
 interface StatusBadgeProps {
   status: SubmissionStatus

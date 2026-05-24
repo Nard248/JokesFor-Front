@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export interface EditorShellProps {
   formatLabel: string
@@ -21,7 +22,7 @@ export function EditorShell({
   const [mobilePane, setMobilePane] = useState<MobilePane>('edit')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div className="flex flex-col" style={{ minHeight: 0 }}>
       {/* Header row */}
       <div
         style={{
@@ -49,8 +50,9 @@ export function EditorShell({
         </Button>
       </div>
 
-      {/* Mobile toggle (always rendered; CSS on ≥768px hides/shows panes differently) */}
+      {/* Mobile toggle — hidden on desktop (md and above) */}
       <div
+        className="md:hidden"
         style={{
           display: 'flex',
           gap: 4,
@@ -99,37 +101,22 @@ export function EditorShell({
         </button>
       </div>
 
-      {/* Two-pane layout */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 24,
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        {/* Editor pane */}
+      {/* Two-pane layout: stacked on mobile, side-by-side grid on desktop */}
+      <div className="md:grid md:grid-cols-2 md:gap-6" style={{ flex: 1, minHeight: 0 }}>
+        {/* Editor pane: shown when mobile=edit or always on desktop */}
         <div
           data-testid="editor-pane"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: mobilePane === 'edit' ? 'block' : 'none',
-          }}
-          className="md-editor-pane"
+          className={cn(mobilePane === 'edit' ? 'block' : 'hidden', 'md:block')}
+          style={{ minWidth: 0 }}
         >
           {children}
         </div>
 
-        {/* Preview pane */}
+        {/* Preview pane: shown when mobile=preview or always on desktop */}
         <div
           data-testid="preview-pane"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: mobilePane === 'preview' ? 'block' : 'none',
-          }}
-          className="md-preview-pane"
+          className={cn(mobilePane === 'preview' ? 'block' : 'hidden', 'md:block')}
+          style={{ minWidth: 0 }}
         >
           {preview}
         </div>

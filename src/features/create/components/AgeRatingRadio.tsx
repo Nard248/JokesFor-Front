@@ -1,4 +1,4 @@
-import type { AgeRating } from '@/features/create'
+import type { AgeRating } from '../types'
 import { RadioGroup } from '@/components/ui/radio-group'
 
 interface AgeRatingRadioProps {

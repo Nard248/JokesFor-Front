@@ -1,4 +1,4 @@
-import type { ContentDraft } from '@/features/create'
+import type { ContentDraft } from '../types'
 import { formatIcon } from '@/features/create/editors/formatIcon'
 import { StatusBadge } from './StatusBadge'
 

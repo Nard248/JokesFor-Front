@@ -1,4 +1,4 @@
-import type { FormatRule } from '@/features/create'
+import type { FormatRule } from '../types'
 import { formatIcon } from '@/features/create/editors/formatIcon'
 
 interface FormatTileProps {

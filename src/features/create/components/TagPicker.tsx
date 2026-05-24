@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Taxon } from '@/features/create'
+import type { Taxon } from '../types'
 import { Chip } from '@/components/ui/chip'
 
 interface TagPickerProps {

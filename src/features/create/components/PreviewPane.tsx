@@ -1,4 +1,4 @@
-import type { JokePayload } from '@/features/create'
+import type { JokePayload } from '@/components/JokeRenderer'
 import { JokeRenderer } from '@/components/JokeRenderer'
 
 interface PreviewPaneProps {

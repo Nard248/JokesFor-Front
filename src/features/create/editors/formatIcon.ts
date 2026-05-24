@@ -1,6 +1,6 @@
 import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { FormatSlug } from '@/features/create'
+import type { FormatSlug } from '../types'
 
 export const FORMAT_ICON: Record<FormatSlug, LucideIcon> = {
   oneliner: Quote,
