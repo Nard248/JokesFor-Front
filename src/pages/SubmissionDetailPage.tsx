@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -34,6 +35,15 @@ export function SubmissionDetailPage() {
 
   const id = Number(draftId)
   const { data: draft, isLoading, isError } = useDraft(id)
+
+  // Spec §12.1: drafts are edited, not viewed — redirect to the editor.
+  // Rejected drafts remain viewable (Edit-and-resubmit CTA); pending/published
+  // are the normal detail-view cases.
+  useEffect(() => {
+    if (draft && draft.status === 'draft') {
+      navigate(`/create/${id}`, { replace: true })
+    }
+  }, [draft, id, navigate])
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>

@@ -12,13 +12,13 @@
  *  Both inner editors render EditorInner which unconditionally calls all hooks.
  *  EditorInner is keyed by `draftId ?? formatSlug` so it remounts cleanly on navigation.
  */
-import { Suspense, useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import React, { Suspense, useEffect, useState } from 'react'
+import { useParams, useNavigate, Link, useBlocker } from 'react-router'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { ToastProvider, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import {
   useAutosave,
   useFormats,
@@ -102,7 +102,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
 
-  // ── Navigation-away guard (beforeunload) ──────────────────────────────────────
+  // ── Navigation-away guard (beforeunload — tab close / hard navigation) ────────
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       if (hasPendingChanges) {
@@ -113,6 +113,18 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasPendingChanges])
+
+  // ── In-app navigation guard (useBlocker — React Router data router) ───────────
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    hasPendingChanges && currentLocation.pathname !== nextLocation.pathname
+  )
+  React.useEffect(() => {
+    if (blocker.state === 'blocked') {
+      const ok = window.confirm('You have unsaved changes. Leave this page?')
+      if (ok) blocker.proceed?.()
+      else blocker.reset?.()
+    }
+  }, [blocker])
 
   // ── Validation ───────────────────────────────────────────────────────────────
   const rule = formats.find((f) => f.slug === draft.format)
@@ -373,11 +385,7 @@ export function EditorPage() {
       // Redirect to picker — use useEffect pattern inside a tiny wrapper to keep render pure
       return <InvalidSlugRedirect />
     }
-    return (
-      <ToastProvider>
-        <NewEditor formatSlug={formatSlug as FormatSlug} />
-      </ToastProvider>
-    )
+    return <NewEditor formatSlug={formatSlug as FormatSlug} />
   }
 
   // Existing mode: /create/:draftId
@@ -386,11 +394,7 @@ export function EditorPage() {
     if (!numId || isNaN(numId)) {
       return <InvalidSlugRedirect />
     }
-    return (
-      <ToastProvider>
-        <ExistingEditor draftId={numId} />
-      </ToastProvider>
-    )
+    return <ExistingEditor draftId={numId} />
   }
 
   // Fallback (shouldn't happen under normal routing)

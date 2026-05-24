@@ -9,16 +9,20 @@
  *  - For the "typing enables Submit" test we return a controllable dispatch
  *    that updates state in the mock.
  *  - Invalid slug redirect is tested via a memory router catch route.
+ *  - useBlocker requires a data router; all tests that render EditorInner use
+ *    createMemoryRouter + RouterProvider. The invalid-slug redirect test renders
+ *    InvalidSlugRedirect (not EditorInner) so it can keep MemoryRouter.
  *
  * Tests:
  *  1. New mode (oneliner): renders editor textarea + preview region; Submit disabled initially.
  *  2. Typing into the textarea enables Submit once text is non-empty.
  *  3. Invalid slug → redirects to /create/new.
+ *  4. Submit path: clicking Submit opens SubmitConfirmModal; confirming calls submitDraft.mutate.
  */
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/ui/toast'
 
@@ -51,6 +55,9 @@ interface MockAutosaveState {
 // Mutable holder so tests can replace the return value
 let mockAutosaveReturn: MockAutosaveState | null = null
 
+// Mutable holder for the submit mutate spy
+const mockSubmitMutate = vi.fn()
+
 // The mock factory — called by useAutosave inside the component
 function buildMockAutosave(formatSlug: FormatSlug, initial?: EditorDraft): MockAutosaveState {
   let draft = initial ?? emptyEditorDraft(formatSlug)
@@ -82,6 +89,7 @@ vi.mock('@/features/create', async (importOriginal) => {
       }
       return mockAutosaveReturn
     },
+    useSubmitDraft: () => ({ mutate: mockSubmitMutate }),
     // useDraft: keep real (for existing-mode test we use real mock adapter)
   }
 })
@@ -90,18 +98,27 @@ import { EditorPage } from './EditorPage'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeWrapper(initialPath: string, extraRoutes?: React.ReactNode) {
+/**
+ * makeDataRouterWrapper — wraps EditorPage in a createMemoryRouter so that
+ * useBlocker (which requires a data router) works correctly in tests.
+ */
+function makeDataRouterWrapper(initialPath: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return ({ children }: { children: React.ReactNode }) => (
+
+  const router = createMemoryRouter(
+    [
+      { path: '/create/new/:formatSlug', element: <EditorPage /> },
+      { path: '/create/:draftId', element: <EditorPage /> },
+      { path: '/create/new', element: <div data-testid="format-picker">format picker</div> },
+      { path: '/create', element: <div data-testid="hub-page">hub</div> },
+    ],
+    { initialEntries: [initialPath] },
+  )
+
+  return (
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route path="/create/new/:formatSlug" element={children} />
-            <Route path="/create/:draftId" element={children} />
-            {extraRoutes}
-          </Routes>
-        </MemoryRouter>
+        <RouterProvider router={router} />
       </ToastProvider>
     </QueryClientProvider>
   )
@@ -110,14 +127,14 @@ function makeWrapper(initialPath: string, extraRoutes?: React.ReactNode) {
 beforeEach(() => {
   // Reset mock autosave state before each test
   mockAutosaveReturn = null
+  mockSubmitMutate.mockReset()
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('EditorPage — new mode (oneliner)', () => {
   it('renders the one-liner editor textarea and a preview region', async () => {
-    const Wrapper = makeWrapper('/create/new/oneliner')
-    render(<EditorPage />, { wrapper: Wrapper })
+    render(makeDataRouterWrapper('/create/new/oneliner'))
 
     // The EditorShell renders data-testid="editor-pane" and data-testid="preview-pane"
     await waitFor(() => {
@@ -134,8 +151,7 @@ describe('EditorPage — new mode (oneliner)', () => {
   })
 
   it('Submit button is disabled initially (no text → validation fails)', async () => {
-    const Wrapper = makeWrapper('/create/new/oneliner')
-    render(<EditorPage />, { wrapper: Wrapper })
+    render(makeDataRouterWrapper('/create/new/oneliner'))
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-pane')).toBeDefined()
@@ -150,8 +166,7 @@ describe('EditorPage — new mode (oneliner)', () => {
 
 describe('EditorPage — typing enables Submit', () => {
   it('typing into the one-liner textarea updates the value', async () => {
-    const Wrapper = makeWrapper('/create/new/oneliner')
-    render(<EditorPage />, { wrapper: Wrapper })
+    render(makeDataRouterWrapper('/create/new/oneliner'))
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-pane')).toBeDefined()
@@ -180,6 +195,8 @@ describe('EditorPage — typing enables Submit', () => {
 
 describe('EditorPage — invalid slug redirect', () => {
   it('redirects to /create/new when given an invalid slug', async () => {
+    // InvalidSlugRedirect does not call useBlocker (rendered before EditorInner),
+    // so this test can use MemoryRouter without issue.
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
     render(
@@ -200,6 +217,64 @@ describe('EditorPage — invalid slug redirect', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('format-picker')).toBeDefined()
+    })
+  })
+})
+
+describe('EditorPage — submit path', () => {
+  it('clicking Submit opens SubmitConfirmModal; confirming calls submitDraft.mutate with the draft id', async () => {
+    // Override mockAutosaveReturn before render: valid draft + liveId 99, canSubmit=true.
+    // We pre-build the state with a long enough text so the oneliner validates.
+    const validText = 'Why did the chicken cross the road? To get to the other side!'
+    const validDraft = emptyEditorDraft('oneliner' as FormatSlug)
+    validDraft.text = validText
+
+    mockAutosaveReturn = {
+      draft: validDraft,
+      dispatch: vi.fn(),
+      saveState: 'idle',
+      lastSavedAt: Date.now(),
+      hasPendingChanges: false,
+      draftId: 99,
+      retry: vi.fn(),
+      flush: vi.fn().mockResolvedValue(undefined),
+    }
+
+    render(makeDataRouterWrapper('/create/new/oneliner'))
+
+    // Wait for the editor shell to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
+    })
+
+    // Submit button should now be enabled (draft is valid + liveId is set)
+    const submitBtn = screen.getByRole('button', { name: /submit for review/i })
+    await waitFor(() => {
+      expect((submitBtn as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    // Click Submit — should open SubmitConfirmModal
+    fireEvent.click(submitBtn)
+
+    // Modal should be visible — SubmitConfirmModal adds a "Submit" button (exact text)
+    // alongside the existing "Submit for review" footer button. Wait for both.
+    await waitFor(() => {
+      const allSubmitBtns = screen.getAllByRole('button', { name: /submit/i })
+      // At least 2: "Submit for review" (footer) + "Submit" (modal confirm)
+      expect(allSubmitBtns.length).toBeGreaterThanOrEqual(2)
+    })
+
+    // Click the modal's "Submit" confirm button (exact text, not "Submit for review")
+    const allSubmitBtns = screen.getAllByRole('button', { name: /submit/i })
+    const modalConfirm = allSubmitBtns.find(
+      (b) => b.textContent?.trim() === 'Submit',
+    )!
+    expect(modalConfirm).toBeDefined()
+    fireEvent.click(modalConfirm)
+
+    // submitDraft.mutate should have been called with draftId=99
+    await waitFor(() => {
+      expect(mockSubmitMutate).toHaveBeenCalledWith(99, expect.any(Object))
     })
   })
 })
