@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { DraftCard } from './DraftCard'
 import type { ContentDraft } from '@/features/create'
@@ -50,5 +50,12 @@ describe('DraftCard', () => {
     const pending: ContentDraft = { ...baseDraft, status: 'pending' }
     render(<DraftCard draft={pending} onClick={vi.fn()} />)
     expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  })
+
+  it('fires onClick when Enter is pressed on the card (keyboard activation)', () => {
+    const onClick = vi.fn()
+    render(<DraftCard draft={baseDraft} onClick={onClick} />)
+    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' })
+    expect(onClick).toHaveBeenCalledTimes(1)
   })
 })

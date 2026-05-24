@@ -79,6 +79,7 @@ export function TagPicker({ label, options, selected, onChange }: TagPickerProps
 
       <input
         type="text"
+        aria-label={`Filter ${label.toLowerCase()}`}
         placeholder={`Filter ${label.toLowerCase()}…`}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}

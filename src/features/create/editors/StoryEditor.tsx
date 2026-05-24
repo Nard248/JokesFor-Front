@@ -1,6 +1,7 @@
+import React from 'react'
 import { AlertCircle } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
-import type { EditorProps } from './OneLinerEditor'
+import type { EditorProps } from './types'
 
 function countWords(text: string): number {
   const trimmed = text.trim()
@@ -9,15 +10,18 @@ function countWords(text: string): number {
 }
 
 export function StoryEditor({ draft, dispatch, errors }: EditorProps) {
+  const id = React.useId()
+  const errorId = `${id}-error`
   const wordCount = countWords(draft.text)
   const meetsMin = wordCount >= 30
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
+      <label htmlFor={id} style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
         Your story
       </label>
       <Textarea
+        id={id}
         variant="pill"
         value={draft.text}
         onChange={(e) =>
@@ -25,6 +29,7 @@ export function StoryEditor({ draft, dispatch, errors }: EditorProps) {
         }
         placeholder="Tell a story with a comedic twist at the end. Aim for at least 30 words."
         rows={6}
+        aria-describedby={errors?.text ? errorId : undefined}
       />
       <div
         data-testid="word-counter"
@@ -39,6 +44,7 @@ export function StoryEditor({ draft, dispatch, errors }: EditorProps) {
       </div>
       {errors?.text && (
         <div
+          id={errorId}
           role="alert"
           style={{
             display: 'flex',

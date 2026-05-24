@@ -1,10 +1,12 @@
+import React from 'react'
 import { AlertCircle } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
-import type { EditorProps } from './OneLinerEditor'
+import type { EditorProps } from './types'
 
-function InlineError({ message }: { message: string }) {
+function InlineError({ id, message }: { id: string; message: string }) {
   return (
     <div
+      id={id}
       role="alert"
       style={{
         display: 'flex',
@@ -21,16 +23,21 @@ function InlineError({ message }: { message: string }) {
 }
 
 export function SetupPunchlineEditor({ draft, dispatch, errors }: EditorProps) {
+  const setupId = React.useId()
+  const punchlineId = React.useId()
+  const setupErrorId = `${setupId}-error`
+  const punchlineErrorId = `${punchlineId}-error`
   const isAnti = draft.format === 'anti'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Setup field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
+        <label htmlFor={setupId} style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
           {isAnti ? 'Straightforward setup' : 'Setup'}
         </label>
         <Textarea
+          id={setupId}
           variant="pill"
           value={draft.setup}
           onChange={(e) =>
@@ -42,8 +49,9 @@ export function SetupPunchlineEditor({ draft, dispatch, errors }: EditorProps) {
               : 'Set the scene — give enough context to make the punchline land.'
           }
           rows={3}
+          aria-describedby={errors?.setup ? setupErrorId : undefined}
         />
-        {errors?.setup && <InlineError message={errors.setup} />}
+        {errors?.setup && <InlineError id={setupErrorId} message={errors.setup} />}
       </div>
 
       {/* Downward arrow divider */}
@@ -61,10 +69,11 @@ export function SetupPunchlineEditor({ draft, dispatch, errors }: EditorProps) {
 
       {/* Punchline field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
+        <label htmlFor={punchlineId} style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
           {isAnti ? 'Literal punchline' : 'Punchline'}
         </label>
         <Textarea
+          id={punchlineId}
           variant="pill"
           value={draft.punchline}
           onChange={(e) =>
@@ -76,8 +85,9 @@ export function SetupPunchlineEditor({ draft, dispatch, errors }: EditorProps) {
               : 'Deliver the punchline — unexpected, punchy, satisfying.'
           }
           rows={2}
+          aria-describedby={errors?.punchline ? punchlineErrorId : undefined}
         />
-        {errors?.punchline && <InlineError message={errors.punchline} />}
+        {errors?.punchline && <InlineError id={punchlineErrorId} message={errors.punchline} />}
       </div>
 
       {/* Anti-joke footer hint */}

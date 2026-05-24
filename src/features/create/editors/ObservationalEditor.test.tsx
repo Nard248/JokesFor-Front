@@ -30,4 +30,10 @@ describe('ObservationalEditor', () => {
     )
     expect(screen.getByText('Required field')).toBeInTheDocument()
   })
+
+  it('does not render an error element when errors is absent', () => {
+    const draft = emptyEditorDraft('observ')
+    render(<ObservationalEditor draft={draft} dispatch={vi.fn()} />)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

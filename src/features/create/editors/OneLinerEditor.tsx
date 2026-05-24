@@ -1,20 +1,21 @@
+import React from 'react'
 import { AlertCircle } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
-import type { EditorDraft, EditorAction } from '@/features/create'
+import type { EditorProps } from './types'
 
-export interface EditorProps {
-  draft: EditorDraft
-  dispatch: (action: EditorAction) => void
-  errors?: Record<string, string>
-}
+export type { EditorProps }
 
 export function OneLinerEditor({ draft, dispatch, errors }: EditorProps) {
+  const id = React.useId()
+  const errorId = `${id}-error`
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
+      <label htmlFor={id} style={{ fontWeight: 600, fontSize: 14, color: '#1A1A1A' }}>
         Your joke
       </label>
       <Textarea
+        id={id}
         variant="pill"
         value={draft.text}
         onChange={(e) =>
@@ -22,9 +23,11 @@ export function OneLinerEditor({ draft, dispatch, errors }: EditorProps) {
         }
         placeholder="Write your one-liner here — short, punchy, no setup needed."
         rows={3}
+        aria-describedby={errors?.text ? errorId : undefined}
       />
       {errors?.text && (
         <div
+          id={errorId}
           role="alert"
           style={{
             display: 'flex',
