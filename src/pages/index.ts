@@ -3,6 +3,12 @@ export { JokeDetailPage } from './JokeDetailPage'
 export { ForgotPasswordPage } from './ForgotPasswordPage'
 export { PackDetailPage } from './PackDetailPage'
 
+// Content Creation pages (Phase 5)
+export { CreatorHubPage } from './CreatorHubPage'
+export { FormatPickerPage } from './FormatPickerPage'
+export { EditorPage } from './EditorPage'
+export { SubmissionDetailPage } from './SubmissionDetailPage'
+
 // Redesigned pages (current design system, FlowAppShell)
 export { HomePage } from './HomePage'
 export { SearchPage } from './SearchPage'
