@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDrafts, DraftCard } from '@/features/create'
 import type { ContentDraft, SubmissionStatus } from '@/features/create'
+import { track } from '@/features/create/analytics'
 
 type TabId = 'all' | SubmissionStatus
 
@@ -32,6 +33,12 @@ export function CreatorHubPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError, refetch } = useDrafts()
   const [activeTab, setActiveTab] = useState<TabId>('all')
+
+  // Analytics: track hub viewed once on mount
+  useEffect(() => {
+    track('creator_hub_viewed', { tab: activeTab })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const allDrafts: ContentDraft[] = data ?? []
   const filtered = activeTab === 'all'

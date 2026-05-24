@@ -44,6 +44,7 @@ import {
   DeleteDraftModal,
 } from '@/features/create'
 import type { FormatSlug, ContentDraft, EditorDraft } from '@/features/create'
+import { track } from '@/features/create/analytics'
 
 // ── toEditorDraft: ContentDraft → EditorDraft ─────────────────────────────────
 
@@ -102,6 +103,12 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [showSubmit, setShowSubmit] = useState(false)
 
+  // ── Analytics: track editor opened on mount ───────────────────────────────────
+  useEffect(() => {
+    track('editor_opened', { format: draft.format, mode: draftId ? 'edit' : 'new' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Navigation-away guard (beforeunload — tab close / hard navigation) ────────
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -137,12 +144,14 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   function handleConfirmFormat(slug: FormatSlug) {
+    track('format_changed', { from: draft.format, to: slug })
     dispatch({ type: 'changeFormat', format: slug })
     setShowChangeFormat(false)
   }
 
   function handleDelete() {
     if (liveId == null) return
+    track('draft_deleted', { draftId: liveId, format: draft.format })
     deleteDraft.mutate(liveId, {
       onSuccess: () => navigate('/create'),
     })
@@ -153,6 +162,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
     if (liveId == null) return
     submitDraft.mutate(liveId, {
       onSuccess: () => {
+        track('submit_succeeded', { draftId: liveId, format: draft.format })
         toast({
           message: "Sent for review. We'll email you when a moderator acts.",
           variant: 'success',

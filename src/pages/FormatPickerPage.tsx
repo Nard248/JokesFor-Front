@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -5,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useFormats, FormatTile, FORMAT_EXAMPLE } from '@/features/create'
 import { FORMAT_SLUGS } from '@/features/create/types'
 import type { FormatRule } from '@/features/create'
+import { track } from '@/features/create/analytics'
 
 /** Fallback format entries (minimal, for error state) */
 const FALLBACK_FORMAT_NAMES: Record<string, string> = {
@@ -29,6 +31,11 @@ const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.map((slug, i) => ({
 export function FormatPickerPage() {
   const navigate = useNavigate()
   const { data, isLoading, isError } = useFormats()
+
+  // Analytics: track page viewed once on mount
+  useEffect(() => {
+    track('format_picker_viewed')
+  }, [])
 
   const formats = (isError || (!isLoading && !data?.length))
     ? FALLBACK_FORMATS
@@ -104,7 +111,10 @@ export function FormatPickerPage() {
                   key={format.slug}
                   format={format}
                   example={FORMAT_EXAMPLE[format.slug] ?? ''}
-                  onClick={() => navigate(`/create/new/${format.slug}`)}
+                  onClick={() => {
+                    track('format_selected', { format: format.slug })
+                    navigate(`/create/new/${format.slug}`)
+                  }}
                 />
               ))}
             </div>

@@ -1,3 +1,7 @@
+// Analytics scaffolding
+export { track } from './analytics'
+export type { CreateEvent } from './analytics'
+
 // Query hooks + key factory
 export { createKeys, useFormats, useAgeRatings, useTones, useContextTags, useCultureTags, useLanguages, useDrafts, useDraft } from './queries'
 

@@ -16,6 +16,7 @@ import { createKeys } from './queries'
 import { editorReducer, emptyEditorDraft, toJokePayload } from './editor-state'
 import type { EditorDraft, EditorAction } from './editor-state'
 import type { FormatSlug } from './types'
+import { track } from './analytics'
 
 export type SaveState = 'idle' | 'debouncing' | 'saving' | 'saved' | 'error'
 
@@ -170,6 +171,7 @@ export function useAutosave(args: {
           .then((created) => {
             draftIdRef.current = created.id
             setDraftId(created.id)
+            track('draft_created', { format: formatSlug })
             onCreated?.(created.id)
             schedulePatch()
           })
