@@ -26,6 +26,21 @@ export interface AuthResponse {
   user: User
 }
 
+/** Gated-mode registration response (EMAIL_VERIFICATION_REQUIRED on): no session yet. */
+export interface EmailVerificationPending {
+  detail: string
+  email: string
+}
+
+export interface VerifyEmailRequest {
+  email: string
+  code: string
+}
+
+export interface VerifyEmailResponse {
+  user: User
+}
+
 export interface GoogleAuthRequest {
   code: string
   /** Optional — backend may use this to override its env var (django-allauth's
@@ -63,7 +78,7 @@ export const authApi = {
     api.post<AuthResponse>('/auth/login/', credentials),
 
   register: (credentials: RegisterCredentials) =>
-    api.post<AuthResponse>('/auth/registration/', credentials),
+    api.post<AuthResponse | EmailVerificationPending>('/auth/registration/', credentials),
 
   logout: () =>
     api.post('/auth/logout/'),
@@ -92,11 +107,11 @@ export const authApi = {
   passwordResetConfirm: (payload: PasswordResetConfirmRequest) =>
     api.post<{ detail: string }>('/auth/password/reset/confirm/', payload),
 
-  verifyEmail: (key: string) =>
-    api.post<{ detail: string }>('/auth/registration/verify-email/', { key }),
+  verifyEmail: (payload: VerifyEmailRequest) =>
+    api.post<VerifyEmailResponse>('/auth/verify-email/', payload),
 
   resendVerification: (email: string) =>
-    api.post<{ detail: string }>('/auth/registration/resend-email/', { email }),
+    api.post<{ detail: string }>('/auth/resend-verification/', { email }),
 }
 
 // Joke types (from backend models)
