@@ -8,6 +8,7 @@ import type {
   PasswordResetRequest,
   PasswordResetConfirmRequest,
   UpdateUserRequest,
+  VerifyEmailRequest,
 } from '@/lib/api'
 import { useAuthStore } from './store'
 import { setAccessToken } from '@/lib/axios'
@@ -62,12 +63,35 @@ export function useRegister() {
       return response.data
     },
     onSuccess: (data) => {
-      if (data.user) {
+      // Gated mode (EMAIL_VERIFICATION_REQUIRED on): no tokens — do NOT log in.
+      // RegisterPage reads `data.email` and routes to /verify-email.
+      if ('access' in data) {
         setAuth(data.user, data.access)
-      } else {
-        setAccessToken(data.access)
-        authApi.getUser().then((res) => setAuth(res.data, data.access))
+        queryClient.invalidateQueries({ queryKey: authKeys.user() })
       }
+    },
+  })
+}
+
+// Verify email (6-digit code) → establishes a session.
+export function useVerifyEmail() {
+  const queryClient = useQueryClient()
+  const { setAuth } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (payload: VerifyEmailRequest) => {
+      const response = await authApi.verifyEmail(payload)
+      return response.data // { user }
+    },
+    onSuccess: async (data) => {
+      // verify-email sets HttpOnly cookies but returns NO access token in the
+      // body. Pull a fresh access token into memory via the refresh cookie
+      // (mirrors AuthProvider bootstrap), then establish auth state. setAuth()
+      // syncs the token to the axios instance internally.
+      const refresh = await authApi.refreshToken()
+      const access = refresh.data.access
+      const user = data.user ?? (await authApi.getUser()).data
+      setAuth(user, access)
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
     },
   })
