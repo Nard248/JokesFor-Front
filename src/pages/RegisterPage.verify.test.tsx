@@ -61,3 +61,23 @@ test('gated-mode registration routes to /verify-email with the email', async () 
   // Should navigate to verify-page
   await waitFor(() => expect(screen.getByText('verify-page')).toBeInTheDocument())
 })
+
+test('registration 502 (email send failed) routes to verify with the form email', async () => {
+  const user = userEvent.setup()
+  // Mock registers an immediate onError with a 502 (account created, send failed)
+  mockRegister.mockImplementation((_vars: unknown, opts: { onError: (e: unknown) => void }) =>
+    opts.onError({ response: { status: 502, data: { detail: 'Email failed to send.', email: 'a@b.com' } } }),
+  )
+  setup()
+
+  await user.type(screen.getByPlaceholderText('Alex'), 'Test')
+  await user.type(screen.getByPlaceholderText('you@studio.com'), 'a@b.com')
+  await user.type(screen.getByPlaceholderText('At least 8 characters'), 'password123')
+  const submitBtn = screen
+    .getAllByRole('button', { name: /continue/i })
+    .find((b) => (b as HTMLButtonElement).type === 'submit')
+  await user.click(submitBtn!)
+  await user.click(screen.getByRole('button', { name: /create account/i }))
+
+  await waitFor(() => expect(screen.getByText('verify-page')).toBeInTheDocument())
+})

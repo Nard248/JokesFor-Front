@@ -124,6 +124,13 @@ export function RegisterPage() {
         onError: (err) => {
           const axiosError = err as AxiosError<RegistrationApiError>
           const data = axiosError.response?.data
+          // 502: the account was created but the verification email failed to
+          // send. It's recoverable via Resend — route to the code screen with a
+          // send-failed hint (the registered email is the form's `email`).
+          if (axiosError.response?.status === 502) {
+            navigate(`/verify-email?email=${encodeURIComponent(email)}&sendFailed=1`, { replace: true })
+            return
+          }
           if (data?.non_field_errors) setError(data.non_field_errors[0])
           else if (data?.email) setError(`Email: ${data.email[0]}`)
           else if (data?.password1) setError(`Password: ${data.password1[0]}`)
