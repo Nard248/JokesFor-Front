@@ -37,6 +37,7 @@ import {
   JokeDetailPage,
   ForgotPasswordPage,
   PackDetailPage,
+  VerifyEmailPage,
 } from '@/pages'
 
 export const routes: RouteObject[] = [
@@ -76,6 +77,7 @@ export const routes: RouteObject[] = [
   // Auth
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
   { path: '/register', element: <GuestOnlyRoute><RegisterPage /></GuestOnlyRoute> },
+  { path: '/verify-email', element: <GuestOnlyRoute><VerifyEmailPage /></GuestOnlyRoute> },
   { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
   // Forgot/reset password — single component, branches on URL.
   { path: '/forgot-password', element: <ForgotPasswordPage /> },

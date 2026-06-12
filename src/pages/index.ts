@@ -1,3 +1,6 @@
+// Auth — email verification
+export { VerifyEmailPage } from './VerifyEmailPage'
+
 // Iteration 5 — pages added for backend handoff integration
 export { JokeDetailPage } from './JokeDetailPage'
 export { ForgotPasswordPage } from './ForgotPasswordPage'

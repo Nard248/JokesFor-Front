@@ -99,8 +99,15 @@ export function RegisterPage() {
     registerMutation.mutate(
       { email, password1: password, password2: password },
       {
-        onSuccess: () => {
-          // Once registered, patch the username (handle without @) + first name.
+        onSuccess: (data) => {
+          // Gated mode (EMAIL_VERIFICATION_REQUIRED on): no session yet — the
+          // backend sent a code. Route to verification carrying the email.
+          // While the flag is off this branch never fires (tokens are returned).
+          if (!('access' in data)) {
+            navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, { replace: true })
+            return
+          }
+          // Legacy mode (logged in): patch the username (handle without @) + first name.
           // If this fails, we still navigate forward — user can fix in profile.
           const cleanHandle = handle.replace(/^@/, '').trim()
           const patch: { first_name?: string; username?: string } = {}

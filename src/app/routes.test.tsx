@@ -41,6 +41,7 @@ vi.mock('@/pages', () => ({
   JokeDetailPage: () => <div data-testid="page-joke-detail" />,
   ForgotPasswordPage: () => <div data-testid="page-forgot-password" />,
   PackDetailPage: () => <div data-testid="page-pack-detail" />,
+  VerifyEmailPage: () => <div data-testid="page-verify-email" />,
   // Legacy pages
   HomePageLegacy: () => <div data-testid="page-home-legacy" />,
   TrendingPageLegacy: () => <div data-testid="page-trending-legacy" />,
