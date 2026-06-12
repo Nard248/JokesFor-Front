@@ -55,28 +55,32 @@ export function GoogleCallbackPage() {
     }
 
     exchanged.current = true
-    googleAuth.mutate(
-      // Send redirect_uri too — backend may use it to override its env var.
-      // The URI MUST match what we sent to Google in step 1, or Google will
-      // reject the code exchange.
-      { code, redirect_uri: getOAuthRedirectUri() },
-      {
-        onSuccess: () => {
-          const returnTo = consumeReturnTo()
-          navigate(returnTo, { replace: true })
-        },
-        onError: (err) => {
-          const axiosError = err as AxiosError<ApiError>
-          const data = axiosError.response?.data
-          const message =
-            data?.detail ||
+    // Use mutateAsync, NOT mutate's call-level callbacks. Under React 18
+    // StrictMode the effect mounts → unmounts → remounts in dev; TanStack
+    // Query drops the onSuccess/onError passed to mutate() when the issuing
+    // component unmounts mid-flight. Combined with the `exchanged` guard
+    // (which stops the remount from re-issuing), the 200 comes back but the
+    // success handler never runs and the page hangs on "Signing you in…".
+    // The mutateAsync promise settles regardless of mount state, so navigation
+    // fires reliably; the guard still keeps this to a single code exchange.
+    //
+    // Send redirect_uri too — it MUST match what we sent to Google in step 1,
+    // or Google rejects the code exchange.
+    googleAuth
+      .mutateAsync({ code, redirect_uri: getOAuthRedirectUri() })
+      .then(() => {
+        navigate(consumeReturnTo(), { replace: true })
+      })
+      .catch((err) => {
+        const axiosError = err as AxiosError<ApiError>
+        const data = axiosError.response?.data
+        setErrorMessage(
+          data?.detail ||
             data?.non_field_errors?.[0] ||
             data?.code?.[0] ||
-            'Sign-in failed. Please try again.'
-          setErrorMessage(message)
-        },
-      },
-    )
+            'Sign-in failed. Please try again.',
+        )
+      })
   }, [code, googleError, googleAuth, navigate])
 
   return (
