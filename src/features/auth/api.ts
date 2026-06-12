@@ -88,10 +88,18 @@ export function useVerifyEmail() {
       // body. Pull a fresh access token into memory via the refresh cookie
       // (mirrors AuthProvider bootstrap), then establish auth state. setAuth()
       // syncs the token to the axios instance internally.
-      const refresh = await authApi.refreshToken()
-      const access = refresh.data.access
-      const user = data.user ?? (await authApi.getUser()).data
-      setAuth(user, access)
+      //
+      // The user IS verified at this point (cookies are set server-side). If the
+      // refresh hiccups, don't strand them in an error state — establish auth
+      // from the verified user with an empty in-memory token; the axios 401
+      // interceptor will acquire one lazily on the first authenticated request.
+      const user = data.user ?? (await authApi.getUser().then((r) => r.data).catch(() => data.user))
+      try {
+        const refresh = await authApi.refreshToken()
+        setAuth(user, refresh.data.access)
+      } catch {
+        setAuth(user, '')
+      }
       queryClient.invalidateQueries({ queryKey: authKeys.user() })
     },
   })

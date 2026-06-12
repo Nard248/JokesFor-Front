@@ -38,3 +38,18 @@ test('verify success establishes auth via refresh token + setAuth', async () => 
   expect(useAuthStore.getState().accessToken).toBe('tok123')
   expect(useAuthStore.getState().user?.email).toBe('a@b.com')
 })
+
+test('verify still establishes auth when the refresh hiccups (verified, lazy token)', async () => {
+  const user = { pk: 12, username: 'a', email: 'a@b.com', first_name: '', last_name: '' }
+  ;(authApi.verifyEmail as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { user } })
+  ;(authApi.refreshToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('refresh failed'))
+
+  const { result } = renderHook(() => useVerifyEmail(), { wrapper })
+  result.current.mutate({ email: 'a@b.com', code: '135790' })
+
+  // Verified user is authenticated even though the token refresh failed;
+  // the in-memory token stays empty and the axios interceptor acquires it lazily.
+  await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
+  expect(useAuthStore.getState().user?.email).toBe('a@b.com')
+  expect(useAuthStore.getState().accessToken).toBe('')
+})
