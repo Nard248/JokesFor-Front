@@ -49,9 +49,16 @@ export function VerifyEmailPage() {
       navigate('/flow', { replace: true }) // new user → onboarding
     } catch (err) {
       const { message, status } = parseAuthError(err, 'Sign-in failed. Please try again.')
-      trackVerify('verify_failed', { reason: message })
+      // Analytics gets a CATEGORY, never the raw message (which could echo the
+      // email back from a field error) — per guide §12/§14.
+      const reason =
+        status === 429 ? 'too_many'
+        : /already verified/i.test(message) ? 'already_verified'
+        : /expired/i.test(message) ? 'expired'
+        : 'incorrect'
+      trackVerify('verify_failed', { reason })
       if (status === 429) { setLocked(true); setError('Too many attempts. Request a new code below.') }
-      else if (/already verified/i.test(message)) { navigate('/login', { replace: true }); return }
+      else if (reason === 'already_verified') { navigate('/login', { replace: true }); return }
       else setError(message)
       setCode('')
     } finally {

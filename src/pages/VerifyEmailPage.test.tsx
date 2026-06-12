@@ -51,6 +51,20 @@ test('entering the correct code verifies and redirects', async () => {
   await waitFor(() => expect(screen.getByText('onboarding-page')).toBeInTheDocument())
 })
 
+test('429 on verify locks the inputs and steers to resend', async () => {
+  const user = userEvent.setup()
+  mockVerify.mockRejectedValue({ response: { status: 429, data: { detail: 'Too many attempts. Request a new code.' } } })
+  renderAt('/verify-email?email=a%40b.com')
+  await user.click(screen.getAllByRole('textbox')[0])
+  await user.keyboard('000000')
+  expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument()
+  // inputs disabled after the lock
+  for (const box of screen.getAllByRole('textbox') as HTMLInputElement[]) {
+    expect(box).toBeDisabled()
+  }
+  expect(screen.queryByText('onboarding-page')).not.toBeInTheDocument()
+})
+
 test('wrong code shows an inline error and does not redirect', async () => {
   const user = userEvent.setup()
   mockVerify.mockRejectedValue({ response: { status: 400, data: { code: ['Incorrect code.'] } } })
