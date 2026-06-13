@@ -100,18 +100,27 @@ export function RegisterPage() {
       { email, password1: password, password2: password },
       {
         onSuccess: (data) => {
+          // Profile fields from step 2 — applied via updateUser once a session
+          // exists (updateUser needs auth). Computed up front so both modes use them.
+          const cleanHandle = handle.replace(/^@/, '').trim()
+          const trimmedFirst = firstName.trim()
+
           // Gated mode (EMAIL_VERIFICATION_REQUIRED on): no session yet — the
-          // backend sent a code. Route to verification carrying the email.
+          // backend sent a code. Route to verification carrying the email (in the
+          // query, refresh-safe) plus the profile fields (nav state, best-effort)
+          // so they're applied after the code is confirmed — not silently dropped.
           // While the flag is off this branch never fires (tokens are returned).
           if (!('access' in data)) {
-            navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, { replace: true })
+            navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, {
+              replace: true,
+              state: { firstName: trimmedFirst, handle: cleanHandle },
+            })
             return
           }
           // Legacy mode (logged in): patch the username (handle without @) + first name.
           // If this fails, we still navigate forward — user can fix in profile.
-          const cleanHandle = handle.replace(/^@/, '').trim()
           const patch: { first_name?: string; username?: string } = {}
-          if (firstName.trim()) patch.first_name = firstName.trim()
+          if (trimmedFirst) patch.first_name = trimmedFirst
           if (cleanHandle) patch.username = cleanHandle
           if (Object.keys(patch).length > 0) {
             updateUser.mutate(patch, {

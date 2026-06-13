@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
-import { useVerifyEmail, useResendVerification } from '@/features/auth'
+import { useVerifyEmail, useResendVerification, useUpdateUser } from '@/features/auth'
 import { parseAuthError } from '@/features/auth/parseAuthError'
 import { trackVerify } from '@/features/auth/analytics'
 import { OtpInput } from '@/components/ui/otp-input'
@@ -23,6 +23,13 @@ export function VerifyEmailPage() {
 
   const verify = useVerifyEmail()
   const resend = useResendVerification()
+  const updateUser = useUpdateUser()
+
+  // Profile fields carried from registration (gated mode) — applied after the
+  // code is confirmed. Lost on a hard refresh of this screen; that's acceptable
+  // (best-effort, same posture as legacy's post-register patch).
+  const location = useLocation()
+  const pendingProfile = location.state as { firstName?: string; handle?: string } | null
 
   // Track screen view on mount
   useEffect(() => {
@@ -45,6 +52,19 @@ export function VerifyEmailPage() {
     setError(null)
     try {
       await verify.mutateAsync({ email, code: value })
+      // Session is now established (useVerifyEmail set the token). Apply the
+      // profile fields carried from registration — best-effort, so a failure
+      // never blocks entry (user can fix in profile), matching legacy behavior.
+      const patch: { first_name?: string; username?: string } = {}
+      if (pendingProfile?.firstName) patch.first_name = pendingProfile.firstName
+      if (pendingProfile?.handle) patch.username = pendingProfile.handle
+      if (Object.keys(patch).length > 0) {
+        try {
+          await updateUser.mutateAsync(patch)
+        } catch {
+          /* best-effort — user can fix it in profile */
+        }
+      }
       trackVerify('verify_succeeded')
       navigate('/flow', { replace: true }) // new user → onboarding
     } catch (err) {

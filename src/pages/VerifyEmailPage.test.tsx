@@ -6,10 +6,12 @@ import { vi } from 'vitest'
 
 const mockVerify = vi.fn()
 const mockResend = vi.fn()
+const mockUpdateUser = vi.fn()
 vi.mock('@/features/auth', async (orig) => ({
   ...(await orig<typeof import('@/features/auth')>()),
   useVerifyEmail: () => ({ mutateAsync: mockVerify, isPending: false }),
   useResendVerification: () => ({ mutate: mockResend, isPending: false }),
+  useUpdateUser: () => ({ mutateAsync: mockUpdateUser, isPending: false }),
 }))
 
 import { VerifyEmailPage } from './VerifyEmailPage'
@@ -48,6 +50,57 @@ test('entering the correct code verifies and redirects', async () => {
   await user.click(screen.getAllByRole('textbox')[0])
   await user.keyboard('135790')
   await waitFor(() => expect(mockVerify).toHaveBeenCalledWith({ email: 'a@b.com', code: '135790' }))
+  await waitFor(() => expect(screen.getByText('onboarding-page')).toBeInTheDocument())
+})
+
+test('applies profile fields carried from registration after a successful verify', async () => {
+  const user = userEvent.setup()
+  mockVerify.mockResolvedValue({ user: { email: 'a@b.com' } })
+  mockUpdateUser.mockResolvedValue({})
+  const qc = new QueryClient()
+  render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/verify-email', search: '?email=a%40b.com', state: { firstName: 'Alex', handle: 'alexj' } },
+        ]}
+      >
+        <Routes>
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/flow" element={<div>onboarding-page</div>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+  await user.click(screen.getAllByRole('textbox')[0])
+  await user.keyboard('135790')
+  await waitFor(() =>
+    expect(mockUpdateUser).toHaveBeenCalledWith({ first_name: 'Alex', username: 'alexj' }),
+  )
+  await waitFor(() => expect(screen.getByText('onboarding-page')).toBeInTheDocument())
+})
+
+test('a profile-patch failure still lets the user into the app (best-effort)', async () => {
+  const user = userEvent.setup()
+  mockVerify.mockResolvedValue({ user: { email: 'a@b.com' } })
+  mockUpdateUser.mockRejectedValue(new Error('patch failed'))
+  const qc = new QueryClient()
+  render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/verify-email', search: '?email=a%40b.com', state: { firstName: 'Alex', handle: 'alexj' } },
+        ]}
+      >
+        <Routes>
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/flow" element={<div>onboarding-page</div>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+  await user.click(screen.getAllByRole('textbox')[0])
+  await user.keyboard('135790')
   await waitFor(() => expect(screen.getByText('onboarding-page')).toBeInTheDocument())
 })
 
