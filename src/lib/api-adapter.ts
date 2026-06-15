@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO } from './api'
 import type {
   TrendingJoke,
   TrendingTag,
@@ -10,7 +10,7 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi } from './api'
 import {
   mockJokesApi,
   mockDailyJokeApi,
@@ -118,39 +118,92 @@ export const savedJokesAdapter = {
       : savedJokesApi.search(params).then((r) => r.data),
 }
 
+// ── Trending mappers ──
+const trendingJokeFromDTO = (d: TrendingJokeDTO): TrendingJoke => ({
+  joke: d.joke,
+  rank: d.rank,
+  likes: d.likes,
+  shares: d.shares,
+  comments: d.comments,
+  trendingSince: d.trending_since,
+})
+const trendingTagFromDTO = (d: TrendingTagDTO): TrendingTag => ({
+  name: d.name,
+  count: d.count,
+  growth: d.growth_percent,
+})
+const risingFromDTO = (d: RisingTagDTO) => ({ name: d.name, growth: d.growth_percent })
+const topJokesterFromDTO = (d: TopJokesterDTO): TopJokester => ({
+  id: d.id,
+  name: d.name,
+  punchlineCount: d.punchline_count,
+  rank: d.rank,
+  avatarUrl: undefined,
+})
+
 // ── Trending Adapter ──
-// NOTE: Real API calls will be added when backend implements these endpoints.
-// For now, all trending adapters use mocks unconditionally.
 export const trendingAdapter = {
   getJokes: (period?: string): Promise<TrendingJoke[]> =>
-    mockTrendingApi.getJokes(period),
+    USE_MOCKS
+      ? mockTrendingApi.getJokes(period)
+      : trendingApi.jokes(period).then((r) => r.data.results.map(trendingJokeFromDTO)),
 
   getTags: (): Promise<TrendingTag[]> =>
-    mockTrendingApi.getTags(),
+    USE_MOCKS
+      ? mockTrendingApi.getTags()
+      : trendingApi.tags().then((r) => r.data.results.map(trendingTagFromDTO)),
 
   getRisingTopics: (): Promise<{ name: string; growth: number }[]> =>
-    mockTrendingApi.getRisingTopics(),
+    USE_MOCKS
+      ? mockTrendingApi.getRisingTopics()
+      : trendingApi.risingTags().then((r) => r.data.results.map(risingFromDTO)),
 
   getTopJokesters: (limit?: number): Promise<TopJokester[]> =>
-    mockTrendingApi.getTopJokesters(limit),
+    USE_MOCKS
+      ? mockTrendingApi.getTopJokesters(limit)
+      : trendingApi.jokesters(limit).then((r) => r.data.results.map(topJokesterFromDTO)),
 
   getPopularThemes: (): Promise<string[]> =>
-    mockTrendingApi.getPopularThemes(),
+    USE_MOCKS
+      ? mockTrendingApi.getPopularThemes()
+      : trendingApi.themes().then((r) => r.data.results),
 }
+
+// ── Favorites mappers ──
+const favoriteFromDTO = (d: FavoriteJokeDTO): FavoriteJoke => ({
+  joke: d.joke,
+  favoritedAt: d.favorited_at,
+})
 
 // ── Favorites Adapter ──
 export const favoritesAdapter = {
   list: (params?: { tones?: string; page?: number }): Promise<PaginatedResponse<FavoriteJoke>> =>
-    mockFavoritesApi.list(params),
+    USE_MOCKS
+      ? mockFavoritesApi.list(params)
+      : favoritesApi.list(params).then((r) => ({ ...r.data, results: r.data.results.map(favoriteFromDTO) })),
 
   add: (jokeId: number): Promise<FavoriteJoke> =>
-    mockFavoritesApi.add(jokeId),
+    USE_MOCKS
+      ? mockFavoritesApi.add(jokeId)
+      : favoritesApi.add(jokeId).then((r) => favoriteFromDTO(r.data)),
 
   remove: (jokeId: number): Promise<void> =>
-    mockFavoritesApi.remove(jokeId),
+    USE_MOCKS
+      ? mockFavoritesApi.remove(jokeId)
+      : favoritesApi.list().then((r) => {
+          const fav = r.data.results.find((f) => f.joke.id === jokeId)
+          if (!fav) return undefined
+          return favoritesApi.remove(fav.id).then(() => undefined)
+        }),
 
   stats: (): Promise<{ totalCount: number; topTone: string; thisWeekCount: number }> =>
-    mockFavoritesApi.stats(),
+    USE_MOCKS
+      ? mockFavoritesApi.stats()
+      : favoritesApi.stats().then((r) => ({
+          totalCount: r.data.total_count,
+          topTone: r.data.top_tone ?? '',
+          thisWeekCount: r.data.this_week_count,
+        })),
 }
 
 // ── Drafts Adapter ──
@@ -197,7 +250,8 @@ export const profileAdapter = {
 //   PreferencesDTO  (api.ts, snake_case):      { humor_types, age_rating, tones, languages, ... }
 import { preferencesApi, type PreferencesDTO } from './api'
 
-const USE_REAL_PREFERENCES = import.meta.env.VITE_USE_REAL_PREFERENCES === 'true'
+const USE_REAL_PREFERENCES =
+  import.meta.env.VITE_USE_REAL_PREFERENCES === 'true' || !USE_MOCKS
 
 function toDTO(prefs: Partial<UserPreferences>): Partial<PreferencesDTO> {
   return {

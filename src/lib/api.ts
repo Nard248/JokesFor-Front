@@ -275,7 +275,7 @@ export const savedJokesApi = {
 export interface FavoriteJokeDTO {
   id: number
   joke: Joke
-  added_at: string
+  favorited_at: string
 }
 
 export const favoritesApi = {
@@ -286,9 +286,9 @@ export const favoritesApi = {
 
   remove: (favoriteId: number) => api.delete(`/favorites/${favoriteId}/`),
 
-  // Per backend handoff: { totalCount, topTone, thisWeekCount } — confirm shape.
+  // Backend returns snake_case; adapter maps to camelCase.
   stats: () =>
-    api.get<{ totalCount: number; topTone: string; thisWeekCount: number }>('/favorites/stats/'),
+    api.get<{ total_count: number; top_tone: string | null; this_week_count: number }>('/favorites/stats/'),
 }
 
 // Drafts — user's in-progress submissions.
@@ -407,22 +407,41 @@ export const preferencesApi = {
   completeOnboarding: () => api.post<{ detail: string }>('/preferences/complete-onboarding/'),
 }
 
-// Trending — multiple endpoints per handoff. Shapes are speculative; each
-// returns a list of items. Adapters stay mock-only until backend confirms.
+// Trending — verified backend shapes (jokes/views.py + serializers.py).
+export interface TrendingJokeDTO {
+  rank: number
+  joke: Joke
+  likes: number
+  shares: number
+  comments: number
+  trending_since: string
+}
+
+export interface TrendingTagDTO {
+  name: string
+  slug: string
+  count: number
+  growth_percent: number
+}
+
+export interface RisingTagDTO {
+  name: string
+  slug: string
+  growth_percent: number
+}
+
 export const trendingApi = {
   jokes: (period?: string) =>
-    api.get<unknown>('/jokes/trending/', { params: { period } }),
+    api.get<PaginatedResponse<TrendingJokeDTO>>('/jokes/trending/', { params: { period } }),
 
-  collections: () => api.get<unknown>('/collections/trending/'),
+  tags: () => api.get<{ results: TrendingTagDTO[] }>('/tags/trending/'),
 
-  tags: () => api.get<unknown>('/tags/trending/'),
+  risingTags: () => api.get<{ results: RisingTagDTO[] }>('/tags/rising/'),
 
-  risingTags: () => api.get<unknown>('/tags/rising/'),
-
-  themes: () => api.get<unknown>('/themes/popular/'),
+  themes: () => api.get<{ results: string[] }>('/themes/popular/'),
 
   jokesters: (limit?: number) =>
-    api.get<TopJokesterDTO[] | PaginatedResponse<TopJokesterDTO>>('/users/top-jokesters/', { params: { limit } }),
+    api.get<{ results: TopJokesterDTO[] }>('/users/top-jokesters/', { params: { limit } }),
 }
 
 // P10: top-jokester rows include 2 vibe pills.
