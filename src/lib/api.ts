@@ -449,6 +449,7 @@ export interface TopJokesterDTO {
   id: number
   name: string
   username: string
+  avatar_url?: string | null
   punchline_count: number
   rank: number
   top_vibes: { slug: string; label: string; icon: string }[]

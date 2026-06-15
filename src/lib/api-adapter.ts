@@ -138,7 +138,7 @@ const topJokesterFromDTO = (d: TopJokesterDTO): TopJokester => ({
   name: d.name,
   punchlineCount: d.punchline_count,
   rank: d.rank,
-  avatarUrl: undefined,
+  avatarUrl: d.avatar_url ?? undefined,
 })
 
 // ── Trending Adapter ──

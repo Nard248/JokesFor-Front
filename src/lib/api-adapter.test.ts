@@ -70,7 +70,7 @@ describe('trendingAdapter (real path)', () => {
     expect(await trendingAdapter.getRisingTopics()).toEqual([{ name: 'AI', growth: 120 }])
   })
 
-  it('getTopJokesters maps punchline_count->punchlineCount, avatar_url->avatarUrl', async () => {
+  it('getTopJokesters maps punchline_count->punchlineCount, avatar_url null->undefined', async () => {
     realApi.trendingApi.jokesters.mockResolvedValue({
       data: {
         results: [
@@ -82,6 +82,20 @@ describe('trendingAdapter (real path)', () => {
     const out = await trendingAdapter.getTopJokesters(5)
     expect(realApi.trendingApi.jokesters).toHaveBeenCalledWith(5)
     expect(out[0]).toMatchObject({ id: 1, name: 'Jerry', punchlineCount: 12, rank: 1 })
+    expect(out[0].avatarUrl).toBeUndefined()
+  })
+
+  it('getTopJokesters maps a real avatar_url string through to avatarUrl', async () => {
+    realApi.trendingApi.jokesters.mockResolvedValue({
+      data: {
+        results: [
+          { id: 2, name: 'Pun Queen', username: '@pq', avatar_url: 'https://cdn.example.com/pq.png', punchline_count: 7, rank: 2, top_vibes: [] },
+        ],
+      },
+    })
+    const { trendingAdapter } = await loadAdapterReal()
+    const out = await trendingAdapter.getTopJokesters()
+    expect(out[0].avatarUrl).toBe('https://cdn.example.com/pq.png')
   })
 
   it('getPopularThemes returns the results string array', async () => {
@@ -138,6 +152,20 @@ describe('favoritesAdapter (real path)', () => {
     const { favoritesAdapter } = await loadAdapterReal()
     await favoritesAdapter.remove(3)
     expect(realApi.favoritesApi.remove).toHaveBeenCalledWith(42)
+  })
+
+  it('remove(jokeId) resolves without calling DELETE when jokeId is not in favorites list', async () => {
+    realApi.favoritesApi.list.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ id: 99, joke: { id: 7 }, favorited_at: 'x' }],
+      },
+    })
+    const { favoritesAdapter } = await loadAdapterReal()
+    await expect(favoritesAdapter.remove(999)).resolves.toBeUndefined()
+    expect(realApi.favoritesApi.remove).not.toHaveBeenCalled()
   })
 })
 
