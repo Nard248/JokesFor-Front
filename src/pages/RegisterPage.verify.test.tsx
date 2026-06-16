@@ -47,6 +47,8 @@ test('gated-mode registration routes to /verify-email with the email', async () 
   await user.type(screen.getByPlaceholderText('Alex'), 'Test')
   await user.type(screen.getByPlaceholderText('you@studio.com'), 'a@b.com')
   await user.type(screen.getByPlaceholderText('At least 8 characters'), 'password123')
+  const dobInput = screen.getByLabelText(/date of birth/i)
+  await user.type(dobInput, '2000-01-01')
   // Continue to Step 2 — the submit button is type="submit" with text "Continue"
   const continueButtons = screen.getAllByRole('button', { name: /continue/i })
   // There may be a Google icon button and others; the one we need is type=submit
@@ -73,6 +75,8 @@ test('registration 502 (email send failed) routes to verify with the form email'
   await user.type(screen.getByPlaceholderText('Alex'), 'Test')
   await user.type(screen.getByPlaceholderText('you@studio.com'), 'a@b.com')
   await user.type(screen.getByPlaceholderText('At least 8 characters'), 'password123')
+  const dobInput = screen.getByLabelText(/date of birth/i)
+  await user.type(dobInput, '2000-01-01')
   const submitBtn = screen
     .getAllByRole('button', { name: /continue/i })
     .find((b) => (b as HTMLButtonElement).type === 'submit')

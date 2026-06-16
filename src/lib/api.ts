@@ -20,6 +20,7 @@ export interface RegisterCredentials {
   email: string
   password1: string
   password2: string
+  date_of_birth: string // ISO 'YYYY-MM-DD' — backend enforces the under-13 block
 }
 
 export interface AuthResponse {

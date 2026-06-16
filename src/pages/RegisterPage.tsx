@@ -27,6 +27,7 @@ interface RegistrationApiError {
   email?: string[]
   password1?: string[]
   password2?: string[]
+  date_of_birth?: string[]
   detail?: string
 }
 
@@ -57,6 +58,8 @@ export function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [dob, setDob] = useState('')
+  const [dobError, setDobError] = useState<string | null>(null)
 
   // Step 2 fields (cosmetic in iteration 2)
   const [pronouns, setPronouns] = useState<PronounId | null>(null)
@@ -71,6 +74,7 @@ export function RegisterPage() {
     if (!email.trim()) return 'Email is required'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email address'
     if (password.length < 8) return 'Password must be at least 8 characters'
+    if (!dob) return 'Date of birth is required'
     return null
   }
 
@@ -96,8 +100,9 @@ export function RegisterPage() {
 
   const handleFinish = () => {
     setError(null)
+    setDobError(null)
     registerMutation.mutate(
-      { email, password1: password, password2: password },
+      { email, password1: password, password2: password, date_of_birth: dob },
       {
         onSuccess: (data) => {
           // Profile fields from step 2 — applied via updateUser once a session
@@ -139,6 +144,11 @@ export function RegisterPage() {
           if (axiosError.response?.status === 502) {
             navigate(`/verify-email?email=${encodeURIComponent(email)}&sendFailed=1`, { replace: true })
             return
+          }
+          if (data?.date_of_birth) {
+            setDobError(data.date_of_birth[0])
+            setStep(1)
+            return // do NOT navigate; the under-13 block stops here
           }
           if (data?.non_field_errors) setError(data.non_field_errors[0])
           else if (data?.email) setError(`Email: ${data.email[0]}`)
@@ -255,6 +265,20 @@ export function RegisterPage() {
             </div>
             <FormField label="Email">
               <FlowInput value={email} onChange={setEmail} placeholder="you@studio.com" type="email" autoComplete="email" />
+            </FormField>
+            <FormField label="Date of birth" htmlFor="dob">
+              <FlowInput
+                id="dob"
+                name="date_of_birth"
+                value={dob}
+                onChange={(v) => { setDob(v); if (dobError) setDobError(null) }}
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                autoComplete="bday"
+              />
+              {dobError && (
+                <p role="alert" style={{ fontSize: 12, color: '#A02B16', marginTop: 6 }}>{dobError}</p>
+              )}
             </FormField>
             <FormField label="Password">
               <div style={{ position: 'relative' }}>
@@ -536,10 +560,11 @@ function RegisterRightPane() {
 // Atoms
 // ──────────────────────────────────────────────────────────────────────────
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+function FormField({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
       <label
+        htmlFor={htmlFor}
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
@@ -563,15 +588,21 @@ interface FlowInputProps {
   type?: string
   autoComplete?: string
   autoFocus?: boolean
+  max?: string
+  id?: string
+  name?: string
 }
 
-function FlowInput({ value, onChange, placeholder, type = 'text', autoComplete, autoFocus }: FlowInputProps) {
+function FlowInput({ value, onChange, placeholder, type = 'text', autoComplete, autoFocus, max, id, name }: FlowInputProps) {
   return (
     <input
+      id={id}
+      name={name}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       type={type}
+      max={max}
       autoComplete={autoComplete}
       autoFocus={autoFocus}
       className="flow-input"
