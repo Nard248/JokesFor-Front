@@ -1,4 +1,3 @@
-import { Link } from 'react-router'
 import { useConsent } from './useConsent'
 
 export function ConsentBanner() {
@@ -30,12 +29,12 @@ export function ConsentBanner() {
       <span>
         We use essential cookies to run the site. With your consent we also use analytics cookies to
         improve your experience.{' '}
-        <Link
-          to="/cookie-policy"
+        <a
+          href="/cookie-policy"
           style={{ color: '#CAFD00', textDecoration: 'underline' }}
         >
           Cookie Policy
-        </Link>
+        </a>
       </span>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
         <button

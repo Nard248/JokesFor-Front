@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
   CONSENT_VERSION,
   readConsent,
@@ -27,6 +27,35 @@ describe('writeConsent / readConsent round-trip', () => {
     const rec = readConsent()
     expect(rec!.analytics).toBe(false)
     expect(rec!.version).toBe(CONSENT_VERSION)
+  })
+
+  it('returns the ConsentRecord it built', () => {
+    const rec = writeConsent(true)
+    expect(rec.version).toBe(CONSENT_VERSION)
+    expect(rec.analytics).toBe(true)
+    expect(typeof rec.ts).toBe('number')
+  })
+})
+
+describe('writeConsent — storage failure resilience', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('does not throw when localStorage.setItem throws (e.g. QuotaExceeded)', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError')
+    })
+    expect(() => writeConsent(true)).not.toThrow()
+  })
+
+  it('still returns a valid ConsentRecord even when storage fails', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('SecurityError')
+    })
+    const rec = writeConsent(false)
+    expect(rec.analytics).toBe(false)
+    expect(rec.version).toBe(CONSENT_VERSION)
   })
 })
 

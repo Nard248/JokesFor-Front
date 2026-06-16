@@ -7,13 +7,19 @@ export interface ConsentRecord {
   ts: number
 }
 
-export function writeConsent(analytics: boolean): void {
+export function writeConsent(analytics: boolean): ConsentRecord {
   const record: ConsentRecord = {
     version: CONSENT_VERSION,
     analytics,
     ts: Date.now(),
   }
-  localStorage.setItem(CONSENT_KEY, JSON.stringify(record))
+  try {
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(record))
+  } catch {
+    // Storage unavailable (QuotaExceeded, Safari private-mode SecurityError).
+    // The in-memory record is still returned so callers can dismiss the banner.
+  }
+  return record
 }
 
 export function readConsent(): ConsentRecord | null {

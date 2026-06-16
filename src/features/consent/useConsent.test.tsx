@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { readConsent } from './storage'
 
@@ -96,6 +96,50 @@ describe('useConsent — initial state', () => {
     // Pre-seed localStorage
     localStorage.setItem('jokesfor-consent', JSON.stringify({ version: 1, analytics: true, ts: Date.now() }))
     const { result } = renderHook(() => useConsent())
+    expect(result.current.decided).toBe(true)
+  })
+})
+
+describe('useConsent — storage failure resilience (FIX 2)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('accept() still flips decided to true even when localStorage.setItem throws', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError')
+    })
+
+    const { result } = renderHook(() => useConsent())
+    expect(result.current.decided).toBe(false)
+
+    await act(async () => { result.current.accept() })
+
+    // Banner must dismiss (decided becomes true) despite the storage failure
+    expect(result.current.decided).toBe(true)
+  })
+
+  it('accept() does not throw when localStorage.setItem throws', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('SecurityError')
+    })
+
+    const { result } = renderHook(() => useConsent())
+    await expect(
+      act(async () => { result.current.accept() })
+    ).resolves.not.toThrow()
+  })
+
+  it('reject() still flips decided to true even when localStorage.setItem throws', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError')
+    })
+
+    const { result } = renderHook(() => useConsent())
+    expect(result.current.decided).toBe(false)
+
+    await act(async () => { result.current.reject() })
+
     expect(result.current.decided).toBe(true)
   })
 })
