@@ -1,5 +1,5 @@
-import { initializeApp, type FirebaseApp } from "firebase/app";
-import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
+import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -9,10 +9,40 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-};
+}
 
-export const firebaseApp: FirebaseApp = initializeApp(firebaseConfig);
+// Module-level memos — nothing runs at import time.
+let appMemo: FirebaseApp | undefined
+let analyticsMemo: Promise<Analytics | null> | undefined
 
-export const analyticsPromise: Promise<Analytics | null> = isSupported().then(
-  (supported) => (supported ? getAnalytics(firebaseApp) : null),
-);
+/** Lazily initialise the Firebase app (at most once). */
+function getFirebaseApp(): FirebaseApp {
+  if (!appMemo) {
+    appMemo = initializeApp(firebaseConfig)
+  }
+  return appMemo
+}
+
+/**
+ * Idempotent analytics init — call after the user gives consent (and only
+ * then). Returns the Analytics instance or null if unsupported / no
+ * measurementId. Subsequent calls return the same in-flight/resolved promise.
+ */
+export function initAnalytics(): Promise<Analytics | null> {
+  if (analyticsMemo !== undefined) return analyticsMemo
+
+  if (!firebaseConfig.measurementId) {
+    analyticsMemo = Promise.resolve(null)
+    return analyticsMemo
+  }
+
+  analyticsMemo = isSupported().then((supported) =>
+    supported ? getAnalytics(getFirebaseApp()) : null,
+  )
+  return analyticsMemo
+}
+
+/** True once initAnalytics() has been called (regardless of outcome). */
+export function isAnalyticsInitialized(): boolean {
+  return analyticsMemo !== undefined
+}
