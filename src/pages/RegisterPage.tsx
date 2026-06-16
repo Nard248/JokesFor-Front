@@ -47,6 +47,9 @@ const VENUE_OPTIONS = [
 type PronounId = typeof PRONOUN_OPTIONS[number]['id']
 type VenueId = typeof VENUE_OPTIONS[number]['id']
 
+// Today (ISO 'YYYY-MM-DD') — caps the DOB picker to discourage future dates.
+const TODAY_ISO = new Date().toISOString().slice(0, 10)
+
 export function RegisterPage() {
   const navigate = useNavigate()
   const registerMutation = useRegister()
@@ -273,11 +276,12 @@ export function RegisterPage() {
                 value={dob}
                 onChange={(v) => { setDob(v); if (dobError) setDobError(null) }}
                 type="date"
-                max={new Date().toISOString().slice(0, 10)}
+                max={TODAY_ISO}
                 autoComplete="bday"
+                aria-describedby={dobError ? 'dob-error' : undefined}
               />
               {dobError && (
-                <p role="alert" style={{ fontSize: 12, color: '#A02B16', marginTop: 6 }}>{dobError}</p>
+                <p id="dob-error" role="alert" style={{ fontSize: 12, color: '#A02B16', marginTop: 6 }}>{dobError}</p>
               )}
             </FormField>
             <FormField label="Password">
@@ -591,9 +595,10 @@ interface FlowInputProps {
   max?: string
   id?: string
   name?: string
+  'aria-describedby'?: string
 }
 
-function FlowInput({ value, onChange, placeholder, type = 'text', autoComplete, autoFocus, max, id, name }: FlowInputProps) {
+function FlowInput({ value, onChange, placeholder, type = 'text', autoComplete, autoFocus, max, id, name, 'aria-describedby': ariaDescribedby }: FlowInputProps) {
   return (
     <input
       id={id}
@@ -605,6 +610,7 @@ function FlowInput({ value, onChange, placeholder, type = 'text', autoComplete, 
       max={max}
       autoComplete={autoComplete}
       autoFocus={autoFocus}
+      aria-describedby={ariaDescribedby}
       className="flow-input"
     />
   )
