@@ -11,9 +11,10 @@ export function Footer() {
           </Link>
 
           <div className="flex items-center gap-6 text-sm text-[#6B7280]">
-            <Link to="/about" className="hover:text-[#6A1CF6] transition-colors">About</Link>
             <Link to="/privacy" className="hover:text-[#6A1CF6] transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-[#6A1CF6] transition-colors">Terms</Link>
+            <Link to="/cookie-policy" className="hover:text-[#6A1CF6] transition-colors">Cookie Policy</Link>
+            <Link to="/childrens-privacy" className="hover:text-[#6A1CF6] transition-colors">Children's Privacy</Link>
           </div>
 
           <div className="flex items-center gap-1 text-sm text-[#6B7280]">

@@ -19,6 +19,11 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 
 // ── Mock every page component to a lightweight passthrough ────────────────────
 vi.mock('@/pages', () => ({
+  // Legal pages (CD5)
+  PrivacyPage: () => <div data-testid="page-privacy" />,
+  TermsPage: () => <div data-testid="page-terms" />,
+  CookiePolicyPage: () => <div data-testid="page-cookie-policy" />,
+  ChildrenPrivacyPage: () => <div data-testid="page-childrens-privacy" />,
   HomePage: () => <div data-testid="page-home" />,
   SearchPage: () => <div data-testid="page-search" />,
   DailyJokePage: () => <div data-testid="page-daily" />,

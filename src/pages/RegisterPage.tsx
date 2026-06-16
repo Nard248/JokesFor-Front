@@ -401,8 +401,8 @@ export function RegisterPage() {
         )}
 
         <p style={{ fontSize: 12, color: '#6B7280', marginTop: 18, textAlign: 'center', maxWidth: 480 }}>
-          By signing up you agree to our <a style={{ color: '#6A1CF6' }}>Terms</a> and{' '}
-          <a style={{ color: '#6A1CF6' }}>Privacy</a>. We never sell your data. We do sell jokes.
+          By signing up you agree to our <Link to="/terms" style={{ color: '#6A1CF6' }}>Terms</Link> and{' '}
+          <Link to="/privacy" style={{ color: '#6A1CF6' }}>Privacy</Link>. We never sell your data. We do sell jokes.
         </p>
         <p style={{ textAlign: 'center', fontSize: 14, color: '#52525B', marginTop: 14 }}>
           Already in?{' '}
