@@ -4,6 +4,11 @@ import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from './providers/ProtectedRoute'
 import { GuestOnlyRoute } from './providers/GuestOnlyRoute'
 import {
+  // Legal pages (CD5)
+  PrivacyPage,
+  TermsPage,
+  CookiePolicyPage,
+  ChildrenPrivacyPage,
   // Redesigned (current design system + FlowAppShell)
   HomePage,
   SearchPage,
@@ -45,6 +50,13 @@ export const routes: RouteObject[] = [
   // Canonical routes — all redesigned, all using FlowAppShell internally.
   // None of them get wrapped in the legacy `Layout` anymore.
   // ─────────────────────────────────────────────────────────────────────
+
+  // Legal pages (public, no auth required)
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/terms', element: <TermsPage /> },
+  { path: '/cookie-policy', element: <CookiePolicyPage /> },
+  { path: '/cookies', element: <Navigate to="/cookie-policy" replace /> },
+  { path: '/childrens-privacy', element: <ChildrenPrivacyPage /> },
 
   // Public
   { path: '/', element: <HomePage /> },

@@ -1,3 +1,9 @@
+// Legal pages (CD5)
+export { PrivacyPage } from './legal/PrivacyPage'
+export { TermsPage } from './legal/TermsPage'
+export { CookiePolicyPage } from './legal/CookiePolicyPage'
+export { ChildrenPrivacyPage } from './legal/ChildrenPrivacyPage'
+
 // Auth — email verification
 export { VerifyEmailPage } from './VerifyEmailPage'
 

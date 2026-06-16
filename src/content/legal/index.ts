@@ -1,0 +1,6 @@
+export { default as privacy } from './privacy'
+export { default as terms } from './terms'
+export { default as cookie } from './cookie'
+export { default as children } from './children'
+export type { LegalDoc } from './types'
+export { DRAFT_NOTICE } from './types'
