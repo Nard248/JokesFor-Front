@@ -1,0 +1,5 @@
+export { useConsent } from './useConsent'
+export { ConsentBanner } from './ConsentBanner'
+export { readConsent, writeConsent, clearConsent, CONSENT_VERSION } from './storage'
+export { isAdult } from './age'
+export type { ConsentRecord } from './storage'

@@ -7,6 +7,8 @@ export interface User {
   email: string
   first_name: string
   last_name: string
+  /** ISO 'YYYY-MM-DD' date of birth — populated by the backend /auth/user/ endpoint (Work-Stream B). Null/absent until then. */
+  date_of_birth?: string | null
 }
 
 export interface LoginCredentials {
