@@ -75,14 +75,23 @@ export function CreatorHubPage() {
             >
               Your jokes
             </h1>
-            <Button
-              variant="pill"
-              size="lg"
-              onClick={() => navigate('/create/new')}
-            >
-              <Plus size={16} />
-              New
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/create/insights')}
+              >
+                Insights
+              </Button>
+              <Button
+                variant="pill"
+                size="lg"
+                onClick={() => navigate('/create/new')}
+              >
+                <Plus size={16} />
+                New
+              </Button>
+            </div>
           </div>
 
           {/* Status tabs */}

@@ -27,6 +27,7 @@ import {
   ExplorePage,
   // Content creation (Phase 5)
   CreatorHubPage,
+  CreatorInsightsPage,
   FormatPickerPage,
   EditorPage,
   SubmissionDetailPage,
@@ -70,8 +71,9 @@ export const routes: RouteObject[] = [
   { path: '/profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
   { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
 
-  // Content creation — /create/* (new-first to avoid "new" matching :draftId)
+  // Content creation — /create/* (specific paths before :draftId wildcard)
   { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
+  { path: '/create/insights', element: <ProtectedRoute><CreatorInsightsPage /></ProtectedRoute> },
   { path: '/create/new', element: <ProtectedRoute><FormatPickerPage /></ProtectedRoute> },
   { path: '/create/new/:formatSlug', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },
   { path: '/create/:draftId', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },

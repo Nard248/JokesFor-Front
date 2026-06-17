@@ -23,6 +23,7 @@ vi.mock('@/pages', () => ({
   ForgotPasswordPage: () => <div data-testid="page-forgot-password" />,
   PackDetailPage: () => <div data-testid="page-pack-detail" />,
   CreatorHubPage: () => <div data-testid="page-creator-hub" />,
+  CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,

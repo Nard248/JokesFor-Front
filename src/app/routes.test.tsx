@@ -40,6 +40,7 @@ vi.mock('@/pages', () => ({
   FlowCanvasPage: () => <div data-testid="page-flow-canvas" />,
   ExplorePage: () => <div data-testid="page-explore" />,
   CreatorHubPage: () => <div data-testid="page-creator-hub" />,
+  CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,

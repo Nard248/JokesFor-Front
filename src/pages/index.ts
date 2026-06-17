@@ -14,6 +14,7 @@ export { PackDetailPage } from './PackDetailPage'
 
 // Content Creation pages (Phase 5)
 export { CreatorHubPage } from './CreatorHubPage'
+export { CreatorInsightsPage } from './CreatorInsightsPage'
 export { FormatPickerPage } from './FormatPickerPage'
 export { EditorPage } from './EditorPage'
 export { SubmissionDetailPage } from './SubmissionDetailPage'

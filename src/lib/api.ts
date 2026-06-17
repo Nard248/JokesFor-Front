@@ -728,3 +728,82 @@ export const jokeDetailApi = {
   get: (id: number, source?: JokeSource) =>
     api.get<Joke>(`/jokes/${id}/`, { params: source ? { source } : undefined }),
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Creator Insights — GET /creators/me/insights/?period=month|week|all
+// ─────────────────────────────────────────────────────────────────────────
+
+export type InsightsPeriod = 'month' | 'week' | 'all'
+
+export interface CreatorOverview {
+  published_jokes: number
+  reach: number
+  views: number
+  payoff_rate: number
+  reactions: number
+  favorites: number
+  saves: number
+  shares: number
+  peak_read_hour: number | null
+  daily_reach_28d: number[]
+}
+
+export interface ReactionBreakdownItem {
+  reaction: string
+  count: number
+}
+
+export interface ShareBreakdownItem {
+  platform: string
+  count: number
+}
+
+export interface SourceMixItem {
+  source: string
+  count: number
+}
+
+export interface TopJokeItem {
+  id: number
+  text: string
+  views: number
+  reactions: number
+  saves: number
+  shares: number
+  payoff_rate: number
+}
+
+export interface AudienceTasteItem {
+  label: string
+  count: number
+}
+
+export interface CreatorAudience {
+  top_themes: AudienceTasteItem[]
+  top_categories: AudienceTasteItem[]
+  top_formats: AudienceTasteItem[]
+}
+
+export interface CreatorSuggestion {
+  kind: 'peak_hour' | 'what_resonates' | 'consistency'
+  title: string
+  detail: string
+  data: Record<string, unknown>
+}
+
+export interface CreatorInsights {
+  period: InsightsPeriod
+  is_creator: boolean
+  overview: CreatorOverview
+  reactions_breakdown: ReactionBreakdownItem[]
+  shares_breakdown: ShareBreakdownItem[]
+  source_mix: SourceMixItem[]
+  top_jokes: TopJokeItem[]
+  audience: CreatorAudience
+  suggestions: CreatorSuggestion[]
+}
+
+export const creatorInsightsApi = {
+  get: (period: InsightsPeriod = 'month') =>
+    api.get<CreatorInsights>('/creators/me/insights/', { params: { period } }),
+}
