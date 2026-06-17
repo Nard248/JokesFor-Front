@@ -449,6 +449,7 @@ export function CreatorInsightsPage() {
               {PERIODS.map(({ id, label }) => (
                 <button
                   key={id}
+                  aria-pressed={period === id}
                   onClick={() => setPeriod(id)}
                   style={{
                     padding: '6px 16px',

@@ -1,4 +1,4 @@
-import type { User, Joke, Collection, SavedJoke, PaginatedResponse } from './api'
+import type { User, Joke, Collection, SavedJoke, PaginatedResponse, CreatorInsights } from './api'
 
 // ── Mock User ──
 export const mockUser: User = {
@@ -532,10 +532,6 @@ export const mockPreferences: UserPreferences = {
 }
 
 // ── Creator Insights ──
-import type {
-  CreatorInsights,
-} from './api'
-
 export const mockCreatorInsights: CreatorInsights = {
   period: 'month',
   is_creator: true,
