@@ -10,7 +10,8 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi } from './api'
+import type { InsightsPeriod, CreatorInsights } from './api'
 import {
   mockJokesApi,
   mockDailyJokeApi,
@@ -21,6 +22,7 @@ import {
   mockDraftsApi,
   mockProfileApi,
   mockPreferencesApi,
+  mockCreatorInsightsApi,
 } from './mock-api'
 
 const USE_MOCKS =
@@ -237,6 +239,14 @@ export const profileAdapter = {
 
   getAchievements: (): Promise<Achievement[]> =>
     mockProfileApi.getAchievements(),
+}
+
+// ── Creator Insights Adapter ──
+export const creatorInsightsAdapter = {
+  get: (period: InsightsPeriod = 'month'): Promise<CreatorInsights> =>
+    USE_MOCKS
+      ? mockCreatorInsightsApi.get(period)
+      : creatorInsightsApi.get(period).then((r) => r.data),
 }
 
 // ── Preferences Adapter ──

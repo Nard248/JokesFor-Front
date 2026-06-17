@@ -531,6 +531,127 @@ export const mockPreferences: UserPreferences = {
   theme: 'light',
 }
 
+// ── Creator Insights ──
+import type {
+  CreatorInsights,
+} from './api'
+
+export const mockCreatorInsights: CreatorInsights = {
+  period: 'month',
+  is_creator: true,
+  overview: {
+    published_jokes: 12,
+    reach: 4_820,
+    views: 18_340,
+    payoff_rate: 0.67,
+    reactions: 2_410,
+    favorites: 880,
+    saves: 530,
+    shares: 314,
+    peak_read_hour: 21,
+    daily_reach_28d: [
+      120, 98, 210, 185, 340, 290, 410,
+      380, 520, 490, 610, 580, 740, 700,
+      820, 780, 900, 860, 1010, 970, 1120,
+      1080, 1230, 1190, 1310, 1270, 1400, 1380,
+    ],
+  },
+  reactions_breakdown: [
+    { reaction: 'lol', count: 1_050 },
+    { reaction: 'crying', count: 720 },
+    { reaction: 'hmm', count: 390 },
+    { reaction: 'eyeroll', count: 250 },
+  ],
+  shares_breakdown: [
+    { platform: 'whatsapp', count: 142 },
+    { platform: 'twitter', count: 98 },
+    { platform: 'copy_link', count: 74 },
+  ],
+  source_mix: [
+    { source: 'daily', count: 2_400 },
+    { source: 'search', count: 1_100 },
+    { source: 'trending', count: 820 },
+    { source: 'explore', count: 500 },
+  ],
+  top_jokes: [
+    {
+      id: 101,
+      text: 'Why did the programmer quit his job? Because he didn\'t get arrays.',
+      views: 5_420,
+      reactions: 810,
+      saves: 224,
+      shares: 92,
+      payoff_rate: 0.78,
+    },
+    {
+      id: 102,
+      text: 'I told my boss I needed a raise because three companies were after me. He asked which ones. I said: "The gas, electric, and water companies."',
+      views: 3_980,
+      reactions: 640,
+      saves: 178,
+      shares: 61,
+      payoff_rate: 0.71,
+    },
+    {
+      id: 103,
+      text: 'My wife told me to stop impersonating a flamingo. I had to put my foot down.',
+      views: 3_210,
+      reactions: 530,
+      saves: 144,
+      shares: 48,
+      payoff_rate: 0.64,
+    },
+    {
+      id: 104,
+      text: 'Why don\'t scientists trust atoms? Because they make up everything!',
+      views: 2_840,
+      reactions: 430,
+      saves: 112,
+      shares: 39,
+      payoff_rate: 0.59,
+    },
+  ],
+  audience: {
+    top_themes: [
+      { label: 'Work', count: 2_100 },
+      { label: 'Tech', count: 1_560 },
+      { label: 'School', count: 980 },
+      { label: 'Family', count: 720 },
+    ],
+    top_categories: [
+      { label: 'Dad Joke', count: 1_840 },
+      { label: 'Punny', count: 1_320 },
+      { label: 'Geeky', count: 760 },
+      { label: 'Sarcastic', count: 540 },
+    ],
+    top_formats: [
+      { label: 'One-Liner', count: 3_010 },
+      { label: 'Setup & Punchline', count: 1_780 },
+      { label: 'Short Story', count: 490 },
+    ],
+  },
+  suggestions: [
+    {
+      kind: 'peak_hour',
+      title: 'Post at 9 PM',
+      detail: 'Your audience is most active between 9–10 PM. Jokes published then get 2× the reach.',
+      data: { hour: 21 },
+    },
+    {
+      kind: 'what_resonates',
+      title: 'Tech humor lands',
+      detail: 'Your geeky jokes average 0.41 reactions per view — almost double your overall rate.',
+      data: { top_tone: 'geeky', reactions_per_view: 0.41 },
+    },
+    {
+      kind: 'consistency',
+      title: 'Keep the streak going',
+      detail: "You've published 3 jokes this week — your best week yet. One more to hit your record.",
+      data: { days_since: 2 },
+    },
+  ],
+}
+
 // Helper to paginate mock data
 export function paginateMock<T>(items: T[], page = 1, pageSize = 10): PaginatedResponse<T> {
   const start = (page - 1) * pageSize

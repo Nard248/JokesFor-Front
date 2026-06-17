@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod } from './api'
 import {
   mockJokes,
   mockDailyJoke,
@@ -17,6 +17,7 @@ import {
   mockActivity,
   mockAchievements,
   mockPreferences,
+  mockCreatorInsights,
   paginateMock,
 } from './mock-data'
 import type {
@@ -307,5 +308,13 @@ export const mockPreferencesApi = {
   update: async (data: Partial<UserPreferences>): Promise<UserPreferences> => {
     await delay(300)
     return { ...mockPreferences, ...data }
+  },
+}
+
+// ── Creator Insights ──
+export const mockCreatorInsightsApi = {
+  get: async (period: InsightsPeriod = 'month'): Promise<CreatorInsights> => {
+    await delay(300)
+    return { ...mockCreatorInsights, period }
   },
 }

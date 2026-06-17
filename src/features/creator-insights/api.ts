@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { creatorInsightsApi, type InsightsPeriod } from '@/lib/api'
+import type { InsightsPeriod } from '@/lib/api'
+import { creatorInsightsAdapter } from '@/lib/api-adapter'
 
 export const creatorInsightsKeys = {
   all: ['creator-insights'] as const,
@@ -9,7 +10,7 @@ export const creatorInsightsKeys = {
 export function useCreatorInsights(period: InsightsPeriod = 'month') {
   return useQuery({
     queryKey: creatorInsightsKeys.byPeriod(period),
-    queryFn: () => creatorInsightsApi.get(period).then((r) => r.data),
+    queryFn: () => creatorInsightsAdapter.get(period),
     staleTime: 1000 * 60 * 5,
     retry: (failureCount, error: unknown) => {
       const status = (error as { response?: { status?: number } })?.response?.status
