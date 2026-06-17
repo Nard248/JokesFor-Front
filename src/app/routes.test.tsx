@@ -104,6 +104,11 @@ describe('create routes', () => {
     expect(await screen.findByTestId('page-creator-hub')).toBeInTheDocument()
   })
 
+  it('/create/insights renders CreatorInsightsPage', async () => {
+    renderAt('/create/insights')
+    expect(await screen.findByTestId('page-creator-insights')).toBeInTheDocument()
+  })
+
   it('/create/new renders FormatPickerPage', async () => {
     renderAt('/create/new')
     expect(await screen.findByTestId('page-format-picker')).toBeInTheDocument()

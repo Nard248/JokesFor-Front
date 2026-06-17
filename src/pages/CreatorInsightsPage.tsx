@@ -525,23 +525,24 @@ export function CreatorInsightsPage() {
             </div>
           )}
 
-          {/* Data */}
-          {!isLoading && !isError && data && <InsightsDashboard data={data} />}
-
-          {/* Zero state: loaded but no data */}
-          {!isLoading && !isError && data && data.overview.published_jokes === 0 && (
-            <div
-              style={{
-                marginTop: 32,
-                padding: '40px 32px',
-                border: '1px dashed #E9E8E7',
-                borderRadius: 18,
-                textAlign: 'center',
-                background: '#fff',
-              }}
-            >
-              <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
-            </div>
+          {/* Data or zero state — mutually exclusive */}
+          {!isLoading && !isError && data && (
+            data.overview.published_jokes === 0 ? (
+              <div
+                style={{
+                  marginTop: 32,
+                  padding: '40px 32px',
+                  border: '1px dashed #E9E8E7',
+                  borderRadius: 18,
+                  textAlign: 'center',
+                  background: '#fff',
+                }}
+              >
+                <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
+              </div>
+            ) : (
+              <InsightsDashboard data={data} />
+            )
           )}
         </div>
       </FlowAppShell>

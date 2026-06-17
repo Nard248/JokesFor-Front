@@ -15,6 +15,7 @@ const realApi = {
   savedJokesApi: {},
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
   preferencesApi: { get: vi.fn(), update: vi.fn() },
+  creatorInsightsApi: { get: vi.fn() },
 }
 vi.mock('@/lib/api', () => realApi)
 
@@ -191,5 +192,50 @@ describe('default mock path', () => {
     const { favoritesAdapter } = await loadAdapterMock()
     await favoritesAdapter.stats()
     expect(realApi.favoritesApi.stats).not.toHaveBeenCalled()
+  })
+
+  it('creatorInsightsAdapter.get does NOT call the real api when mocks on', async () => {
+    const { creatorInsightsAdapter } = await loadAdapterMock()
+    const result = await creatorInsightsAdapter.get('week')
+    expect(realApi.creatorInsightsApi.get).not.toHaveBeenCalled()
+    // Returns the mock fixture with the requested period
+    expect(result.period).toBe('week')
+    expect(result.is_creator).toBe(true)
+    expect(result.overview.published_jokes).toBeGreaterThan(0)
+    expect(result.overview.daily_reach_28d).toBeDefined()
+  })
+})
+
+describe('creatorInsightsAdapter (real path)', () => {
+  it('get() calls creatorInsightsApi.get with the period and returns data', async () => {
+    realApi.creatorInsightsApi.get.mockResolvedValue({
+      data: {
+        period: 'month',
+        is_creator: true,
+        overview: {
+          published_jokes: 5,
+          reach: 1000,
+          views: 4000,
+          payoff_rate: 0.55,
+          reactions: 500,
+          favorites: 120,
+          saves: 80,
+          shares: 40,
+          peak_read_hour: 20,
+          daily_reach_28d: Array(28).fill(10),
+        },
+        reactions_breakdown: [],
+        shares_breakdown: [],
+        source_mix: [],
+        top_jokes: [],
+        audience: { top_themes: [], top_categories: [], top_formats: [] },
+        suggestions: [],
+      },
+    })
+    const { creatorInsightsAdapter } = await loadAdapterReal()
+    const out = await creatorInsightsAdapter.get('month')
+    expect(realApi.creatorInsightsApi.get).toHaveBeenCalledWith('month')
+    expect(out.period).toBe('month')
+    expect(out.overview.published_jokes).toBe(5)
   })
 })

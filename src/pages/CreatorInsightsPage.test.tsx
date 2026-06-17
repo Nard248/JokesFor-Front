@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { CreatorInsights } from '@/lib/api'
@@ -15,7 +15,7 @@ vi.mock('@/features/creator-insights', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/features/creator-insights')>()
   return {
     ...original,
-    useCreatorInsights: () => mockUseCreatorInsights(),
+    useCreatorInsights: (period?: string) => mockUseCreatorInsights(period),
   }
 })
 
@@ -137,5 +137,34 @@ describe('CreatorInsightsPage', () => {
     expect(screen.getByText('Work')).toBeDefined()
     expect(screen.getByText('Dark')).toBeDefined()
     expect(screen.getByText('One-liner')).toBeDefined()
+  })
+
+  it('zero-state shows only "No data" message and NOT the KPI row when published_jokes === 0', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        overview: { ...MOCK_DATA.overview, published_jokes: 0 },
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    // Zero-state message should appear
+    expect(screen.getByText(/no data yet for this period/i)).toBeDefined()
+    // KPI values (reach/views) should NOT appear
+    expect(screen.queryByText('412')).toBeNull()
+    expect(screen.queryByText('1,830')).toBeNull()
+  })
+
+  it('clicking "Week" pill calls useCreatorInsights with "week"', () => {
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    const weekButton = screen.getByRole('button', { name: /week/i })
+    fireEvent.click(weekButton)
+    // The hook should have been called with 'week' after the click
+    const calls = mockUseCreatorInsights.mock.calls
+    const calledWithWeek = calls.some((args) => args[0] === 'week')
+    expect(calledWithWeek).toBe(true)
   })
 })
