@@ -1,4 +1,4 @@
-import type { User, Joke, Collection, SavedJoke, PaginatedResponse, CreatorInsights } from './api'
+import type { User, Joke, Collection, SavedJoke, PaginatedResponse, CreatorInsights, CreatorProfile, PublicUser } from './api'
 
 // ── Mock User ──
 export const mockUser: User = {
@@ -551,6 +551,8 @@ export const mockCreatorInsights: CreatorInsights = {
       820, 780, 900, 860, 1010, 970, 1120,
       1080, 1230, 1190, 1310, 1270, 1400, 1380,
     ],
+    followers: 42,
+    follower_growth_28d: Array(28).fill(0).map((_, i) => i),
   },
   reactions_breakdown: [
     { reaction: 'lol', count: 1_050 },
@@ -647,6 +649,24 @@ export const mockCreatorInsights: CreatorInsights = {
     },
   ],
 }
+
+// ── Creator Profile ──
+export const mockCreatorProfile: CreatorProfile = {
+  id: 7,
+  display_name: 'user_7',
+  handle: '@user7',
+  avatar_url: null,
+  published_jokes: 14,
+  follower_count: 42,
+  is_following: false,
+  jokes: mockJokes.slice(0, 6),
+  jokes_pagination: { count: 14, next: null, previous: null },
+}
+
+export const mockPublicUsers: PublicUser[] = [
+  { id: 7, display_name: 'user_7', handle: '@user7', avatar_url: null },
+  { id: 8, display_name: 'Alice', handle: '@alice', avatar_url: null },
+]
 
 // Helper to paginate mock data
 export function paginateMock<T>(items: T[], page = 1, pageSize = 10): PaginatedResponse<T> {

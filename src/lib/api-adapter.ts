@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO, FollowStatus, CreatorProfile } from './api'
 import type {
   TrendingJoke,
   TrendingTag,
@@ -10,7 +10,7 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi } from './api'
 import type { InsightsPeriod, CreatorInsights } from './api'
 import {
   mockJokesApi,
@@ -23,6 +23,8 @@ import {
   mockProfileApi,
   mockPreferencesApi,
   mockCreatorInsightsApi,
+  mockFollowsApi,
+  mockCreatorProfileApi,
 } from './mock-api'
 
 const USE_MOCKS =
@@ -247,6 +249,32 @@ export const creatorInsightsAdapter = {
     USE_MOCKS
       ? mockCreatorInsightsApi.get(period)
       : creatorInsightsApi.get(period).then((r) => r.data),
+}
+
+// ── Follows Adapter ──
+export const followsAdapter = {
+  follow: (id: number): Promise<FollowStatus> =>
+    USE_MOCKS
+      ? mockFollowsApi.follow(id)
+      : followsApi.follow(id).then((r) => r.data),
+
+  unfollow: (id: number): Promise<void> =>
+    USE_MOCKS
+      ? mockFollowsApi.unfollow(id)
+      : followsApi.unfollow(id).then(() => undefined),
+
+  status: (id: number): Promise<FollowStatus> =>
+    USE_MOCKS
+      ? mockFollowsApi.status(id)
+      : followsApi.status(id).then((r) => r.data),
+}
+
+// ── Creator Profile Adapter ──
+export const creatorProfileAdapter = {
+  get: (id: number): Promise<CreatorProfile> =>
+    USE_MOCKS
+      ? mockCreatorProfileApi.get(id)
+      : creatorProfileApi.get(id).then((r) => r.data),
 }
 
 // ── Preferences Adapter ──

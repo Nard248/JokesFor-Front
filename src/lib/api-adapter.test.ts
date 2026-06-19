@@ -16,6 +16,8 @@ const realApi = {
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
   preferencesApi: { get: vi.fn(), update: vi.fn() },
   creatorInsightsApi: { get: vi.fn() },
+  followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
+  creatorProfileApi: { get: vi.fn() },
 }
 vi.mock('@/lib/api', () => realApi)
 
@@ -223,6 +225,8 @@ describe('creatorInsightsAdapter (real path)', () => {
           shares: 40,
           peak_read_hour: 20,
           daily_reach_28d: Array(28).fill(10),
+          followers: 42,
+          follower_growth_28d: Array(28).fill(0).map((_: unknown, i: number) => i),
         },
         reactions_breakdown: [],
         shares_breakdown: [],
@@ -237,5 +241,89 @@ describe('creatorInsightsAdapter (real path)', () => {
     expect(realApi.creatorInsightsApi.get).toHaveBeenCalledWith('month')
     expect(out.period).toBe('month')
     expect(out.overview.published_jokes).toBe(5)
+  })
+})
+
+describe('followsAdapter mock path', () => {
+  it('routes to mock and follow toggles is_following', async () => {
+    const { followsAdapter } = await loadAdapterMock()
+    // Initially not following
+    const statusBefore = await followsAdapter.status(99)
+    expect(statusBefore.is_following).toBe(false)
+    // Follow
+    const followed = await followsAdapter.follow(99)
+    expect(followed.is_following).toBe(true)
+    // Status should now be true
+    const statusAfter = await followsAdapter.status(99)
+    expect(statusAfter.is_following).toBe(true)
+    // Unfollow
+    await followsAdapter.unfollow(99)
+    const statusFinal = await followsAdapter.status(99)
+    expect(statusFinal.is_following).toBe(false)
+    // Ensure real API not called
+    expect(realApi.followsApi.follow).not.toHaveBeenCalled()
+    expect(realApi.followsApi.status).not.toHaveBeenCalled()
+  })
+})
+
+describe('creatorProfileAdapter mock path', () => {
+  it('routes to mock and returns correct shape', async () => {
+    const { creatorProfileAdapter } = await loadAdapterMock()
+    const profile = await creatorProfileAdapter.get(7)
+    expect(profile.id).toBe(7)
+    expect(typeof profile.display_name).toBe('string')
+    expect(typeof profile.handle).toBe('string')
+    expect(typeof profile.follower_count).toBe('number')
+    expect(Array.isArray(profile.jokes)).toBe(true)
+    expect(realApi.creatorProfileApi.get).not.toHaveBeenCalled()
+  })
+})
+
+describe('followsAdapter real path', () => {
+  it('status() calls followsApi.status and returns data', async () => {
+    realApi.followsApi.status.mockResolvedValue({ data: { is_following: true, follower_count: 5 } })
+    const { followsAdapter } = await loadAdapterReal()
+    const out = await followsAdapter.status(42)
+    expect(realApi.followsApi.status).toHaveBeenCalledWith(42)
+    expect(out.is_following).toBe(true)
+    expect(out.follower_count).toBe(5)
+  })
+
+  it('follow() calls followsApi.follow and returns data', async () => {
+    realApi.followsApi.follow.mockResolvedValue({ data: { is_following: true, follower_count: 6 } })
+    const { followsAdapter } = await loadAdapterReal()
+    const out = await followsAdapter.follow(42)
+    expect(realApi.followsApi.follow).toHaveBeenCalledWith(42)
+    expect(out.is_following).toBe(true)
+  })
+
+  it('unfollow() calls followsApi.unfollow and resolves void', async () => {
+    realApi.followsApi.unfollow.mockResolvedValue({})
+    const { followsAdapter } = await loadAdapterReal()
+    await expect(followsAdapter.unfollow(42)).resolves.toBeUndefined()
+    expect(realApi.followsApi.unfollow).toHaveBeenCalledWith(42)
+  })
+})
+
+describe('creatorProfileAdapter real path', () => {
+  it('get() calls creatorProfileApi.get and returns data', async () => {
+    realApi.creatorProfileApi.get.mockResolvedValue({
+      data: {
+        id: 7,
+        display_name: 'user_7',
+        handle: '@user7',
+        avatar_url: null,
+        published_jokes: 14,
+        follower_count: 42,
+        is_following: false,
+        jokes: [],
+        jokes_pagination: { count: 14, next: null, previous: null },
+      },
+    })
+    const { creatorProfileAdapter } = await loadAdapterReal()
+    const out = await creatorProfileAdapter.get(7)
+    expect(realApi.creatorProfileApi.get).toHaveBeenCalledWith(7)
+    expect(out.id).toBe(7)
+    expect(out.display_name).toBe('user_7')
   })
 })

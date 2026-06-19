@@ -746,6 +746,8 @@ export interface CreatorOverview {
   shares: number
   peak_read_hour: number | null
   daily_reach_28d: number[]
+  followers: number
+  follower_growth_28d: number[]
 }
 
 export interface ReactionBreakdownItem {
@@ -806,4 +808,43 @@ export interface CreatorInsights {
 export const creatorInsightsApi = {
   get: (period: InsightsPeriod = 'month') =>
     api.get<CreatorInsights>('/creators/me/insights/', { params: { period } }),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Public creator profiles + follows
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface PublicUser {
+  id: number
+  display_name: string
+  handle: string
+  avatar_url?: string | null
+}
+
+export interface FollowStatus {
+  is_following: boolean
+  follower_count: number
+}
+
+export interface CreatorProfile {
+  id: number
+  display_name: string
+  handle: string
+  avatar_url?: string | null
+  published_jokes: number
+  follower_count: number
+  /** null = anon viewer or self-view */
+  is_following: boolean | null
+  jokes: Joke[]
+  jokes_pagination: { count: number; next: string | null; previous: string | null }
+}
+
+export const followsApi = {
+  follow: (id: number) => api.post<FollowStatus>(`/follows/${id}/`),
+  unfollow: (id: number) => api.delete(`/follows/${id}/`),
+  status: (id: number) => api.get<FollowStatus>(`/follows/${id}/status/`),
+}
+
+export const creatorProfileApi = {
+  get: (id: number) => api.get<CreatorProfile>(`/creators/${id}/profile/`),
 }

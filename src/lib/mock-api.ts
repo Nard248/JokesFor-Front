@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile } from './api'
 import {
   mockJokes,
   mockDailyJoke,
@@ -18,6 +18,7 @@ import {
   mockAchievements,
   mockPreferences,
   mockCreatorInsights,
+  mockCreatorProfile,
   paginateMock,
 } from './mock-data'
 import type {
@@ -316,5 +317,37 @@ export const mockCreatorInsightsApi = {
   get: async (period: InsightsPeriod = 'month'): Promise<CreatorInsights> => {
     await delay(300)
     return { ...mockCreatorInsights, period }
+  },
+}
+
+// ── Follows (stateful) ──
+const followedCreators = new Set<number>()
+
+export const mockFollowsApi = {
+  follow: async (id: number): Promise<FollowStatus> => {
+    await delay(300)
+    followedCreators.add(id)
+    return { is_following: true, follower_count: 43 }
+  },
+  unfollow: async (id: number): Promise<void> => {
+    await delay(300)
+    followedCreators.delete(id)
+  },
+  status: async (id: number): Promise<FollowStatus> => {
+    await delay(200)
+    return { is_following: followedCreators.has(id), follower_count: followedCreators.has(id) ? 43 : 42 }
+  },
+}
+
+export const mockCreatorProfileApi = {
+  get: async (id: number): Promise<CreatorProfile> => {
+    await delay(400)
+    const is_following = followedCreators.has(id)
+    return {
+      ...mockCreatorProfile,
+      id,
+      follower_count: is_following ? 43 : 42,
+      is_following,
+    }
   },
 }
