@@ -42,6 +42,7 @@ vi.mock('@/pages', () => ({
   DraftsPage: () => <div data-testid="page-drafts" />,
   ProfilePage: () => <div data-testid="page-profile" />,
   SettingsPage: () => <div data-testid="page-settings" />,
+  BillingPage: () => <div data-testid="page-billing" />,
   SubmitJokePage: () => <div data-testid="page-submit" />,
   NotFoundPage: () => <div data-testid="page-not-found" />,
   OnboardingPage: () => <div data-testid="page-onboarding" />,

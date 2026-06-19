@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { User, Bell, Shield, Palette, AlertTriangle, LogOut } from 'lucide-react'
+import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useAuth, useLogout } from '@/features/auth'
 import { usePreferences, useUpdatePreferences } from '@/features/preferences'
@@ -87,6 +87,25 @@ export function SettingsPage() {
               <button type="button" className="btn-flow-ghost" style={{ height: 40, fontSize: 13 }}>
                 Change password
               </button>
+            </div>
+          </SettingsSection>
+
+          {/* Billing */}
+          <SettingsSection icon={<CreditCard size={18} />} title="Billing &amp; Plans" subtitle="Manage your subscription and entitlements.">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>Subscription</div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                  View plans, upgrade, or manage your billing.
+                </div>
+              </div>
+              <Link
+                to="/settings/billing"
+                className="btn-flow-primary"
+                style={{ height: 40, fontSize: 13, textDecoration: 'none' }}
+              >
+                Manage billing
+              </Link>
             </div>
           </SettingsSection>
 

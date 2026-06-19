@@ -38,6 +38,7 @@ export { FavoritesPage } from './FavoritesPage'
 export { DraftsPage } from './DraftsPage'
 export { ProfilePage } from './ProfilePage'
 export { SettingsPage } from './SettingsPage'
+export { BillingPage } from './BillingPage'
 export { SubmitJokePage } from './SubmitJokePage'
 export { NotFoundPage } from './NotFoundPage'
 

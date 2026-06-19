@@ -21,6 +21,7 @@ import {
   FavoritesPage,
   ProfilePage,
   SettingsPage,
+  BillingPage,
   NotFoundPage,
   FlowPage,
   FlowCanvasPage,
@@ -72,6 +73,7 @@ export const routes: RouteObject[] = [
   { path: '/favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
   { path: '/profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
   { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
+  { path: '/settings/billing', element: <ProtectedRoute><BillingPage /></ProtectedRoute> },
 
   // Content creation — /create/* (specific paths before :draftId wildcard)
   { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
