@@ -180,6 +180,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           <KpiCard label="Favorites" value={fmt(overview.favorites)} />
           <KpiCard label="Saves" value={fmt(overview.saves)} />
           <KpiCard label="Shares" value={fmt(overview.shares)} />
+          <KpiCard label="Followers" value={fmt(overview.followers)} />
           {overview.peak_read_hour !== null && (
             <KpiCard label="Peak Hour" value={`${overview.peak_read_hour}:00`} />
           )}
@@ -210,6 +211,33 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
             28-Day Reach
           </div>
           <Sparkline data={overview.daily_reach_28d} />
+        </section>
+      )}
+
+      {/* Follower growth sparkline */}
+      {overview.follower_growth_28d && overview.follower_growth_28d.length > 0 && (
+        <section
+          style={{
+            background: '#fff',
+            border: '1px solid #E9E8E7',
+            borderRadius: 16,
+            padding: '20px 24px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#71717A',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 12,
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            28-Day Follower Growth
+          </div>
+          <Sparkline data={overview.follower_growth_28d} />
         </section>
       )}
 

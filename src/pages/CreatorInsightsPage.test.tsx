@@ -35,6 +35,8 @@ const MOCK_DATA: CreatorInsights = {
     shares: 31,
     peak_read_hour: 21,
     daily_reach_28d: Array(28).fill(0).map((_, i) => i * 2),
+    followers: 42,
+    follower_growth_28d: Array(28).fill(0).map((_, i) => i * 2),
   },
   reactions_breakdown: [{ reaction: 'lol', count: 120 }, { reaction: 'crying', count: 80 }],
   shares_breakdown: [{ platform: 'whatsapp', count: 14 }],
@@ -166,5 +168,12 @@ describe('CreatorInsightsPage', () => {
     const calls = mockUseCreatorInsights.mock.calls
     const calledWithWeek = calls.some((args) => args[0] === 'week')
     expect(calledWithWeek).toBe(true)
+  })
+
+  it('renders followers KPI', () => {
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('42')).toBeDefined()
+    // Verify the "Followers" label is also present
+    expect(screen.getByText('Followers')).toBeDefined()
   })
 })

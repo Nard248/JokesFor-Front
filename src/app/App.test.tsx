@@ -52,6 +52,7 @@ vi.mock('@/pages', () => ({
   ProfilePageLegacy: () => <div data-testid="page-profile-legacy" />,
   SettingsPageLegacy: () => <div data-testid="page-settings-legacy" />,
   SubmitJokePageLegacy: () => <div data-testid="page-submit-legacy" />,
+  CreatorProfilePage: () => <div data-testid="page-creator-profile" />,
 }))
 
 // ── Mock Layout (used by /legacy/* routes) ────────────────────────────────────
