@@ -848,3 +848,62 @@ export const followsApi = {
 export const creatorProfileApi = {
   get: (id: number) => api.get<CreatorProfile>(`/creators/${id}/profile/`),
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Billing / Subscription
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface BillingPlan {
+  slug: string
+  name: string
+  description: string
+  interval: 'month' | 'year' | null
+  amount_cents: number
+  currency: string
+  amount_display: string
+  features: Record<string, boolean>
+  limits: Record<string, number | null>
+  sort_order: number
+}
+
+export interface MySubscription {
+  plan_slug: string
+  plan_name: string
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'free'
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  stripe_customer_id: string | null
+}
+
+export interface BillingEntitlements {
+  plan: string
+  features: {
+    creator_analytics: boolean
+    daily_joke_preview: boolean
+    mature_content_addon: boolean
+  }
+  limits: {
+    mystery_box_rolls_per_day: number | null
+    submissions_per_day: number | null
+    daily_jokes_per_day: number | null
+    daily_joke_history_days: number | null
+  }
+}
+
+export interface CheckoutSessionResponse {
+  url: string
+}
+
+export interface PortalSessionResponse {
+  url: string
+}
+
+export const billingApi = {
+  listPlans: () => api.get<BillingPlan[]>('/billing/plans'),
+  mySubscription: () => api.get<MySubscription>('/billing/my-subscription'),
+  entitlements: () => api.get<BillingEntitlements>('/billing/entitlements'),
+  createCheckoutSession: (plan_slug: string) =>
+    api.post<CheckoutSessionResponse>('/billing/checkout-session', { plan_slug }),
+  createPortalSession: () =>
+    api.post<PortalSessionResponse>('/billing/portal-session'),
+}

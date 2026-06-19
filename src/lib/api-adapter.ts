@@ -10,8 +10,8 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi } from './api'
-import type { InsightsPeriod, CreatorInsights } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi } from './api'
+import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokesApi,
   mockDailyJokeApi,
@@ -25,6 +25,7 @@ import {
   mockCreatorInsightsApi,
   mockFollowsApi,
   mockCreatorProfileApi,
+  mockBillingApi,
 } from './mock-api'
 
 const USE_MOCKS =
@@ -349,4 +350,32 @@ export const preferencesAdapter = {
     USE_REAL_PREFERENCES
       ? preferencesApi.update(toDTO(data)).then((r) => fromDTO(r.data))
       : mockPreferencesApi.update(data),
+}
+
+// ── Billing Adapter ──
+export const billingAdapter = {
+  listPlans: (): Promise<BillingPlan[]> =>
+    USE_MOCKS
+      ? mockBillingApi.listPlans()
+      : billingApi.listPlans().then((r) => r.data),
+
+  mySubscription: (): Promise<MySubscription> =>
+    USE_MOCKS
+      ? mockBillingApi.mySubscription()
+      : billingApi.mySubscription().then((r) => r.data),
+
+  entitlements: (): Promise<BillingEntitlements> =>
+    USE_MOCKS
+      ? mockBillingApi.entitlements()
+      : billingApi.entitlements().then((r) => r.data),
+
+  createCheckoutSession: (plan_slug: string): Promise<CheckoutSessionResponse> =>
+    USE_MOCKS
+      ? mockBillingApi.createCheckoutSession(plan_slug)
+      : billingApi.createCheckoutSession(plan_slug).then((r) => r.data),
+
+  createPortalSession: (): Promise<PortalSessionResponse> =>
+    USE_MOCKS
+      ? mockBillingApi.createPortalSession()
+      : billingApi.createPortalSession().then((r) => r.data),
 }

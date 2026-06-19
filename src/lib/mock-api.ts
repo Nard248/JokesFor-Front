@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokes,
   mockDailyJoke,
@@ -19,6 +19,8 @@ import {
   mockPreferences,
   mockCreatorInsights,
   mockCreatorProfile,
+  mockBillingPlans,
+  mockMySubscription,
   paginateMock,
 } from './mock-data'
 import type {
@@ -350,4 +352,67 @@ export const mockCreatorProfileApi = {
       is_following,
     }
   },
+}
+
+// ── Billing (stateful: tracks current plan for demo) ──
+let mockCurrentPlanSlug = mockMySubscription.plan_slug
+
+export const mockBillingApi = {
+  listPlans: async (): Promise<BillingPlan[]> => {
+    await delay(300)
+    return [...mockBillingPlans]
+  },
+
+  mySubscription: async (): Promise<MySubscription> => {
+    await delay(200)
+    const plan = mockBillingPlans.find((p) => p.slug === mockCurrentPlanSlug) ?? mockBillingPlans[0]
+    return {
+      plan_slug: plan.slug,
+      plan_name: plan.name,
+      status: plan.slug === 'free' ? 'free' : 'active',
+      current_period_end: plan.slug === 'free' ? null : '2026-07-19T00:00:00Z',
+      cancel_at_period_end: false,
+      stripe_customer_id: plan.slug === 'free' ? null : 'cus_mock123',
+    }
+  },
+
+  entitlements: async (): Promise<BillingEntitlements> => {
+    await delay(200)
+    const plan = mockBillingPlans.find((p) => p.slug === mockCurrentPlanSlug) ?? mockBillingPlans[0]
+    return {
+      plan: plan.slug,
+      features: {
+        creator_analytics: plan.features.creator_analytics as boolean,
+        daily_joke_preview: plan.features.daily_joke_preview as boolean,
+        mature_content_addon: plan.features.mature_content_addon as boolean,
+      },
+      limits: {
+        mystery_box_rolls_per_day: (plan.limits.mystery_box_rolls_per_day as number | null) ?? null,
+        submissions_per_day: (plan.limits.submissions_per_day as number | null) ?? null,
+        daily_jokes_per_day: (plan.limits.daily_jokes_per_day as number | null) ?? null,
+        daily_joke_history_days: (plan.limits.daily_joke_history_days as number | null) ?? null,
+      },
+    }
+  },
+
+  createCheckoutSession: async (plan_slug: string): Promise<CheckoutSessionResponse> => {
+    await delay(400)
+    const plan = mockBillingPlans.find((p) => p.slug === plan_slug)
+    if (!plan) throw Object.assign(new Error('Not found'), { response: { status: 404 } })
+    // In mock mode, simulate a successful demo redirect URL
+    return { url: `https://checkout.stripe.com/demo?plan=${plan_slug}` }
+  },
+
+  createPortalSession: async (): Promise<PortalSessionResponse> => {
+    await delay(400)
+    if (mockCurrentPlanSlug === 'free') {
+      throw Object.assign(new Error('No billing account'), { response: { status: 404 } })
+    }
+    return { url: 'https://billing.stripe.com/demo/portal' }
+  },
+}
+
+// Exported so tests can reset plan state
+export function _resetMockBillingPlan(slug = 'free') {
+  mockCurrentPlanSlug = slug
 }
