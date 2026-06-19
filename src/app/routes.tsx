@@ -25,6 +25,8 @@ import {
   FlowPage,
   FlowCanvasPage,
   ExplorePage,
+  // Public creator profiles
+  CreatorProfilePage,
   // Content creation (Phase 5)
   CreatorHubPage,
   CreatorInsightsPage,
@@ -96,6 +98,9 @@ export const routes: RouteObject[] = [
   // Forgot/reset password — single component, branches on URL.
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ForgotPasswordPage /> },
+
+  // Public creator profiles (no auth required)
+  { path: '/creators/:creatorId', element: <CreatorProfilePage /> },
 
   // Joke detail (logs JokeView server-side via ?source=)
   { path: '/jokes/:id', element: <JokeDetailPage /> },

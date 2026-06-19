@@ -12,6 +12,9 @@ export { JokeDetailPage } from './JokeDetailPage'
 export { ForgotPasswordPage } from './ForgotPasswordPage'
 export { PackDetailPage } from './PackDetailPage'
 
+// Public creator profiles
+export { CreatorProfilePage } from './CreatorProfilePage'
+
 // Content Creation pages (Phase 5)
 export { CreatorHubPage } from './CreatorHubPage'
 export { CreatorInsightsPage } from './CreatorInsightsPage'
