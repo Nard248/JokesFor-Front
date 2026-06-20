@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { PublicIdentityEditor } from '@/components/PublicIdentityEditor'
 import { useAuth, useLogout } from '@/features/auth'
 import { usePreferences, useUpdatePreferences } from '@/features/preferences'
 
@@ -88,6 +89,11 @@ export function SettingsPage() {
                 Change password
               </button>
             </div>
+          </SettingsSection>
+
+          {/* Public identity */}
+          <SettingsSection icon={<User size={18} />} title="Public identity" subtitle="Your creator handle and display name.">
+            <PublicIdentityEditor />
           </SettingsSection>
 
           {/* Billing */}

@@ -1,6 +1,8 @@
 export {
   useProfile,
   useUpdateProfile,
+  usePublicIdentity,
+  useUpdateIdentity,
   useActivity,
   useAchievements,
   profileKeys,

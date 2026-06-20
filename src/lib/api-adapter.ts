@@ -10,7 +10,7 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi } from './api'
 import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokesApi,
@@ -242,6 +242,53 @@ export const profileAdapter = {
 
   getAchievements: (): Promise<Achievement[]> =>
     mockProfileApi.getAchievements(),
+}
+
+// ── Public Identity Adapter ──
+// Editing a creator's public handle/display name. This has a REAL path (the rest
+// of profileAdapter is still mock-only because its DTO is unverified): the
+// backend PATCH /users/me/profile/ is implemented and validates the handle.
+export interface PublicIdentity {
+  display_name: string
+  handle: string | null
+  /** Resolved public-facing values (name falls back to user_<id>, etc.). */
+  name: string
+  username: string
+}
+
+const mapIdentity = (d: {
+  display_name?: string
+  handle?: string | null
+  name?: string
+  username?: string
+}): PublicIdentity => ({
+  display_name: d.display_name ?? '',
+  handle: d.handle ?? null,
+  name: d.name ?? '',
+  username: d.username ?? '',
+})
+
+// In-memory identity for the offline/mock demo so edits round-trip.
+let mockIdentity: PublicIdentity = { display_name: '', handle: null, name: 'You', username: '@you' }
+
+export const accountIdentityAdapter = {
+  get: (): Promise<PublicIdentity> =>
+    USE_MOCKS
+      ? Promise.resolve(mockIdentity)
+      : profileApi.get().then((r) => mapIdentity(r.data)),
+
+  update: (data: { display_name?: string; handle?: string | null }): Promise<PublicIdentity> => {
+    if (USE_MOCKS) {
+      mockIdentity = {
+        ...mockIdentity,
+        ...data,
+        name: data.display_name || mockIdentity.name,
+        username: data.handle ? `@${data.handle}` : mockIdentity.username,
+      }
+      return Promise.resolve(mockIdentity)
+    }
+    return profileApi.update(data).then((r) => mapIdentity(r.data))
+  },
 }
 
 // ── Creator Insights Adapter ──

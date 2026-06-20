@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { profileAdapter } from '@/lib/api-adapter'
+import { profileAdapter, accountIdentityAdapter } from '@/lib/api-adapter'
 import type { UserProfile } from '@/lib/mock-data'
 
 export const profileKeys = {
   all: ['profile'] as const,
   me: () => [...profileKeys.all, 'me'] as const,
+  identity: () => [...profileKeys.all, 'identity'] as const,
   activity: () => [...profileKeys.all, 'activity'] as const,
   achievements: () => [...profileKeys.all, 'achievements'] as const,
 }
@@ -24,6 +25,25 @@ export function useUpdateProfile() {
     onSuccess: (updatedProfile) => {
       // Optimistic: set the profile cache directly instead of refetching
       queryClient.setQueryData(profileKeys.me(), updatedProfile)
+    },
+  })
+}
+
+export function usePublicIdentity() {
+  return useQuery({
+    queryKey: profileKeys.identity(),
+    queryFn: () => accountIdentityAdapter.get(),
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useUpdateIdentity() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { display_name?: string; handle?: string | null }) =>
+      accountIdentityAdapter.update(data),
+    onSuccess: (identity) => {
+      queryClient.setQueryData(profileKeys.identity(), identity)
     },
   })
 }

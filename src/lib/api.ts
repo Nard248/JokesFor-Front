@@ -337,6 +337,11 @@ export interface UserProfileDTO {
   avatar_url?: string | null
   joined_at?: string
   streak_days?: number
+  /** Public identity (settable via PATCH). `name`/`username` are the resolved
+   * public-facing values; `display_name`/`handle` are the raw chosen fields. */
+  name?: string
+  display_name?: string
+  handle?: string | null
 }
 
 export interface ActivityItemDTO {

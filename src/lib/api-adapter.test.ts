@@ -15,6 +15,7 @@ const realApi = {
   savedJokesApi: {},
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
   preferencesApi: { get: vi.fn(), update: vi.fn() },
+  profileApi: { get: vi.fn(), update: vi.fn() },
   creatorInsightsApi: { get: vi.fn() },
   followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
   creatorProfileApi: { get: vi.fn() },
@@ -361,6 +362,33 @@ describe('creatorProfileAdapter real path', () => {
     expect(joke.format).toEqual({ id: 0, name: 'Knock Knock', slug: 'knock-knock' })
     expect(joke.age_rating).toMatchObject({ slug: 'pg', name: 'Pg' })
     expect(joke.categories).toEqual(joke.tones)
+  })
+
+  it('accountIdentityAdapter.update (real) PATCHes display_name/handle and maps the response', async () => {
+    realApi.profileApi.update.mockResolvedValue({
+      data: { display_name: 'Pun Queen', handle: 'punqueen', name: 'Pun Queen', username: '@punqueen' },
+    })
+    const { accountIdentityAdapter } = await loadAdapterReal()
+    const out = await accountIdentityAdapter.update({ display_name: 'Pun Queen', handle: 'punqueen' })
+    expect(realApi.profileApi.update).toHaveBeenCalledWith({ display_name: 'Pun Queen', handle: 'punqueen' })
+    expect(out).toEqual({ display_name: 'Pun Queen', handle: 'punqueen', name: 'Pun Queen', username: '@punqueen' })
+  })
+
+  it('accountIdentityAdapter.get (real) maps the profile DTO to PublicIdentity', async () => {
+    realApi.profileApi.get.mockResolvedValue({
+      data: { display_name: 'user_5', handle: null, name: 'user_5', username: '@user5' },
+    })
+    const { accountIdentityAdapter } = await loadAdapterReal()
+    const out = await accountIdentityAdapter.get()
+    expect(out).toEqual({ display_name: 'user_5', handle: null, name: 'user_5', username: '@user5' })
+  })
+
+  it('accountIdentityAdapter.update (mock) round-trips without hitting the real api', async () => {
+    const { accountIdentityAdapter } = await loadAdapterMock()
+    const out = await accountIdentityAdapter.update({ display_name: 'Demo', handle: 'demo' })
+    expect(realApi.profileApi.update).not.toHaveBeenCalled()
+    expect(out.name).toBe('Demo')
+    expect(out.username).toBe('@demo')
   })
 
   it('normalizeProfileJoke passes already-nested objects through unchanged', async () => {
