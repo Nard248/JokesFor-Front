@@ -326,4 +326,55 @@ describe('creatorProfileAdapter real path', () => {
     expect(out.id).toBe(7)
     expect(out.display_name).toBe('user_7')
   })
+
+  it('get() normalizes lean JokeListSerializer jokes (string tones/format/age_rating) into objects', async () => {
+    realApi.creatorProfileApi.get.mockResolvedValue({
+      data: {
+        id: 7,
+        display_name: 'Funny Jane',
+        handle: '@janedoe',
+        avatar_url: null,
+        published_jokes: 1,
+        follower_count: 3,
+        is_following: false,
+        jokes: [
+          {
+            id: 1,
+            text: 'Why did the...',
+            format: 'knock-knock',
+            age_rating: 'pg',
+            tones: ['witty', 'dry'],
+            categories: ['witty', 'dry'],
+          },
+        ],
+        jokes_pagination: { count: 1, next: null, previous: null },
+      },
+    })
+    const { creatorProfileAdapter } = await loadAdapterReal()
+    const out = await creatorProfileAdapter.get(7)
+    const joke = out.jokes[0]
+    // tones became objects JokeCard can render (tone.id / tone.slug / tone.name)
+    expect(joke.tones).toEqual([
+      { id: -1, name: 'Witty', slug: 'witty' },
+      { id: -2, name: 'Dry', slug: 'dry' },
+    ])
+    expect(joke.format).toEqual({ id: 0, name: 'Knock Knock', slug: 'knock-knock' })
+    expect(joke.age_rating).toMatchObject({ slug: 'pg', name: 'Pg' })
+    expect(joke.categories).toEqual(joke.tones)
+  })
+
+  it('normalizeProfileJoke passes already-nested objects through unchanged', async () => {
+    const { normalizeProfileJoke } = await loadAdapterReal()
+    const nested = {
+      id: 2,
+      text: 't',
+      format: { id: 5, name: 'One Liner', slug: 'one-liner' },
+      age_rating: { id: 1, name: 'PG', slug: 'pg', min_age: 0 },
+      tones: [{ id: 9, name: 'Dad', slug: 'dad' }],
+      categories: [{ id: 9, name: 'Dad', slug: 'dad' }],
+    } as unknown as Parameters<typeof normalizeProfileJoke>[0]
+    const out = normalizeProfileJoke(nested)
+    expect(out.tones).toEqual([{ id: 9, name: 'Dad', slug: 'dad' }])
+    expect(out.format).toEqual({ id: 5, name: 'One Liner', slug: 'one-liner' })
+  })
 })

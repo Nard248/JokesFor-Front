@@ -1,4 +1,4 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO, FollowStatus, CreatorProfile } from './api'
+import type { Joke, JokeTaxon, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO, FollowStatus, CreatorProfile } from './api'
 import type {
   TrendingJoke,
   TrendingTag,
@@ -271,11 +271,49 @@ export const followsAdapter = {
 }
 
 // ── Creator Profile Adapter ──
+// The real API serializes a profile's jokes via JokeListSerializer, which emits
+// tones/categories as slug *strings* and format/age_rating as slug strings.
+// JokeCard renders tones as objects (tone.id/slug/name), so the lean DTO must be
+// normalized to the Joke shape. Defensive: objects pass through unchanged, so
+// this is safe if the backend serializer ever switches to nested objects.
+function prettifySlug(slug: string): string {
+  return slug
+    .split(/[-_]/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
+function toTaxon(value: string | JokeTaxon, index: number): JokeTaxon {
+  return typeof value === 'string'
+    ? { id: -(index + 1), name: prettifySlug(value), slug: value }
+    : value
+}
+
+function toTaxonObject(value: unknown, extra: Record<string, unknown> = {}): unknown {
+  return typeof value === 'string'
+    ? { id: 0, name: prettifySlug(value), slug: value, ...extra }
+    : value
+}
+
+export function normalizeProfileJoke(raw: Joke): Joke {
+  const tones = Array.isArray(raw.tones) ? raw.tones.map(toTaxon) : []
+  return {
+    ...raw,
+    tones,
+    categories: Array.isArray(raw.categories) ? raw.categories.map(toTaxon) : tones,
+    format: toTaxonObject(raw.format) as Joke['format'],
+    age_rating: toTaxonObject(raw.age_rating, { min_age: 0 }) as Joke['age_rating'],
+  }
+}
+
 export const creatorProfileAdapter = {
   get: (id: number): Promise<CreatorProfile> =>
     USE_MOCKS
       ? mockCreatorProfileApi.get(id)
-      : creatorProfileApi.get(id).then((r) => r.data),
+      : creatorProfileApi.get(id).then((r) => ({
+          ...r.data,
+          jokes: (r.data.jokes ?? []).map(normalizeProfileJoke),
+        })),
 }
 
 // ── Preferences Adapter ──
