@@ -4,6 +4,7 @@ import { Bell, Plus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
 import { useUnseenSubmissionChange } from '@/features/create/store'
+import { useUnreadCount } from '@/features/notifications'
 import { ProfileMenu } from './ProfileMenu'
 import { NotificationsPanel } from './NotificationsPanel'
 
@@ -42,6 +43,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
   const initial = (user?.first_name?.[0] ?? user?.username?.[0] ?? 'A').toUpperCase()
   // Always call unconditionally (hooks rules); hook is safe when no drafts exist.
   const hasUnseenChange = useUnseenSubmissionChange()
+  const { data: unreadCount = 0 } = useUnreadCount()
 
   // Pathname becomes the React key for <main>. When the user navigates between
   // FlowAppShell-wrapped pages, React would normally reuse the <main> element
@@ -157,6 +159,20 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
                 >
                   <Bell size={16} />
                 </button>
+                {unreadCount > 0 && (
+                  <span
+                    aria-label={`${unreadCount} unread notifications`}
+                    data-testid="unread-badge"
+                    style={{
+                      position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16,
+                      padding: '0 4px', borderRadius: 8, background: '#6A1CF6', color: '#fff',
+                      fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', pointerEvents: 'none',
+                    }}
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
                 {openMenu === 'notifications' && (
                   <NotificationsPanel onClose={() => setOpenMenu(null)} />
                 )}

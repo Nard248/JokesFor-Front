@@ -23,6 +23,11 @@ vi.mock('@/features/streak', () => ({
   useStreak: () => ({ data: null }),
 }))
 
+// ── Mock useUnreadCount (avoids needing a QueryClientProvider) ─────────────────
+vi.mock('@/features/notifications', () => ({
+  useUnreadCount: () => ({ data: 0 }),
+}))
+
 // ── Mock useUnseenSubmissionChange ────────────────────────────────────────────
 const mockUseUnseenSubmissionChange = vi.fn(() => false)
 vi.mock('@/features/create/store', () => ({

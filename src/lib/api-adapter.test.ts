@@ -17,6 +17,7 @@ const realApi = {
   preferencesApi: { get: vi.fn(), update: vi.fn() },
   profileApi: { get: vi.fn(), update: vi.fn() },
   moderationApi: { report: vi.fn(), block: vi.fn(), unblock: vi.fn(), myBlocks: vi.fn() },
+  notificationsApi: { list: vi.fn(), unreadCount: vi.fn(), markRead: vi.fn() },
   creatorInsightsApi: { get: vi.fn() },
   followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
   creatorProfileApi: { get: vi.fn() },
@@ -265,6 +266,42 @@ describe('followsAdapter mock path', () => {
     // Ensure real API not called
     expect(realApi.followsApi.follow).not.toHaveBeenCalled()
     expect(realApi.followsApi.status).not.toHaveBeenCalled()
+  })
+})
+
+describe('notificationsAdapter', () => {
+  it('list (real) unwraps paginated results', async () => {
+    realApi.notificationsApi.list.mockResolvedValue({
+      data: {
+        count: 1, next: null, previous: null,
+        results: [{ id: 1, verb: 'followed_you', read: false, created_at: 'x', actor: { id: 7, name: 'Q', username: '@q' }, joke: null }],
+      },
+    })
+    const { notificationsAdapter } = await loadAdapterReal()
+    const out = await notificationsAdapter.list()
+    expect(out).toHaveLength(1)
+    expect(out[0].verb).toBe('followed_you')
+  })
+
+  it('unreadCount (real) returns the count', async () => {
+    realApi.notificationsApi.unreadCount.mockResolvedValue({ data: { count: 3 } })
+    const { notificationsAdapter } = await loadAdapterReal()
+    expect(await notificationsAdapter.unreadCount()).toBe(3)
+  })
+
+  it('markAllRead (real) calls the endpoint', async () => {
+    realApi.notificationsApi.markRead.mockResolvedValue({ data: { marked: 3 } })
+    const { notificationsAdapter } = await loadAdapterReal()
+    await notificationsAdapter.markAllRead()
+    expect(realApi.notificationsApi.markRead).toHaveBeenCalled()
+  })
+
+  it('mock path: markAllRead clears unread without hitting the api', async () => {
+    const { notificationsAdapter } = await loadAdapterMock()
+    expect(await notificationsAdapter.unreadCount()).toBeGreaterThan(0)
+    await notificationsAdapter.markAllRead()
+    expect(await notificationsAdapter.unreadCount()).toBe(0)
+    expect(realApi.notificationsApi.markRead).not.toHaveBeenCalled()
   })
 })
 

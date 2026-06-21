@@ -10,8 +10,8 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import type { BlockedUser, ContentReportInput } from './api'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi } from './api'
+import type { BlockedUser, ContentReportInput, NotificationDTO } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi } from './api'
 import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokesApi,
@@ -271,6 +271,38 @@ const mapIdentity = (d: {
 
 // In-memory identity for the offline/mock demo so edits round-trip.
 let mockIdentity: PublicIdentity = { display_name: '', handle: null, name: 'You', username: '@you' }
+
+// ── Notifications (inbox) Adapter ──
+// In-app notifications. Mock keeps a small seeded inbox so the offline demo
+// shows the panel populated and "mark all read" round-trips.
+let mockNotifications: NotificationDTO[] = [
+  {
+    id: 1, verb: 'followed_you', read: false, created_at: '2026-06-19T12:00:00Z',
+    actor: { id: 7, name: 'Pun Queen', username: '@punqueen' }, joke: null,
+  },
+  {
+    id: 2, verb: 'joke_published', read: false, created_at: '2026-06-18T09:30:00Z',
+    actor: null, joke: { id: 42, preview: 'Why did the scarecrow win an award? ...' },
+  },
+]
+
+export const notificationsAdapter = {
+  list: (): Promise<NotificationDTO[]> =>
+    USE_MOCKS ? Promise.resolve(mockNotifications) : notificationsApi.list().then((r) => r.data.results),
+
+  unreadCount: (): Promise<number> =>
+    USE_MOCKS
+      ? Promise.resolve(mockNotifications.filter((n) => !n.read).length)
+      : notificationsApi.unreadCount().then((r) => r.data.count),
+
+  markAllRead: (): Promise<void> => {
+    if (USE_MOCKS) {
+      mockNotifications = mockNotifications.map((n) => ({ ...n, read: true }))
+      return Promise.resolve()
+    }
+    return notificationsApi.markRead().then(() => undefined)
+  },
+}
 
 // ── Moderation Adapter ──
 // Real path hits the Wave 2 endpoints; mock keeps an in-memory blocked list so

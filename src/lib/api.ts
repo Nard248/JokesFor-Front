@@ -890,6 +890,33 @@ export const moderationApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// In-app notifications (inbox)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type NotificationVerb = 'followed_you' | 'joke_published' | 'joke_removed'
+
+export interface NotificationActor {
+  id: number
+  name: string
+  username: string
+}
+
+export interface NotificationDTO {
+  id: number
+  verb: NotificationVerb
+  read: boolean
+  created_at: string
+  actor: NotificationActor | null
+  joke: { id: number; preview: string } | null
+}
+
+export const notificationsApi = {
+  list: () => api.get<PaginatedResponse<NotificationDTO>>('/notifications/'),
+  unreadCount: () => api.get<{ count: number }>('/notifications/unread-count/'),
+  markRead: () => api.post<{ marked: number }>('/notifications/mark-read/', {}),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Billing / Subscription
 // ─────────────────────────────────────────────────────────────────────────
 

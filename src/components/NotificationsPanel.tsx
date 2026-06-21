@@ -1,19 +1,32 @@
 import { useEffect, useRef } from 'react'
-import { Bell, Check, Sparkles } from 'lucide-react'
+import { Bell, Check, Sparkles, UserPlus, ShieldAlert } from 'lucide-react'
+import { useNotifications, useMarkAllRead } from '@/features/notifications'
+import type { NotificationDTO } from '@/lib/api'
+
+type PanelItem = { icon: React.ReactNode; title: string; sub: string; tone: 'purple' | 'lime' | 'amber' }
+
+function mapNotification(n: NotificationDTO): PanelItem {
+  switch (n.verb) {
+    case 'followed_you':
+      return { icon: <UserPlus size={15} />, title: `${n.actor?.name ?? 'Someone'} followed you`, sub: n.actor?.username ?? '', tone: 'purple' }
+    case 'joke_published':
+      return { icon: <Sparkles size={15} />, title: 'Your joke was published', sub: n.joke?.preview ?? '', tone: 'lime' }
+    case 'joke_removed':
+      return { icon: <ShieldAlert size={15} />, title: 'A joke was removed', sub: n.joke?.preview ?? 'It broke our guidelines.', tone: 'amber' }
+    default:
+      return { icon: <Sparkles size={15} />, title: 'Notification', sub: '', tone: 'purple' }
+  }
+}
 
 /**
  * NotificationsPanel — dropdown shown when the user clicks the bell in
- * FlowAppShell. No /notifications/ endpoint exists in the backend yet, so
- * this is a placeholder panel with an empty state and a couple of
- * brand-friendly ambient items (today's joke ready, streak reminder)
- * that are derived from existing UI state — not from a real notifications
- * inbox.
- *
- * When the backend ships /users/me/notifications/, swap the static items
- * for `useNotifications()` data — the visual treatment stays the same.
+ * FlowAppShell. Wired to the real in-app inbox (`/notifications/`): new
+ * followers, joke publishes, and moderation takedowns.
  */
 export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { data: notifications = [] } = useNotifications()
+  const markAllRead = useMarkAllRead()
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -33,8 +46,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
     }
   }, [onClose])
 
-  // Placeholder items — swap for /users/me/notifications/ when backend lands.
-  const items: { icon: React.ReactNode; title: string; sub: string; tone: 'purple' | 'lime' | 'amber' }[] = []
+  const items: PanelItem[] = notifications.map(mapNotification)
 
   return (
     <div
@@ -82,11 +94,13 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => markAllRead.mutate()}
+          disabled={markAllRead.isPending || items.length === 0}
+          data-testid="mark-all-read"
           style={{
             background: 'none',
             border: 0,
-            cursor: 'pointer',
+            cursor: items.length === 0 ? 'default' : 'pointer',
             color: '#52525B',
             fontFamily: 'var(--font-mono)',
             fontSize: 10,
@@ -95,6 +109,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 4,
+            opacity: items.length === 0 ? 0.5 : 1,
           }}
           aria-label="Mark all read"
         >
