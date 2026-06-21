@@ -16,6 +16,7 @@ const realApi = {
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
   preferencesApi: { get: vi.fn(), update: vi.fn() },
   profileApi: { get: vi.fn(), update: vi.fn() },
+  moderationApi: { report: vi.fn(), block: vi.fn(), unblock: vi.fn(), myBlocks: vi.fn() },
   creatorInsightsApi: { get: vi.fn() },
   followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
   creatorProfileApi: { get: vi.fn() },
@@ -264,6 +265,40 @@ describe('followsAdapter mock path', () => {
     // Ensure real API not called
     expect(realApi.followsApi.follow).not.toHaveBeenCalled()
     expect(realApi.followsApi.status).not.toHaveBeenCalled()
+  })
+})
+
+describe('moderationAdapter', () => {
+  it('report (real) POSTs the payload and resolves void', async () => {
+    realApi.moderationApi.report.mockResolvedValue({})
+    const { moderationAdapter } = await loadAdapterReal()
+    await expect(moderationAdapter.report({ joke: 5, reason: 'spam' })).resolves.toBeUndefined()
+    expect(realApi.moderationApi.report).toHaveBeenCalledWith({ joke: 5, reason: 'spam' })
+  })
+
+  it('block/unblock (real) call the api with the user id', async () => {
+    realApi.moderationApi.block.mockResolvedValue({})
+    realApi.moderationApi.unblock.mockResolvedValue({})
+    const { moderationAdapter } = await loadAdapterReal()
+    await moderationAdapter.block({ id: 9, name: 'X', username: '@x' })
+    expect(realApi.moderationApi.block).toHaveBeenCalledWith(9)
+    await moderationAdapter.unblock(9)
+    expect(realApi.moderationApi.unblock).toHaveBeenCalledWith(9)
+  })
+
+  it('myBlocks (real) unwraps results', async () => {
+    realApi.moderationApi.myBlocks.mockResolvedValue({ data: { results: [{ id: 9, name: 'X', username: '@x' }] } })
+    const { moderationAdapter } = await loadAdapterReal()
+    expect(await moderationAdapter.myBlocks()).toEqual([{ id: 9, name: 'X', username: '@x' }])
+  })
+
+  it('mock path round-trips block/unblock without hitting the real api', async () => {
+    const { moderationAdapter } = await loadAdapterMock()
+    await moderationAdapter.block({ id: 1, name: 'A', username: '@a' })
+    expect(await moderationAdapter.myBlocks()).toEqual([{ id: 1, name: 'A', username: '@a' }])
+    await moderationAdapter.unblock(1)
+    expect(await moderationAdapter.myBlocks()).toEqual([])
+    expect(realApi.moderationApi.block).not.toHaveBeenCalled()
   })
 })
 

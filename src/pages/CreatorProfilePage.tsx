@@ -1,7 +1,8 @@
-import { useParams } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Skeleton } from '@/components/ui/skeleton'
 import { JokeCard } from '@/components/JokeCard'
+import { BlockButton } from '@/components/BlockButton'
 import { useCreatorProfile, FollowButton } from '@/features/follows'
 
 function ProfileSkeleton() {
@@ -19,6 +20,7 @@ function ProfileSkeleton() {
 
 export function CreatorProfilePage() {
   const { creatorId } = useParams<{ creatorId: string }>()
+  const navigate = useNavigate()
   const id = Number(creatorId)
 
   const { data, isLoading, isError, error } = useCreatorProfile(id)
@@ -139,11 +141,21 @@ export function CreatorProfilePage() {
                   </div>
                 </div>
 
-                <FollowButton
-                  creatorId={data.id}
-                  isFollowing={data.is_following}
-                  followerCount={data.follower_count}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FollowButton
+                    creatorId={data.id}
+                    isFollowing={data.is_following}
+                    followerCount={data.follower_count}
+                  />
+                  {/* Block only for an authenticated, non-self viewer (same gate
+                      FollowButton uses: is_following is null for anon/self). */}
+                  {data.is_following !== null && (
+                    <BlockButton
+                      user={{ id: data.id, name: data.display_name, username: data.handle }}
+                      onBlocked={() => navigate('/')}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Jokes grid */}
@@ -162,7 +174,7 @@ export function CreatorProfilePage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {data.jokes.map((joke) => (
-                    <JokeCard key={joke.id} joke={joke} />
+                    <JokeCard key={joke.id} joke={joke} showReport />
                   ))}
                 </div>
               )}

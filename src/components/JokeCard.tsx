@@ -5,11 +5,15 @@ import { Copy, Share2, Bookmark } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { mockAuthors } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
+import { ReportJokeButton } from '@/components/ReportJokeButton'
 
 interface JokeCardProps {
   joke: Joke
   className?: string
   showBookmark?: boolean
+  /** Show the report (flag) affordance. Off by default so presentational
+   * call sites (and their tests) don't need router/query providers. */
+  showReport?: boolean
 }
 
 const toneBadgeVariant: Record<string, 'default' | 'lime' | 'amber' | 'purple' | 'muted'> = {
@@ -21,7 +25,7 @@ const toneBadgeVariant: Record<string, 'default' | 'lime' | 'amber' | 'purple' |
   dark: 'muted',
 }
 
-export function JokeCard({ joke, className, showBookmark }: JokeCardProps) {
+export function JokeCard({ joke, className, showBookmark, showReport }: JokeCardProps) {
   const author = mockAuthors[(joke.id % Object.keys(mockAuthors).length) + 1] || mockAuthors[1]
 
   const handleCopy = () => {
@@ -83,6 +87,7 @@ export function JokeCard({ joke, className, showBookmark }: JokeCardProps) {
           <button className="size-8 flex items-center justify-center rounded-full hover:bg-[#F2F0F0] text-[#6B7280] transition-colors">
             <Share2 className="size-4" />
           </button>
+          {showReport && <ReportJokeButton jokeId={joke.id} />}
         </div>
       </div>
     </Card>

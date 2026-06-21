@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard } from 'lucide-react'
+import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard, UserX } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { PublicIdentityEditor } from '@/components/PublicIdentityEditor'
+import { BlockedUsersList } from '@/components/BlockedUsersList'
 import { useAuth, useLogout } from '@/features/auth'
 import { usePreferences, useUpdatePreferences } from '@/features/preferences'
 
@@ -163,6 +164,11 @@ export function SettingsPage() {
               checked={prefs?.privacy?.shareAnalytics ?? false}
               onChange={(v) => updatePrivacy('shareAnalytics', v)}
             />
+          </SettingsSection>
+
+          {/* Blocked users */}
+          <SettingsSection icon={<UserX size={18} />} title="Blocked users" subtitle="People you've blocked can't appear in your feed or see your profile.">
+            <BlockedUsersList />
           </SettingsSection>
 
           {/* Appearance */}

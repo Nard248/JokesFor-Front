@@ -10,7 +10,8 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi } from './api'
+import type { BlockedUser, ContentReportInput } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi } from './api'
 import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokesApi,
@@ -270,6 +271,35 @@ const mapIdentity = (d: {
 
 // In-memory identity for the offline/mock demo so edits round-trip.
 let mockIdentity: PublicIdentity = { display_name: '', handle: null, name: 'You', username: '@you' }
+
+// ── Moderation Adapter ──
+// Real path hits the Wave 2 endpoints; mock keeps an in-memory blocked list so
+// the offline demo round-trips block/unblock and report is a no-op success.
+let mockBlocked: BlockedUser[] = []
+
+export const moderationAdapter = {
+  report: (data: ContentReportInput): Promise<void> =>
+    USE_MOCKS ? Promise.resolve() : moderationApi.report(data).then(() => undefined),
+
+  block: (user: BlockedUser): Promise<void> => {
+    if (USE_MOCKS) {
+      if (!mockBlocked.some((u) => u.id === user.id)) mockBlocked = [...mockBlocked, user]
+      return Promise.resolve()
+    }
+    return moderationApi.block(user.id).then(() => undefined)
+  },
+
+  unblock: (userId: number): Promise<void> => {
+    if (USE_MOCKS) {
+      mockBlocked = mockBlocked.filter((u) => u.id !== userId)
+      return Promise.resolve()
+    }
+    return moderationApi.unblock(userId).then(() => undefined)
+  },
+
+  myBlocks: (): Promise<BlockedUser[]> =>
+    USE_MOCKS ? Promise.resolve(mockBlocked) : moderationApi.myBlocks().then((r) => r.data.results),
+}
 
 export const accountIdentityAdapter = {
   get: (): Promise<PublicIdentity> =>

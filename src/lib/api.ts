@@ -855,6 +855,41 @@ export const creatorProfileApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Moderation (Wave 2): report content, block/unblock users
+// ─────────────────────────────────────────────────────────────────────────
+
+export const REPORT_REASONS = [
+  { value: 'offensive', label: 'Offensive content' },
+  { value: 'inappropriate', label: 'Inappropriate for its rating' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'copyright', label: 'Copyright violation' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'other', label: 'Other' },
+] as const
+
+export type ReportReason = (typeof REPORT_REASONS)[number]['value']
+
+export interface ContentReportInput {
+  joke: number
+  reason: ReportReason
+  description?: string
+}
+
+export interface BlockedUser {
+  id: number
+  name: string
+  username: string
+  avatar_url?: string | null
+}
+
+export const moderationApi = {
+  report: (data: ContentReportInput) => api.post('/reports/', data),
+  block: (userId: number) => api.post(`/users/${userId}/block/`, {}),
+  unblock: (userId: number) => api.delete(`/users/${userId}/block/`),
+  myBlocks: () => api.get<{ results: BlockedUser[] }>('/users/me/blocks/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Billing / Subscription
 // ─────────────────────────────────────────────────────────────────────────
 
