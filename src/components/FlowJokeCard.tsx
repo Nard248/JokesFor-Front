@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react'
 import { useReactToJoke, useReactions } from '@/features/reactions'
+import { useSaveJoke } from '@/features/saved-jokes'
 import type { Joke, ReactionSlug } from '@/lib/api'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from './JokeRenderer'
 
@@ -58,6 +59,13 @@ interface FlowJokeCardProps {
 export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps) {
   const skin = SKIN[joke.fmt] ?? SKIN.setup
   const [saved, setSaved] = useState(false)
+  const saveJoke = useSaveJoke()
+
+  const handleSave = () => {
+    if (saved) return // save-only here; unsave lives in the Library
+    setSaved(true)
+    saveJoke.mutate({ jokeId: Number(joke.id) }, { onError: () => setSaved(false) })
+  }
 
   const isAnti = joke.fmt === 'anti'
   const mutedFg = isAnti ? 'rgba(255,255,255,0.6)' : '#52525B'
@@ -147,7 +155,7 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             type="button"
-            onClick={() => setSaved((s) => !s)}
+            onClick={handleSave}
             aria-pressed={saved}
             style={{
               height: 32,

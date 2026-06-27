@@ -9,6 +9,7 @@ import { useStreak } from '@/features/streak'
 import { useMysteryBoxStatus, useRollMysteryBox } from '@/features/mystery-box'
 import { useFeaturedPack, usePacksInProgress } from '@/features/packs'
 import { useJokeSearch } from '@/features/jokes'
+import { useSaveJoke } from '@/features/saved-jokes'
 import { useDailyJokeHistory } from '@/features/daily-joke'
 import { useTopJokesters } from '@/features/trending'
 
@@ -39,6 +40,7 @@ export function FlowCanvasPage() {
   const { user } = useAuth()
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
+  const saveJoke = useSaveJoke()
 
   // Real-API data sources for the Today hub.
   const { data: today } = useTodayAugmented()
@@ -166,7 +168,12 @@ export function FlowCanvasPage() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
-                    onClick={() => setSaved((s) => !s)}
+                    onClick={() => {
+                      const id = today?.joke?.id
+                      if (saved || !id) return
+                      setSaved(true)
+                      saveJoke.mutate({ jokeId: id }, { onError: () => setSaved(false) })
+                    }}
                     aria-pressed={saved}
                     className={saved ? 'btn-flow-reward' : 'btn-flow-ghost'}
                     style={{ height: 44 }}

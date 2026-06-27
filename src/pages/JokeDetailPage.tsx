@@ -9,6 +9,8 @@ import { useReactions, useReactToJoke } from '@/features/reactions'
 import { useStreak } from '@/features/streak'
 import { useTasteProfile } from '@/features/insights'
 import { useSaveJoke } from '@/features/saved-jokes'
+import { ReportJokeButton } from '@/components/ReportJokeButton'
+import { useToast } from '@/components/ui/toast'
 import { useJokeSearch } from '@/features/jokes'
 import { useRollMysteryBox } from '@/features/mystery-box'
 import type { ReactionSlug } from '@/lib/api'
@@ -113,21 +115,42 @@ export function JokeDetailPage() {
 function JokeHero({ joke }: { joke: Joke }) {
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
+  const { toast } = useToast()
 
   const themes = joke.themes ?? joke.context_tags ?? []
   const categories = joke.categories ?? joke.tones ?? []
 
   const handleSave = () => {
     setSaved(true)
-    // Default collection (collection: 0 or backend's default). Adjust when collection picker added.
-    saveJoke.mutate({ jokeId: joke.id, collectionId: 0 })
+    // No collection → saves to the library. Revert the optimistic state on failure.
+    saveJoke.mutate(
+      { jokeId: joke.id },
+      {
+        onSuccess: () => toast({ message: 'Saved to your library.', variant: 'success' }),
+        onError: () => {
+          setSaved(false)
+          toast({ message: "Couldn't save that joke. Please try again.", variant: 'error' })
+        },
+      },
+    )
   }
 
   const handleCopy = () => {
     const text = joke.setup && joke.punchline ? `${joke.setup} ${joke.punchline}` : joke.text
     if (text) {
-      navigator.clipboard.writeText(text).catch(() => {})
+      navigator.clipboard
+        .writeText(text)
+        .then(() => toast({ message: 'Copied to clipboard.', variant: 'success' }))
+        .catch(() => toast({ message: "Couldn't copy.", variant: 'error' }))
     }
+  }
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/jokes/${joke.id}`
+    navigator.clipboard
+      .writeText(url)
+      .then(() => toast({ message: 'Link copied to clipboard.', variant: 'success' }))
+      .catch(() => toast({ message: "Couldn't copy the link.", variant: 'error' }))
   }
 
   return (
@@ -243,12 +266,13 @@ function JokeHero({ joke }: { joke: Joke }) {
             {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
             {saved ? 'Saved' : 'Save to library'}
           </button>
-          <button type="button" className="btn-flow-ghost" style={{ height: 48 }}>
+          <button type="button" onClick={handleShare} className="btn-flow-ghost" style={{ height: 48 }}>
             <Share2 size={16} /> Share
           </button>
           <button type="button" onClick={handleCopy} className="btn-flow-ghost" style={{ height: 48 }}>
             <Copy size={16} /> Copy
           </button>
+          <ReportJokeButton jokeId={joke.id} />
         </footer>
       </div>
     </article>

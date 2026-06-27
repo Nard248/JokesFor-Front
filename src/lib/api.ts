@@ -249,8 +249,14 @@ export const savedJokesApi = {
   list: () =>
     api.get<PaginatedResponse<SavedJoke>>('/saved-jokes/'),
 
-  save: (jokeId: number, collectionId: number, note?: string) =>
-    api.post<SavedJoke>('/saved-jokes/', { joke: jokeId, collection: collectionId, note }),
+  save: (jokeId: number, collectionId?: number | null, note?: string) => {
+    // Omit `collection` unless a real id is given — the backend rejects a 0/null
+    // PK (no such Collection). A bare { joke } saves to the user's library.
+    const body: { joke: number; collection?: number; note?: string } = { joke: jokeId }
+    if (collectionId) body.collection = collectionId
+    if (note) body.note = note
+    return api.post<SavedJoke>('/saved-jokes/', body)
+  },
 
   unsave: (savedJokeId: number) =>
     api.delete(`/saved-jokes/${savedJokeId}/`),

@@ -21,7 +21,7 @@ export function useSavedJokes() {
 export function useSaveJoke() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ jokeId, collectionId, note }: { jokeId: number; collectionId: number; note?: string }) =>
+    mutationFn: ({ jokeId, collectionId, note }: { jokeId: number; collectionId?: number | null; note?: string }) =>
       savedJokesAdapter.save(jokeId, collectionId, note),
     onSuccess: () => {
       // Cascade invalidation: saving a joke affects multiple data sources

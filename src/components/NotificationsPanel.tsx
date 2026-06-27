@@ -186,8 +186,8 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
             You're all <em className="wink">caught up.</em>
           </div>
           <p style={{ marginTop: 6, fontSize: 12, color: '#6B7280', maxWidth: 240, marginLeft: 'auto', marginRight: 'auto' }}>
-            We'll ping you here when there's something worth your attention — daily-joke
-            arrivals, streak reminders, replies to your submissions.
+            We'll ping you here when someone follows you, or when one of your jokes is
+            published or removed.
           </p>
         </div>
       )}

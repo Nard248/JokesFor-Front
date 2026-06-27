@@ -108,9 +108,9 @@ export const savedJokesAdapter = {
       ? mockSavedJokesApi.list()
       : savedJokesApi.list().then((r) => r.data),
 
-  save: (jokeId: number, collectionId: number, note?: string): Promise<SavedJoke> =>
+  save: (jokeId: number, collectionId?: number | null, note?: string): Promise<SavedJoke> =>
     USE_MOCKS
-      ? mockSavedJokesApi.save(jokeId, collectionId, note)
+      ? mockSavedJokesApi.save(jokeId, collectionId ?? 0, note)
       : savedJokesApi.save(jokeId, collectionId, note).then((r) => r.data),
 
   unsave: (savedJokeId: number): Promise<void> =>
