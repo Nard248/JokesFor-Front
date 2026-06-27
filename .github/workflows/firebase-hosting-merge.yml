@@ -25,9 +25,12 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || '332865216810-7kouajjg51jiceqk4g2h0qa3t3nbk4ga.apps.googleusercontent.com' }}
           VITE_GOOGLE_OAUTH_REDIRECT_URI: ${{ vars.VITE_GOOGLE_OAUTH_REDIRECT_URI || 'https://jokesforfront.web.app/auth/google/callback' }}
           VITE_USE_REAL_PREFERENCES: ${{ vars.VITE_USE_REAL_PREFERENCES || 'true' }}
-          # Was unset → the entire create/submission feature ran on MOCK data in
-          # prod (drafts/submissions never persisted). Enable the real backend.
-          VITE_USE_REAL_CREATE: ${{ vars.VITE_USE_REAL_CREATE || 'true' }}
+          # NOTE: the create feature currently runs on MOCK data in prod
+          # (submissions don't persist). Flipping this to 'true' surfaced real-API
+          # DTO mismatches (e.g. catalog endpoints return arrays, not {results};
+          # 'a.filter is not a function'). Keep mock until the create adapter's
+          # fromDTO/catalog mappings are reconciled with the real backend + tested.
+          VITE_USE_REAL_CREATE: ${{ vars.VITE_USE_REAL_CREATE || 'false' }}
       # Kept on the floating @v0: the latest release (v0.10.0) still declares
       # node20, so there's no Node-24 version to pin to yet. Floating @v0 will
       # auto-adopt the maintainers' node24 release when it ships; pinning would
