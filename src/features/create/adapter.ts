@@ -21,47 +21,54 @@ import type { ContentDraft, ContentDraftDTO, FormatRule, AgeRating, Taxon, Langu
 
 const USE_REAL = import.meta.env.VITE_USE_REAL_CREATE === 'true'
 
+// Catalog/list endpoints may come back paginated ({results}) or as plain arrays
+// depending on DRF config — tolerate both so the real path never crashes on shape.
+function unwrapList<T>(data: T[] | { results: T[] } | null | undefined): T[] {
+  if (Array.isArray(data)) return data
+  return data?.results ?? []
+}
+
 export const contentAdapter = {
   // ── Catalog endpoints ──
 
   formats: (): Promise<FormatRule[]> => {
     if (USE_REAL) {
-      return contentApi.formats().then((r) => r.data.results)
+      return contentApi.formats().then((r) => unwrapList(r.data))
     }
     return mockFormats()
   },
 
   ageRatings: (): Promise<AgeRating[]> => {
     if (USE_REAL) {
-      return contentApi.ageRatings().then((r) => r.data)
+      return contentApi.ageRatings().then((r) => unwrapList(r.data))
     }
     return mockAgeRatings()
   },
 
   tones: (): Promise<Taxon[]> => {
     if (USE_REAL) {
-      return contentApi.tones().then((r) => r.data)
+      return contentApi.tones().then((r) => unwrapList(r.data))
     }
     return mockTones()
   },
 
   contextTags: (): Promise<Taxon[]> => {
     if (USE_REAL) {
-      return contentApi.contextTags().then((r) => r.data)
+      return contentApi.contextTags().then((r) => unwrapList(r.data))
     }
     return mockContextTags()
   },
 
   cultureTags: (): Promise<Taxon[]> => {
     if (USE_REAL) {
-      return contentApi.cultureTags().then((r) => r.data)
+      return contentApi.cultureTags().then((r) => unwrapList(r.data))
     }
     return mockCultureTags()
   },
 
   languages: (): Promise<Language[]> => {
     if (USE_REAL) {
-      return contentApi.languages().then((r) => r.data)
+      return contentApi.languages().then((r) => unwrapList(r.data))
     }
     return mockLanguages()
   },
@@ -70,7 +77,7 @@ export const contentAdapter = {
 
   listDrafts: (): Promise<ContentDraft[]> => {
     if (USE_REAL) {
-      return contentApi.listDrafts().then((r) => r.data.results.map(fromDTO))
+      return contentApi.listDrafts().then((r) => unwrapList(r.data).map(fromDTO))
     }
     return mockContentApi.listDrafts().then((r) => r.results.map(fromDTO))
   },
