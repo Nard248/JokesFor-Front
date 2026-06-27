@@ -83,7 +83,12 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
       draftId,
       formatSlug,
       initial,
-      onCreated: (id) => navigate(`/create/${id}`, { replace: true }),
+      // Update the URL WITHOUT a router navigation: a real navigate() here swaps
+      // NewEditor→ExistingEditor, remounting this component (keyed by draftId) and
+      // discarding in-flight local text typed before the first autosave landed.
+      // history.replaceState keeps us mounted; liveId drives delete/submit, and a
+      // refresh loads the fully-autosaved draft from /create/:id.
+      onCreated: (id) => window.history.replaceState(null, '', `/create/${id}`),
     })
 
   // ── Taxonomy data ────────────────────────────────────────────────────────────
