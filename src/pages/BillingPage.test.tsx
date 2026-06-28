@@ -313,5 +313,41 @@ describe('BillingPage', () => {
         expect(screen.getByTestId('demo-message').textContent).toContain('Portal')
       })
     })
+
+    it('surfaces a renewal date in the manage card for an active subscription', () => {
+      mockUseMySubscription.mockReturnValue({ data: MOCK_SUBSCRIPTION_ACTIVE, isLoading: false })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      expect(screen.getByText(/renews/i)).toBeDefined()
+    })
+
+    it('surfaces a cancellation notice when cancel_at_period_end is set', () => {
+      mockUseMySubscription.mockReturnValue({
+        data: { ...MOCK_SUBSCRIPTION_ACTIVE, cancel_at_period_end: true },
+        isLoading: false,
+      })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      expect(screen.getByText(/cancels on/i)).toBeDefined()
+    })
+  })
+
+  describe('empty / no plans state', () => {
+    it('shows an intentional "coming soon" card when the backend returns zero plans', () => {
+      mockUseBillingPlans.mockReturnValue({ data: [], isLoading: false, isError: false })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      expect(screen.getByTestId('no-plans')).toBeDefined()
+      expect(screen.queryByTestId('plans-grid')).toBeNull()
+    })
+  })
+
+  describe('placeholder plan resilience', () => {
+    it('renders a fallback price for a plan with a blank amount_display', () => {
+      mockUseBillingPlans.mockReturnValue({
+        data: [{ ...MOCK_PLANS[1], amount_display: '' }],
+        isLoading: false,
+        isError: false,
+      })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      expect(screen.getByTestId('plan-price-supporter').textContent).toBe('—')
+    })
   })
 })

@@ -4,7 +4,14 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatorInsights } from '@/features/creator-insights'
-import type { InsightsPeriod, CreatorInsights, CreatorSuggestion, AudienceTasteItem } from '@/lib/api'
+import type {
+  InsightsPeriod,
+  CreatorInsights,
+  CreatorSuggestion,
+  AudienceTasteItem,
+  ReactionBreakdownItem,
+  ShareBreakdownItem,
+} from '@/lib/api'
 
 const PERIODS: { id: InsightsPeriod; label: string }[] = [
   { id: 'month', label: 'Month' },
@@ -12,11 +19,40 @@ const PERIODS: { id: InsightsPeriod; label: string }[] = [
   { id: 'all', label: 'All Time' },
 ]
 
+// Friendly display for reaction slugs (mirrors FlowJokeCard's REACTIONS).
+const REACTION_DISPLAY: Record<string, string> = {
+  lol: '😂 LOL',
+  crying: '🤣 Dying',
+  hmm: '🤔 Hmm',
+  eyeroll: '🙄 Eyeroll',
+}
+
+// Friendly display for share platform slugs.
+const SHARE_DISPLAY: Record<string, string> = {
+  whatsapp: 'WhatsApp',
+  twitter: 'Twitter / X',
+  x: 'Twitter / X',
+  facebook: 'Facebook',
+  copy_link: 'Copy link',
+  copy: 'Copy link',
+  email: 'Email',
+  sms: 'SMS',
+  other: 'Other',
+}
+
+function titleCase(s: string): string {
+  return s
+    .split(/[-_\s]+/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
 function fmt(n: number): string {
   return n.toLocaleString()
 }
 
-function pct(n: number): string {
+function pct(n: number | null): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—'
   return `${Math.round(n * 100)}%`
 }
 
@@ -149,6 +185,81 @@ function TasteChip({ item }: { item: AudienceTasteItem }) {
   )
 }
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 700,
+        color: '#71717A',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        marginBottom: 12,
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function BarRow({ label, count, total }: { label: string; count: number; total: number }) {
+  const widthPct = Math.round((count / (total || 1)) * 100)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div
+        style={{
+          width: 110,
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#1A1A1A',
+          fontFamily: 'var(--font-sans)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        title={label}
+      >
+        {label}
+      </div>
+      <div style={{ flex: 1, height: 8, background: '#F4F4F5', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${widthPct}%`, background: '#AC8EFF', borderRadius: 4 }} />
+      </div>
+      <div style={{ fontSize: 12, color: '#71717A', minWidth: 40, textAlign: 'right', fontFamily: 'var(--font-sans)' }}>
+        {fmt(count)}
+      </div>
+    </div>
+  )
+}
+
+function BreakdownPanel({
+  title,
+  rows,
+}: {
+  title: string
+  rows: { key: string; label: string; count: number }[]
+}) {
+  const total = rows.reduce((s, r) => s + r.count, 0)
+  return (
+    <section
+      style={{
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 16,
+        padding: '20px 24px',
+        flex: '1 1 280px',
+      }}
+    >
+      <SectionTitle>{title}</SectionTitle>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map((r) => (
+          <BarRow key={r.key} label={r.label} count={r.count} total={total} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function LoadingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -165,8 +276,30 @@ function LoadingSkeleton() {
 }
 
 function InsightsDashboard({ data }: { data: CreatorInsights }) {
-  const { overview, top_jokes, audience, suggestions, source_mix } = data
-  const totalSource = source_mix.reduce((s, r) => s + r.count, 0) || 1
+  const {
+    overview,
+    top_jokes,
+    audience,
+    suggestions,
+    source_mix,
+    reactions_breakdown,
+    shares_breakdown,
+  } = data
+
+  const reactionRows = (reactions_breakdown ?? []).map((r: ReactionBreakdownItem) => ({
+    key: r.reaction,
+    label: REACTION_DISPLAY[r.reaction] ?? titleCase(r.reaction),
+    count: r.count,
+  }))
+  const shareRows = (shares_breakdown ?? []).map((s: ShareBreakdownItem) => ({
+    key: s.platform,
+    label: SHARE_DISPLAY[s.platform] ?? titleCase(s.platform),
+    count: s.count,
+  }))
+  const hasAudience =
+    audience.top_themes.length > 0 ||
+    audience.top_categories.length > 0 ||
+    audience.top_formats.length > 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -238,6 +371,32 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
             28-Day Follower Growth
           </div>
           <Sparkline data={overview.follower_growth_28d} />
+        </section>
+      )}
+
+      {/* Reactions & Shares breakdown */}
+      {(reactionRows.length > 0 || shareRows.length > 0) && (
+        <section>
+          <h2
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 18,
+              color: '#1A1A1A',
+              marginBottom: 12,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Reactions &amp; Shares
+          </h2>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {reactionRows.length > 0 && (
+              <BreakdownPanel title="Reactions" rows={reactionRows} />
+            )}
+            {shareRows.length > 0 && (
+              <BreakdownPanel title="Shares by platform" rows={shareRows} />
+            )}
+          </div>
         </section>
       )}
 
@@ -321,6 +480,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
       )}
 
       {/* Audience taste */}
+      {hasAudience && (
       <section>
         <h2
           style={{
@@ -361,6 +521,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           )}
         </div>
       </section>
+      )}
 
       {/* Source mix */}
       {source_mix.length > 0 && (
@@ -372,39 +533,15 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
             padding: '20px 24px',
           }}
         >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: '#71717A',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: 12,
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
-            Where readers find you
-          </div>
+          <SectionTitle>Where readers find you</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {source_mix.map((s) => (
-              <div key={s.source} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 70, fontSize: 13, fontWeight: 600, color: '#1A1A1A', textTransform: 'capitalize', fontFamily: 'var(--font-sans)' }}>
-                  {s.source}
-                </div>
-                <div style={{ flex: 1, height: 8, background: '#F4F4F5', borderRadius: 4, overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${Math.round((s.count / totalSource) * 100)}%`,
-                      background: '#AC8EFF',
-                      borderRadius: 4,
-                    }}
-                  />
-                </div>
-                <div style={{ fontSize: 12, color: '#71717A', minWidth: 36, textAlign: 'right', fontFamily: 'var(--font-sans)' }}>
-                  {fmt(s.count)}
-                </div>
-              </div>
+              <BarRow
+                key={s.source}
+                label={titleCase(s.source)}
+                count={s.count}
+                total={source_mix.reduce((sum, r) => sum + r.count, 0)}
+              />
             ))}
           </div>
         </section>

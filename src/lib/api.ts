@@ -750,7 +750,8 @@ export interface CreatorOverview {
   published_jokes: number
   reach: number
   views: number
-  payoff_rate: number
+  /** null when there are no views yet (no denominator). */
+  payoff_rate: number | null
   reactions: number
   favorites: number
   saves: number
@@ -783,7 +784,8 @@ export interface TopJokeItem {
   reactions: number
   saves: number
   shares: number
-  payoff_rate: number
+  /** null when the joke has no views yet (no denominator). */
+  payoff_rate: number | null
 }
 
 export interface AudienceTasteItem {

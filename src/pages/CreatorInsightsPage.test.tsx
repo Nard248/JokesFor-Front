@@ -176,4 +176,43 @@ describe('CreatorInsightsPage', () => {
     // Verify the "Followers" label is also present
     expect(screen.getByText('Followers')).toBeDefined()
   })
+
+  it('renders the reactions & shares breakdown section with friendly labels', () => {
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText(/reactions & shares/i)).toBeDefined()
+    // 'lol' -> '😂 LOL', 'whatsapp' -> 'WhatsApp'
+    expect(screen.getByText(/LOL/)).toBeDefined()
+    expect(screen.getByText('WhatsApp')).toBeDefined()
+  })
+
+  it('hides the audience taste section when all taste lists are empty', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        audience: { top_themes: [], top_categories: [], top_formats: [] },
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.queryByText(/audience taste/i)).toBeNull()
+  })
+
+  it('renders an em-dash for a null payoff_rate instead of crashing', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        overview: { ...MOCK_DATA.overview, payoff_rate: null },
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Payoff Rate')).toBeDefined()
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+  })
 })

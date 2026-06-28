@@ -31,6 +31,13 @@ const LIMIT_LABELS: Record<string, string> = {
   daily_joke_history_days: 'Joke history (days)',
 }
 
+/** Render an ISO date/datetime as a short readable date; falls back to raw on parse failure. */
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // BillingPage
 // ────────────────────────────────────────────────────────────────────────────
@@ -47,10 +54,26 @@ export function BillingPage() {
   // Dormant: Stripe not configured on backend
   const [dormant, setDormant] = useState(false)
 
-  const currentPlanSlug = subscriptionQuery.data?.plan_slug ?? 'free'
-  const isSubscribed =
-    subscriptionQuery.data?.status === 'active' ||
-    subscriptionQuery.data?.status === 'trialing'
+  const sub = subscriptionQuery.data
+  const currentPlanSlug = sub?.plan_slug ?? 'free'
+  const isSubscribed = sub?.status === 'active' || sub?.status === 'trialing'
+
+  // Human-friendly line describing the subscription's renewal / cancellation state.
+  const subscriptionStatusLine = (() => {
+    if (!sub) return null
+    const end = sub.current_period_end ? formatDate(sub.current_period_end) : null
+    if (sub.cancel_at_period_end) {
+      return end ? `Cancels on ${end} — access continues until then.` : 'Set to cancel at period end.'
+    }
+    if (sub.status === 'past_due') {
+      return 'Payment past due — update your card to keep your plan.'
+    }
+    if (sub.status === 'trialing') {
+      return end ? `Free trial — renews ${end}.` : 'Free trial active.'
+    }
+    if (end) return `Renews ${end}.`
+    return null
+  })()
 
   function handleSubscribe(plan: BillingPlan) {
     checkoutMutation.mutate(plan.slug, {
@@ -191,6 +214,8 @@ export function BillingPage() {
               </div>
             ) : plansQuery.isError ? (
               <ErrorCard message="Could not load plans. Please try again." />
+            ) : (plansQuery.data ?? []).length === 0 ? (
+              <NoPlansCard />
             ) : (
               <div
                 data-testid="plans-grid"
@@ -233,7 +258,7 @@ export function BillingPage() {
                   Manage your subscription
                 </div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                  Update payment, view invoices, or cancel.
+                  {subscriptionStatusLine ?? 'Update payment, view invoices, or cancel.'}
                 </div>
               </div>
               <button
@@ -275,6 +300,7 @@ function PlanCard({
   onSubscribe: () => void
 }) {
   const isFree = plan.slug === 'free'
+  const priceLabel = plan.amount_display?.trim() || (isFree ? 'Free' : '—')
 
   return (
     <div
@@ -337,7 +363,7 @@ function PlanCard({
         }}
         data-testid={`plan-price-${plan.slug}`}
       >
-        {plan.amount_display}
+        {priceLabel}
       </div>
 
       {/* Feature list */}
@@ -389,7 +415,7 @@ function PlanCard({
           style={{ width: '100%', height: 42, fontSize: 14, marginTop: 4 }}
           data-testid={`subscribe-btn-${plan.slug}`}
         >
-          {isPending ? 'Loading…' : isFree ? 'Downgrade to Free' : `Subscribe — ${plan.amount_display}`}
+          {isPending ? 'Loading…' : isFree ? 'Downgrade to Free' : `Subscribe — ${priceLabel}`}
         </button>
       )}
     </div>
@@ -499,6 +525,58 @@ function EntitlementsPanel({ entitlements }: { entitlements: BillingEntitlements
 // ────────────────────────────────────────────────────────────────────────────
 // ErrorCard
 // ────────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────────
+// NoPlansCard — shown when the backend returns zero plans (billing dormant / not
+// configured). Reads as intentional rather than a broken/empty grid.
+// ────────────────────────────────────────────────────────────────────────────
+
+function NoPlansCard() {
+  return (
+    <div
+      data-testid="no-plans"
+      style={{
+        padding: '40px 32px',
+        background: '#fff',
+        border: '1px dashed #E9E8E7',
+        borderRadius: 24,
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          background: '#F2E9FF',
+          color: '#6A1CF6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px',
+        }}
+      >
+        <Zap size={22} />
+      </div>
+      <h3
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 20,
+          color: '#1A1A1A',
+          letterSpacing: '-0.01em',
+          marginBottom: 8,
+        }}
+      >
+        Paid plans are coming soon
+      </h3>
+      <p style={{ fontSize: 14, color: '#52525B', maxWidth: 420, margin: '0 auto' }}>
+        You're on the free plan with everything you need to get started. We'll add upgrade
+        options here when they're ready.
+      </p>
+    </div>
+  )
+}
 
 function ErrorCard({ message }: { message: string }) {
   return (
