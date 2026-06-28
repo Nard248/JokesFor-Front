@@ -51,9 +51,19 @@ function fmt(n: number): string {
   return n.toLocaleString()
 }
 
-function pct(n: number | null): string {
+function pct(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return '—'
   return `${Math.round(n * 100)}%`
+}
+
+/** Format seconds as "Ns" or "Nm Ns". Returns "—" for null/undefined. */
+function secs(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—'
+  const total = Math.max(0, Math.round(n))
+  if (total < 60) return `${total}s`
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return s === 0 ? `${m}m` : `${m}m ${s}s`
 }
 
 function Sparkline({ data }: { data: number[] }) {
@@ -124,6 +134,51 @@ function KpiCard({ label, value, hero }: { label: string; value: string; hero?: 
         }}
       >
         {value}
+      </div>
+    </div>
+  )
+}
+
+/** A labeled read-attention stat. Degrades to "—" when its value is null. */
+function AttentionStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div
+      style={{
+        background: '#fff',
+        border: '1px solid #E9E8E7',
+        borderRadius: 16,
+        padding: '16px 20px',
+        flex: '1 1 160px',
+        minWidth: 150,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: '#71717A',
+          marginBottom: 6,
+          fontFamily: 'var(--font-sans)',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: 28,
+          color: '#1A1A1A',
+          letterSpacing: '-0.02em',
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: '#A1A1AA', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+        {hint}
       </div>
     </div>
   )
@@ -320,6 +375,43 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
         </div>
       </section>
 
+      {/* Attention / Read-through — Phase-2 read-time telemetry. Each stat
+          degrades gracefully to "—" when the backend has no data yet. */}
+      <section>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 18,
+            color: '#1A1A1A',
+            marginBottom: 4,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Attention
+        </h2>
+        <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 12px', fontFamily: 'var(--font-sans)' }}>
+          How much your jokes actually get read.
+        </p>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <AttentionStat
+            label="Avg read time"
+            value={secs(overview.avg_read_seconds)}
+            hint="Time spent reading, per view"
+          />
+          <AttentionStat
+            label="Read-through rate"
+            value={pct(overview.read_rate)}
+            hint="Impressions that became a real read"
+          />
+          <AttentionStat
+            label="Completion (story)"
+            value={pct(overview.completion_rate)}
+            hint="Story reads scrolled to the end"
+          />
+        </div>
+      </section>
+
       {/* 28-day sparkline */}
       {overview.daily_reach_28d.length > 0 && (
         <section
@@ -466,6 +558,8 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
                       { label: 'Saves', val: fmt(joke.saves) },
                       { label: 'Shares', val: fmt(joke.shares) },
                       { label: 'Payoff', val: pct(joke.payoff_rate) },
+                      { label: 'Avg read', val: secs(joke.avg_read_seconds) },
+                      { label: 'Read rate', val: pct(joke.read_rate) },
                     ].map(({ label, val }) => (
                       <span key={label} style={{ fontSize: 12, color: '#71717A', fontFamily: 'var(--font-sans)' }}>
                         <span style={{ fontWeight: 700, color: '#52525B' }}>{val}</span> {label}

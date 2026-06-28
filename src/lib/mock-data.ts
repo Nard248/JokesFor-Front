@@ -553,6 +553,9 @@ export const mockCreatorInsights: CreatorInsights = {
     ],
     followers: 42,
     follower_growth_28d: Array(28).fill(0).map((_, i) => i),
+    avg_read_seconds: 14,
+    read_rate: 0.58,
+    completion_rate: 0.41,
   },
   reactions_breakdown: [
     { reaction: 'lol', count: 1_050 },
@@ -580,6 +583,8 @@ export const mockCreatorInsights: CreatorInsights = {
       saves: 224,
       shares: 92,
       payoff_rate: 0.78,
+      avg_read_seconds: 18,
+      read_rate: 0.64,
     },
     {
       id: 102,
@@ -589,6 +594,8 @@ export const mockCreatorInsights: CreatorInsights = {
       saves: 178,
       shares: 61,
       payoff_rate: 0.71,
+      avg_read_seconds: 22,
+      read_rate: 0.6,
     },
     {
       id: 103,

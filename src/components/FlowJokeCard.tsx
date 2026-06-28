@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react'
 import { useReactToJoke, useReactions } from '@/features/reactions'
 import { useSaveJoke } from '@/features/saved-jokes'
-import { useImpression, recordShare } from '@/features/telemetry'
+import { useImpression, useDwell, recordShare } from '@/features/telemetry'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import type { Joke, ReactionSlug } from '@/lib/api'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from './JokeRenderer'
@@ -68,9 +68,13 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   const saveJoke = useSaveJoke()
 
   const numericId = typeof joke.id === 'number' ? joke.id : undefined
+  const telemetryId = source ? numericId : undefined
   // Impression: fire once when ≥50% visible for ~1s (no-op without a real id
   // or telemetry source; gating lives in the telemetry client).
-  const impressionRef = useImpression<HTMLElement>(source ? numericId : undefined, source ?? 'other')
+  const impressionRef = useImpression<HTMLElement>(telemetryId, source ?? 'other')
+  // Dwell: read-time per card, sharing the same root element ref. Story cards
+  // can overflow, so leave scroll tracking on (no-op when content fits).
+  useDwell<HTMLElement>(telemetryId, source ?? 'other', { ref: impressionRef })
 
   const handleSave = (e: React.MouseEvent) => {
     // Don't let a tap on Save bubble to an enclosing detail Link.

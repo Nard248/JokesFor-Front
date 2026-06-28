@@ -170,3 +170,82 @@ describe('telemetry buffering + dedup', () => {
     }).not.toThrow()
   })
 })
+
+describe('trackDwell helper (Phase 2)', () => {
+  function captureBeaconBodies() {
+    const bodies: string[] = []
+    const RealBlob = globalThis.Blob
+    vi.stubGlobal(
+      'Blob',
+      class extends RealBlob {
+        constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
+          super(parts, opts)
+          bodies.push(String(parts[0]))
+        }
+      },
+    )
+    return bodies
+  }
+
+  it('enqueues a dwell event with value and optional scroll_pct', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackDwell(7, 'feed', 3_200, 64)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0]).toEqual({
+      joke: 7,
+      type: 'dwell',
+      source: 'feed',
+      value: 3_200,
+      scroll_pct: 64,
+    })
+  })
+
+  it('omits scroll_pct when not provided', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackDwell(7, 'daily', 1_500)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0]).toEqual({ joke: 7, type: 'dwell', source: 'daily', value: 1_500 })
+    expect('scroll_pct' in payload.events[0]).toBe(false)
+  })
+
+  it('drops sub-1s samples (too short to count as a read)', async () => {
+    const t = await loadTelemetry({ mocks: false })
+    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    t.trackDwell(7, 'feed', 800)
+    t.flush()
+    expect(beacon).not.toHaveBeenCalled()
+  })
+
+  it('clamps value to the 600000ms cap and rounds + clamps scroll_pct', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackDwell(7, 'feed', 9_999_999, 142.7)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0].value).toBe(600_000)
+    expect(payload.events[0].scroll_pct).toBe(100)
+  })
+
+  it('does NOT dedupe dwell — multiple read samples for one joke all count', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackDwell(7, 'feed', 2_000)
+    t.trackDwell(7, 'feed', 3_000)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events).toHaveLength(2)
+  })
+
+  it('respects the gate (no dwell when consent is off)', async () => {
+    consent = { analytics: false }
+    const t = await loadTelemetry({ mocks: false })
+    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    t.trackDwell(7, 'feed', 4_000)
+    t.flush()
+    expect(beacon).not.toHaveBeenCalled()
+  })
+})

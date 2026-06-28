@@ -24,14 +24,22 @@ import { readConsent } from '@/features/consent/storage'
 import { isAdult } from '@/features/consent/age'
 import { useAuthStore } from '@/features/auth/store'
 
-export type TelemetryType = 'impression' | 'reveal'
+export type TelemetryType = 'impression' | 'reveal' | 'dwell'
 export type TelemetrySource = 'feed' | 'explore' | 'search' | 'daily' | 'pack' | 'other'
 
 interface TelemetryEvent {
   joke: number
   type: TelemetryType
   source: TelemetrySource
+  /** Dwell only: accumulated visible time in ms (backend clamps to [0,600000]). */
+  value?: number
+  /** Dwell only: max scroll depth reached within the content, 0-100. Optional. */
+  scroll_pct?: number
 }
+
+/** Phase-2 dwell tuning. Mirrors the backend contract (ignores <500ms). */
+const DWELL_MIN_MS = 1000
+const DWELL_MAX_MS = 600_000
 
 const FLUSH_AT = 10
 const MAX_BATCH = 50
@@ -141,14 +149,16 @@ function bindPageHideListeners(): void {
   }
 }
 
-function enqueue(event: TelemetryEvent): void {
+function enqueue(event: TelemetryEvent, dedupe = true): void {
   try {
     if (!gateOpen()) return
     if (!Number.isFinite(event.joke) || event.joke <= 0) return
 
-    const key = dedupKey(event)
-    if (seen.has(key)) return
-    seen.add(key)
+    if (dedupe) {
+      const key = dedupKey(event)
+      if (seen.has(key)) return
+      seen.add(key)
+    }
 
     bindPageHideListeners()
     queue.push(event)
@@ -166,6 +176,37 @@ export function trackImpression(jokeId: number, source: TelemetrySource): void {
 /** Record that the user revealed a joke's punchline. Deduped per session. */
 export function trackReveal(jokeId: number, source: TelemetrySource): void {
   enqueue({ joke: jokeId, type: 'reveal', source })
+}
+
+/**
+ * Record how long a joke was actually visible to the reader (read-time).
+ *
+ * Unlike impression/reveal this is NOT deduped: a reader can dwell on the same
+ * card several times in a page-session (scroll away, scroll back), and each is a
+ * real, additive read-time sample for the backend.
+ *
+ * - `ms` is clamped to [0, 600000]; samples under ~1s are dropped (too short to
+ *   count as a read, and the backend ignores <500ms anyway).
+ * - `scrollPct` (0-100) is optional — pass it for long/story content where the
+ *   reader can scroll; omit it for short jokes that fit on screen.
+ */
+export function trackDwell(
+  jokeId: number,
+  source: TelemetrySource,
+  ms: number,
+  scrollPct?: number,
+): void {
+  try {
+    if (!Number.isFinite(ms) || ms < DWELL_MIN_MS) return
+    const value = Math.min(Math.round(ms), DWELL_MAX_MS)
+    const event: TelemetryEvent = { joke: jokeId, type: 'dwell', source, value }
+    if (typeof scrollPct === 'number' && Number.isFinite(scrollPct)) {
+      event.scroll_pct = Math.max(0, Math.min(100, Math.round(scrollPct)))
+    }
+    enqueue(event, false)
+  } catch {
+    /* never throw */
+  }
 }
 
 /** Test-only: reset module state between cases. */

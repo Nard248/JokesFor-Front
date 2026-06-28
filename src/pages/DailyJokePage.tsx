@@ -4,7 +4,7 @@ import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles } from '
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
 import { useSaveJoke } from '@/features/saved-jokes'
-import { recordShare } from '@/features/telemetry'
+import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
 
 /**
@@ -143,6 +143,8 @@ function JotdHero({ jokeId, setup, punchline, text, date }: JotdHeroProps) {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
+  // Read-time on the daily hero. No-op until the joke id resolves.
+  const dwellRef = useDwell<HTMLElement>(jokeId, 'daily')
 
   const isSetupPunch = !!(setup && punchline)
   const headlineText = isSetupPunch ? null : text ?? setup ?? ''
@@ -171,6 +173,7 @@ function JotdHero({ jokeId, setup, punchline, text, date }: JotdHeroProps) {
 
   return (
     <article
+      ref={dwellRef}
       style={{
         background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
         border: '1px solid #E9E8E7',

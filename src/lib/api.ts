@@ -773,6 +773,13 @@ export interface CreatorOverview {
   daily_reach_28d: number[]
   followers: number
   follower_growth_28d: number[]
+  // Phase-2 read-time telemetry (additive; null until there's enough data).
+  /** Average read time across views, in seconds. */
+  avg_read_seconds?: number | null
+  /** Fraction of impressions that turned into a real read (dwell ≥ ~1s). */
+  read_rate?: number | null
+  /** Fraction of story reads that scrolled (near) all the way through. */
+  completion_rate?: number | null
 }
 
 export interface ReactionBreakdownItem {
@@ -799,6 +806,11 @@ export interface TopJokeItem {
   shares: number
   /** null when the joke has no views yet (no denominator). */
   payoff_rate: number | null
+  // Phase-2 read-time telemetry (additive; null until there's enough data).
+  /** Average read time for this joke, in seconds. */
+  avg_read_seconds?: number | null
+  /** Fraction of this joke's impressions that became a real read. */
+  read_rate?: number | null
 }
 
 export interface AudienceTasteItem {

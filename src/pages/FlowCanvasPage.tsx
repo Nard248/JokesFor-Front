@@ -12,7 +12,7 @@ import { useJokeSearch } from '@/features/jokes'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { useDailyJokeHistory } from '@/features/daily-joke'
 import { useTopJokesters } from '@/features/trending'
-import { recordShare } from '@/features/telemetry'
+import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
 
 /**
@@ -60,6 +60,9 @@ export function FlowCanvasPage() {
 
   const firstName = user?.first_name || user?.username || 'friend'
 
+  // Read-time on the daily-joke hero (source 'daily'). No-op until id resolves.
+  const heroDwellRef = useDwell<HTMLElement>(today?.joke?.id, 'daily')
+
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="today">
@@ -104,6 +107,7 @@ export function FlowCanvasPage() {
           <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
             {/* JOTD hero */}
             <article
+              ref={heroDwellRef}
               style={{
                 background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
                 border: '1px solid #E9E8E7',

@@ -13,7 +13,7 @@ import { ReportJokeButton } from '@/components/ReportJokeButton'
 import { useToast } from '@/components/ui/toast'
 import { useJokeSearch } from '@/features/jokes'
 import { useRollMysteryBox } from '@/features/mystery-box'
-import { recordShare } from '@/features/telemetry'
+import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import type { ReactionSlug } from '@/lib/api'
 
@@ -107,7 +107,7 @@ export function JokeDetailPage() {
           </button>
 
           {/* Hero */}
-          <JokeHero joke={joke} />
+          <JokeHero joke={joke} source={telemetrySourceFor(source)} />
 
           {/* Reactions breakdown */}
           <ReactionsBreakdown jokeId={joke.id} />
@@ -133,10 +133,12 @@ export function JokeDetailPage() {
 // Hero — themes/categories pills + setup/punch + save/share/copy + reaction row
 // ──────────────────────────────────────────────────────────────────────────
 
-function JokeHero({ joke }: { joke: Joke }) {
+function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
   const { toast } = useToast()
+  // Read-time: dwell on the joke content with scroll depth (strongest signal).
+  const dwellRef = useDwell<HTMLElement>(joke.id, source)
 
   const themes = joke.themes ?? joke.context_tags ?? []
   const categories = joke.categories ?? joke.tones ?? []
@@ -178,6 +180,7 @@ function JokeHero({ joke }: { joke: Joke }) {
 
   return (
     <article
+      ref={dwellRef}
       style={{
         background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
         border: '1px solid #E9E8E7',
