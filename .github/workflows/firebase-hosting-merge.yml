@@ -25,13 +25,10 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID || '332865216810-7kouajjg51jiceqk4g2h0qa3t3nbk4ga.apps.googleusercontent.com' }}
           VITE_GOOGLE_OAUTH_REDIRECT_URI: ${{ vars.VITE_GOOGLE_OAUTH_REDIRECT_URI || 'https://jokesforfront.web.app/auth/google/callback' }}
           VITE_USE_REAL_PREFERENCES: ${{ vars.VITE_USE_REAL_PREFERENCES || 'true' }}
-          # Keep on MOCK: the real cutover is blocked on the BACKEND — there is no
-          # POST /jokes/my-drafts/ create endpoint (JokeDraftListView is a
-          # ListAPIView, GET-only), so draft-create returns 405 ("Save failed").
-          # The frontend catalog readers are now tolerant (unwrapList) and the page
-          # renders; flip to 'true' once the backend adds a draft-create endpoint
-          # (ListCreateAPIView + draft serializer) and it's verified.
-          VITE_USE_REAL_CREATE: ${{ vars.VITE_USE_REAL_CREATE || 'false' }}
+          # Real create cutover ENABLED: the backend now has POST /jokes/my-drafts/
+          # (ListCreateAPIView, verified live) and the frontend catalog readers are
+          # tolerant (unwrapList). Creator submissions now persist for real.
+          VITE_USE_REAL_CREATE: ${{ vars.VITE_USE_REAL_CREATE || 'true' }}
       # Kept on the floating @v0: the latest release (v0.10.0) still declares
       # node20, so there's no Node-24 version to pin to yet. Floating @v0 will
       # auto-adopt the maintainers' node24 release when it ships; pinning would
