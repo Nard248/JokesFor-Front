@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5 } from 'lucide-react'
@@ -13,7 +13,22 @@ import { ReportJokeButton } from '@/components/ReportJokeButton'
 import { useToast } from '@/components/ui/toast'
 import { useJokeSearch } from '@/features/jokes'
 import { useRollMysteryBox } from '@/features/mystery-box'
+import { recordShare } from '@/features/telemetry'
+import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import type { ReactionSlug } from '@/lib/api'
+
+/** Map the URL ?source= (JokeSource) onto the telemetry source vocabulary. */
+function telemetrySourceFor(source: JokeSource): TelemetrySource {
+  switch (source) {
+    case 'daily':
+    case 'search':
+    case 'explore':
+    case 'pack':
+      return source
+    default:
+      return 'other'
+  }
+}
 
 /**
  * JokeDetailPage — full-screen joke viewer per Docs/JokesFor/parts/screens-4.jsx.
@@ -48,6 +63,12 @@ export function JokeDetailPage() {
     queryFn: () => jokeDetailApi.get(jokeId, source).then((r) => r.data),
     enabled: !!jokeId && !isNaN(jokeId),
   })
+
+  // The detail view always shows the punchline, so loading it IS the reveal.
+  // Deduped per session by the telemetry client.
+  useEffect(() => {
+    if (joke?.id) trackReveal(joke.id, telemetrySourceFor(source))
+  }, [joke?.id, source])
 
   if (isLoading || !joke) {
     return (
@@ -151,6 +172,8 @@ function JokeHero({ joke }: { joke: Joke }) {
       .writeText(url)
       .then(() => toast({ message: 'Link copied to clipboard.', variant: 'success' }))
       .catch(() => toast({ message: "Couldn't copy the link.", variant: 'error' }))
+    // Record a real share for creator analytics (fire-and-forget).
+    recordShare(joke.id, 'copy')
   }
 
   return (
@@ -499,7 +522,7 @@ function MoreLikeThis({ joke }: { joke: Joke }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
         {more.map((j) => (
           <Link key={j.id} to={`/jokes/${j.id}?source=other`} style={{ textDecoration: 'none' }}>
-            <FlowJokeCard joke={jokeToFlowData(j)} />
+            <FlowJokeCard joke={jokeToFlowData(j)} source="other" />
           </Link>
         ))}
       </div>

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react'
 import { useReactToJoke, useReactions } from '@/features/reactions'
 import { useSaveJoke } from '@/features/saved-jokes'
+import { useImpression, recordShare } from '@/features/telemetry'
+import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import type { Joke, ReactionSlug } from '@/lib/api'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from './JokeRenderer'
 
@@ -54,17 +56,43 @@ interface FlowJokeCardProps {
   joke: FlowJokeData
   big?: boolean
   className?: string
+  /** Telemetry surface this card is rendered on. When provided (and the joke
+   * has a numeric backend id) the card logs a real impression once it's seen
+   * and a real reveal when the punchline is uncovered. */
+  source?: TelemetrySource
 }
 
-export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps) {
+export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeCardProps) {
   const skin = SKIN[joke.fmt] ?? SKIN.setup
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
 
-  const handleSave = () => {
+  const numericId = typeof joke.id === 'number' ? joke.id : undefined
+  // Impression: fire once when ≥50% visible for ~1s (no-op without a real id
+  // or telemetry source; gating lives in the telemetry client).
+  const impressionRef = useImpression<HTMLElement>(source ? numericId : undefined, source ?? 'other')
+
+  const handleSave = (e: React.MouseEvent) => {
+    // Don't let a tap on Save bubble to an enclosing detail Link.
+    e.stopPropagation()
     if (saved) return // save-only here; unsave lives in the Library
     setSaved(true)
     saveJoke.mutate({ jokeId: Number(joke.id) }, { onError: () => setSaved(false) })
+  }
+
+  const handleReveal = () => {
+    if (numericId !== undefined && source) trackReveal(numericId, source)
+  }
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const text = joke.setup && joke.punch ? `${joke.setup} ${joke.punch}` : joke.text ?? ''
+    const url = numericId !== undefined ? `${window.location.origin}/jokes/${numericId}` : ''
+    const payload = url || text
+    if (payload) {
+      navigator.clipboard?.writeText(payload).catch(() => { /* best-effort */ })
+    }
+    if (numericId !== undefined) recordShare(numericId, 'copy')
   }
 
   const isAnti = joke.fmt === 'anti'
@@ -75,6 +103,7 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
 
   return (
     <article
+      ref={impressionRef}
       className={className}
       style={{
         background: skin.bg,
@@ -121,6 +150,7 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
         }}
         big={big}
         read={joke.read}
+        onReveal={handleReveal}
       />
 
       {/* Reaction row: only for real jokes with numeric IDs (skip previews/mocks). */}
@@ -128,30 +158,19 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
         <ReactionRow jokeId={joke.id} isAnti={isAnti} divider={skin.divider} />
       )}
 
-      {/* Footer: stats + actions */}
+      {/* Footer: actions. Engagement stat literals were removed — the card has
+          no real per-joke laugh/save counts yet, so showing them would be fake.
+          The reaction row above shows the real counts. */}
       <footer
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           marginTop: 14,
           paddingTop: 12,
           borderTop: `1px solid ${skin.divider}`,
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            fontSize: 12,
-            color: mutedFg,
-            fontFamily: 'var(--font-mono)',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {joke.laughs !== undefined && <span>😂 {joke.laughs}</span>}
-          {joke.saves !== undefined && <span>💾 {joke.saves}</span>}
-        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             type="button"
@@ -180,6 +199,7 @@ export function FlowJokeCard({ joke, big = false, className }: FlowJokeCardProps
           <button
             type="button"
             aria-label="Share joke"
+            onClick={handleShare}
             style={{
               height: 32,
               width: 32,

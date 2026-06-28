@@ -3,6 +3,9 @@ import { Link } from 'react-router'
 import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
+import { useSaveJoke } from '@/features/saved-jokes'
+import { recordShare } from '@/features/telemetry'
+import { trackReveal } from '@/lib/telemetry'
 
 /**
  * DailyJokePage — reskinned in iteration 4 to match FlowCanvasPage's
@@ -61,7 +64,7 @@ export function DailyJokePage() {
 
           {/* Hero JOTD */}
           <div style={{ marginTop: 32 }}>
-            {loadingToday ? <JotdSkeleton /> : <JotdHero text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} date={today?.date} />}
+            {loadingToday ? <JotdSkeleton /> : <JotdHero jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} date={today?.date} />}
           </div>
 
           {/* History */}
@@ -129,18 +132,38 @@ export function DailyJokePage() {
 // ──────────────────────────────────────────────────────────────────────────
 
 interface JotdHeroProps {
+  jokeId?: number
   setup?: string | null
   punchline?: string | null
   text?: string
   date?: string
 }
 
-function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
+function JotdHero({ jokeId, setup, punchline, text, date }: JotdHeroProps) {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
+  const saveJoke = useSaveJoke()
 
   const isSetupPunch = !!(setup && punchline)
   const headlineText = isSetupPunch ? null : text ?? setup ?? ''
+
+  const handleReveal = () => {
+    setRevealed(true)
+    if (jokeId) trackReveal(jokeId, 'daily')
+  }
+
+  const handleSave = () => {
+    if (saved || !jokeId) return
+    setSaved(true)
+    saveJoke.mutate({ jokeId }, { onError: () => setSaved(false) })
+  }
+
+  const handleShare = () => {
+    if (!jokeId) return
+    const url = `${window.location.origin}/jokes/${jokeId}`
+    navigator.clipboard?.writeText(url).catch(() => { /* best-effort */ })
+    recordShare(jokeId, 'copy')
+  }
 
   const dateline = date
     ? new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -196,7 +219,7 @@ function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
             Punchline
           </span>
           <div
-            onClick={() => setRevealed(true)}
+            onClick={handleReveal}
             className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
             style={{
               cursor: revealed ? 'default' : 'pointer',
@@ -214,7 +237,7 @@ function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
           {!revealed && (
             <button
               type="button"
-              onClick={() => setRevealed(true)}
+              onClick={handleReveal}
               className="btn-flow-reward"
               style={{ marginTop: 24 }}
             >
@@ -252,15 +275,12 @@ function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
           gap: 14,
         }}
       >
-        <div style={{ display: 'flex', gap: 18, fontSize: 13, color: '#52525B' }}>
-          <span>😂 612 laughs</span>
-          <span>💾 4.1K saves</span>
-          <span>🔁 312 retold</span>
-        </div>
+        {/* Engagement-stat literals removed — no real per-joke counts here yet. */}
+        <div />
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
-            onClick={() => setSaved((s) => !s)}
+            onClick={handleSave}
             aria-pressed={saved}
             className={saved ? 'btn-flow-reward' : 'btn-flow-ghost'}
             style={{ height: 44 }}
@@ -268,7 +288,7 @@ function JotdHero({ setup, punchline, text, date }: JotdHeroProps) {
             {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
             {saved ? 'Saved' : 'Save'}
           </button>
-          <button type="button" className="btn-flow-ghost" style={{ height: 44 }}>
+          <button type="button" onClick={handleShare} className="btn-flow-ghost" style={{ height: 44 }}>
             <Share2 size={14} /> Share
           </button>
         </div>

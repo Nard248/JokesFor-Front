@@ -326,7 +326,7 @@ function PackEntry({
           {String(order).padStart(2, '0')}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <FlowJokeCard joke={jokeToFlowData(joke)} />
+          <FlowJokeCard joke={jokeToFlowData(joke)} source="pack" />
         </div>
       </div>
     </button>

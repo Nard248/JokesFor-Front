@@ -121,7 +121,7 @@ export function FavoritesPage() {
               <div style={{ columnCount: 3, columnGap: 18 }}>
                 {flowFavorites.map((j) => (
                   <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={j} />
+                    <FlowJokeCard joke={j} source="other" />
                   </div>
                 ))}
               </div>

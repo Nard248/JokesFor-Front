@@ -12,6 +12,8 @@ import { useJokeSearch } from '@/features/jokes'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { useDailyJokeHistory } from '@/features/daily-joke'
 import { useTopJokesters } from '@/features/trending'
+import { recordShare } from '@/features/telemetry'
+import { trackReveal } from '@/lib/telemetry'
 
 /**
  * Flow Canvas — the "Today" hub, redesigned per Docs/JokesFor/parts/flow-screens.jsx
@@ -145,7 +147,10 @@ export function FlowCanvasPage() {
               <JotdBody
                 joke={today?.joke}
                 revealed={revealed}
-                onReveal={() => setRevealed(true)}
+                onReveal={() => {
+                  setRevealed(true)
+                  if (today?.joke?.id) trackReveal(today.joke.id, 'daily')
+                }}
               />
               <footer
                 style={{
@@ -160,11 +165,8 @@ export function FlowCanvasPage() {
                   gap: 14,
                 }}
               >
-                <div style={{ display: 'flex', gap: 18, fontSize: 13, color: '#52525B' }}>
-                  <span>😂 612 laughs</span>
-                  <span>💾 4.1K saves</span>
-                  <span>🔁 312 retold</span>
-                </div>
+                {/* Engagement-stat literals removed — no real per-joke counts here yet. */}
+                <div />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
@@ -181,7 +183,18 @@ export function FlowCanvasPage() {
                     {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
                     {saved ? 'Saved' : 'Save'}
                   </button>
-                  <button type="button" className="btn-flow-ghost" style={{ height: 44 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = today?.joke?.id
+                      if (!id) return
+                      const url = `${window.location.origin}/jokes/${id}`
+                      navigator.clipboard?.writeText(url).catch(() => { /* best-effort */ })
+                      recordShare(id, 'copy')
+                    }}
+                    className="btn-flow-ghost"
+                    style={{ height: 44 }}
+                  >
                     <Share2 size={14} /> Share
                   </button>
                 </div>
@@ -236,7 +249,7 @@ export function FlowCanvasPage() {
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
             {forYouJokes && forYouJokes.results.length > 0
               ? forYouJokes.results.slice(0, 3).map((j) => (
-                  <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} />
+                  <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} source="feed" />
                 ))
               : SAMPLE_JOKES.slice(0, 3).map((j) => <FlowJokeCard key={j.id} joke={j} />)}
           </div>

@@ -558,6 +558,19 @@ export const reactionsApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Shares — records a real share for creator analytics (shares_breakdown).
+// `platform` is the surface the user shared to ('copy' for a link/text copy).
+// Fire-and-forget from the UI; never block the clipboard action on it.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type SharePlatform = 'copy' | 'twitter' | 'whatsapp' | 'facebook' | 'other'
+
+export const sharesApi = {
+  share: (jokeId: number, platform: SharePlatform = 'copy') =>
+    api.post(`/jokes/${jokeId}/share/`, { platform }),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // P5 — Activity log + recently-viewed
 // Every authenticated GET /jokes/{id}/ logs a JokeView automatically.
 // Pass ?source= so the backend knows the surface for analytics.

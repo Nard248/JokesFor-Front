@@ -94,7 +94,7 @@ export function TrendingPage() {
               <div style={{ marginTop: 18, columnCount: 3, columnGap: 18 }}>
                 {trendingJokes.slice(0, 9).map((tj, i) => (
                   <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={trendingToFlowData(tj, i)} />
+                    <FlowJokeCard joke={trendingToFlowData(tj, i)} source="feed" />
                   </div>
                 ))}
               </div>

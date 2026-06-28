@@ -197,7 +197,7 @@ export function LibraryPage() {
               <div style={{ columnCount: 3, columnGap: 18 }}>
                 {filteredSaves.slice(0, 12).map((s) => (
                   <div key={s.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={savedJokeToFlowData(s)} />
+                    <FlowJokeCard joke={savedJokeToFlowData(s)} source="other" />
                   </div>
                 ))}
               </div>
