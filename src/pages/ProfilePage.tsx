@@ -93,9 +93,11 @@ export function ProfilePage() {
                   {bio}
                 </p>
                 <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button type="button" className="btn-flow-primary" style={{ height: 40, fontSize: 13 }}>
+                  {/* The real, working profile editor is the "Public identity"
+                      section on the Settings page (PATCHes /users/me/profile/). */}
+                  <Link to="/settings" className="btn-flow-primary" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
                     <Edit3 size={14} /> Edit profile
-                  </button>
+                  </Link>
                   <Link to="/settings" className="btn-flow-ghost" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
                     <Settings size={14} /> Settings
                   </Link>

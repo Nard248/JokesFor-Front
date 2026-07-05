@@ -28,6 +28,21 @@ export const FORMAT_LABEL: Record<FlowJokeFormat, string> = {
   anti: 'Anti-joke', knock: 'Knock-knock', story: 'Story',
 }
 
+/**
+ * Map a UI FlowJokeFormat back to the backend JokeFormat slug for the
+ * `joke_format` query param (JokeViewSet.list). These are the canonical
+ * long-form slugs the backend serializes (`format.slug`), matching the
+ * reverse mapping in FlowJokeCard.jokeToFlowData.
+ */
+export const FLOW_FORMAT_TO_BACKEND_SLUG: Record<FlowJokeFormat, string> = {
+  setup: 'setup_punchline',
+  oneliner: 'one_liner',
+  observ: 'observational',
+  anti: 'anti_joke',
+  knock: 'knock_knock',
+  story: 'story',
+}
+
 export function formatLabelFor(fmt: FlowJokeFormat): string { return FORMAT_LABEL[fmt] }
 
 export function tagToneFor(fmt: FlowJokeFormat): string {

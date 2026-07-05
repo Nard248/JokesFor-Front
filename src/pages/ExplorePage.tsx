@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Search as SearchIcon, Dice5 } from 'lucide-react'
-import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
+import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { useJokeSearch, type JokeSearchParams } from '@/features/jokes'
 
 /**
  * Explore — three-axis chip-rail filter + format-aware masonry results.
@@ -21,16 +23,25 @@ export function ExplorePage() {
   const [themes, setThemes] = useState<Set<string>>(new Set())
   const [cats, setCats] = useState<Set<string>>(new Set())
 
-  const filtered = useMemo(
-    () =>
-      MOCK_JOKES.filter(
-        (j) =>
-          (fmts.size === 0 || fmts.has(j.fmt)) &&
-          (themes.size === 0 || themes.has(j.theme ?? '')) &&
-          (cats.size === 0 || cats.has(j.cat ?? '')),
-      ),
-    [fmts, themes, cats],
-  )
+  // Build the real /jokes/ query from the three chip axes. `page: 1` keeps the
+  // query enabled even with no filters (so the default listing shows real
+  // jokes, not an empty grid). Filters map to the backend params per the API:
+  //   Format chips  → joke_format (backend format slug)
+  //   Theme chips   → context_tags (comma slugs)
+  //   Category chips→ tones (comma slugs)
+  const params = useMemo<JokeSearchParams>(() => {
+    const p: JokeSearchParams = { page: 1, page_size: 30, ordering: '-created_at' }
+    if (fmts.size > 0) {
+      p.joke_format = Array.from(fmts).map((f) => FLOW_FORMAT_TO_BACKEND_SLUG[f]).join(',')
+    }
+    if (themes.size > 0) p.context_tags = Array.from(themes).join(',')
+    if (cats.size > 0) p.tones = Array.from(cats).join(',')
+    return p
+  }, [fmts, themes, cats])
+
+  const { data, isLoading, isError } = useJokeSearch(params)
+  const jokes = data?.results ?? []
+  const totalCount = data?.count ?? 0
 
   const activeCount = fmts.size + themes.size + cats.size
   const clearAll = () => {
@@ -46,7 +57,7 @@ export function ExplorePage() {
           {/* Hero */}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 32, alignItems: 'end' }}>
             <div>
-              <span className="eyebrow-mono">Explore · {MOCK_JOKES.length} jokes loaded</span>
+              <span className="eyebrow-mono">Explore · {totalCount} jokes loaded</span>
               <h2
                 style={{
                   marginTop: 8,
@@ -153,7 +164,7 @@ export function ExplorePage() {
           {/* Active filters bar */}
           <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <span className="eyebrow-mono">
-              {filtered.length} of {MOCK_JOKES.length} jokes
+              {totalCount} joke{totalCount === 1 ? '' : 's'}
               {activeCount > 0 ? ` · ${activeCount} filter${activeCount > 1 ? 's' : ''} on` : ' · no filters'}
             </span>
             {activeCount > 0 && (
@@ -221,13 +232,18 @@ export function ExplorePage() {
           </div>
 
           {/* ── Results: format-aware masonry ── */}
-          {filtered.length > 0 ? (
+          {isLoading ? (
+            <ResultsSkeleton />
+          ) : isError ? (
+            <ErrorState />
+          ) : jokes.length > 0 ? (
             <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }}>
-              {filtered.map((j, i) => (
-                <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                  {/* Link to detail so a click logs a real view (?source=explore). */}
-                  <Link to={`/jokes/${j.id}?source=explore`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <FlowJokeCard joke={j} source="explore" />
+              {jokes.map((joke, i) => (
+                <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                  {/* Link to the real detail so a click opens the correct joke and
+                      logs a real view (?source=explore). */}
+                  <Link to={`/jokes/${joke.id}?source=explore`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <FlowJokeCard joke={jokeToFlowData(joke)} source="explore" />
                   </Link>
                   {/* Curator note interleaved */}
                   {i === 4 && (
@@ -381,6 +397,45 @@ function Chip({ background, color, onClick, children }: ChipProps) {
   )
 }
 
+function ResultsSkeleton() {
+  return (
+    <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }} aria-busy="true">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            breakInside: 'avoid',
+            marginBottom: 18,
+            height: 160 + (i % 3) * 40,
+            background: '#F2F0F0',
+            borderRadius: 18,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ErrorState() {
+  return (
+    <div
+      style={{
+        marginTop: 24,
+        padding: '48px 32px',
+        border: '1px dashed #E9E8E7',
+        borderRadius: 18,
+        textAlign: 'center',
+        background: '#fff',
+      }}
+    >
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 28, color: '#1A1A1A', letterSpacing: '-0.02em' }}>
+        Couldn't load jokes.
+      </div>
+      <p style={{ marginTop: 8, fontSize: 16, color: '#52525B' }}>Check your connection and try again in a moment.</p>
+    </div>
+  )
+}
+
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
     <div
@@ -471,27 +526,4 @@ const CATEGORIES = [
   { id: 'surreal', label: 'Surreal' },
   { id: 'dark', label: 'Dark' },
   { id: 'edgy', label: 'Edgy' },
-]
-
-interface ExploreJoke extends FlowJokeData {
-  theme: string
-  cat: string
-}
-
-const MOCK_JOKES: ExploreJoke[] = [
-  { id: 1, fmt: 'setup', setup: "Why don't scientists trust atoms anymore?", punch: 'Because they make up everything.', theme: 'science', themeLabel: 'Science', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 2, fmt: 'oneliner', text: 'I told my wife she was drawing her eyebrows too high. She seemed surprised.', theme: 'family', themeLabel: 'Family', cat: 'dad', catLabel: 'Dad' },
-  { id: 3, fmt: 'observ', text: "Adulthood is just emailing 'Sounds good!' back and forth until one of you dies.", theme: 'work', themeLabel: 'Work', cat: 'office', catLabel: 'Office-proper' },
-  { id: 4, fmt: 'setup', setup: "What's the difference between a hippo and a Zippo?", punch: 'One is really heavy and the other is a little lighter.', theme: 'animals', themeLabel: 'Animals', cat: 'dad', catLabel: 'Dad' },
-  { id: 5, fmt: 'oneliner', text: 'I used to hate facial hair. But then it grew on me.', theme: 'family', themeLabel: 'Family', cat: 'wholesome', catLabel: 'Wholesome' },
-  { id: 6, fmt: 'setup', setup: 'Why did the scarecrow win an award?', punch: 'He was outstanding in his field.', theme: 'animals', themeLabel: 'Animals', cat: 'dad', catLabel: 'Dad' },
-  { id: 7, fmt: 'anti', setup: 'Why did the chicken cross the road?', punch: 'To get to the other side.', theme: 'animals', themeLabel: 'Animals', cat: 'surreal', catLabel: 'Surreal' },
-  { id: 8, fmt: 'observ', text: 'My therapist said growth is uncomfortable. So is this email.', theme: 'work', themeLabel: 'Work', cat: 'office', catLabel: 'Office-proper' },
-  { id: 9, fmt: 'oneliner', text: "I'm reading a book about anti-gravity. It's impossible to put down.", theme: 'science', themeLabel: 'Science', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 10, fmt: 'knock', lines: ['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing out here."], theme: 'weather', themeLabel: 'Weather', cat: 'kid', catLabel: 'Kid-safe' },
-  { id: 11, fmt: 'story', text: "A man walks into a library and asks the librarian for a book on paranoia. She whispers, 'They're right behind you.' He turned around — and to his relief, only a stack of returns. He picked one off the top: 'How to Trust Strangers.' He's been on chapter one for six years.", theme: 'work', themeLabel: 'Work', cat: 'surreal', catLabel: 'Surreal', read: '2 min' },
-  { id: 12, fmt: 'observ', text: "Coffee doesn't ask silly questions. Coffee understands.", theme: 'food', themeLabel: 'Coffee', cat: 'wholesome', catLabel: 'Wholesome' },
-  { id: 13, fmt: 'oneliner', text: 'My password is the last 8 digits of pi.', theme: 'tech', themeLabel: 'Tech', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 14, fmt: 'setup', setup: 'How many programmers does it take to change a lightbulb?', punch: "None. That's a hardware problem.", theme: 'tech', themeLabel: 'Tech', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 15, fmt: 'anti', setup: "What's red and bad for your teeth?", punch: 'A brick.', theme: 'food', themeLabel: 'Food', cat: 'surreal', catLabel: 'Surreal' },
 ]

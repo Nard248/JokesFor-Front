@@ -315,8 +315,36 @@ function formatCount(n: number): string {
 // Use this when you have a Joke from the backend and want to render it.
 // ──────────────────────────────────────────────────────────────────────────
 
+// The real lean list serializer (JokeListSerializer) emits `format`,
+// `tones`/`categories`, `context_tags`/`themes` as slug STRINGS, whereas the
+// detail serializer emits nested { id, name, slug } objects. These helpers
+// tolerate either shape so a card renders (and links to the right id) in both.
+function taxonSlug(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object' && 'slug' in value) {
+    return String((value as { slug?: unknown }).slug ?? '')
+  }
+  return ''
+}
+
+function prettifySlug(slug: string): string {
+  return slug
+    .split(/[-_]/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
+function taxonLabel(value: unknown): string | undefined {
+  if (typeof value === 'string') return value ? prettifySlug(value) : undefined
+  if (value && typeof value === 'object' && 'name' in value) {
+    const name = (value as { name?: unknown }).name
+    return typeof name === 'string' ? name : undefined
+  }
+  return undefined
+}
+
 export function jokeToFlowData(joke: Joke): FlowJokeData {
-  const slug = joke.format?.slug?.toLowerCase() ?? ''
+  const slug = taxonSlug(joke.format).toLowerCase()
   const fmt: FlowJokeFormat =
     slug === 'setup_punchline' || slug === 'setup-punchline' || slug === 'setup'
       ? 'setup'
@@ -334,9 +362,10 @@ export function jokeToFlowData(joke: Joke): FlowJokeData {
       ? 'setup'
       : 'oneliner'
 
-  // Prefer new vocabulary (themes/categories), fall back to legacy (context_tags/tones).
-  const themeLabel = joke.themes?.[0]?.name ?? joke.context_tags?.[0]?.name
-  const catLabel = joke.categories?.[0]?.name ?? joke.tones?.[0]?.name
+  // Prefer new vocabulary (themes/categories), fall back to legacy
+  // (context_tags/tones). Each entry may be a slug string or a taxon object.
+  const themeLabel = taxonLabel(joke.themes?.[0]) ?? taxonLabel(joke.context_tags?.[0])
+  const catLabel = taxonLabel(joke.categories?.[0]) ?? taxonLabel(joke.tones?.[0])
 
   return {
     id: joke.id,

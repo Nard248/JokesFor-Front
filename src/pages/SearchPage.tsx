@@ -2,7 +2,9 @@ import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react'
 import { useSearchParams, Link } from 'react-router'
 import { Search as SearchIcon, Dice5 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
+import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
+import { useJokeSearch, type JokeSearchParams } from '@/features/jokes'
 
 /**
  * SearchPage — Sentence Builder redesign per
@@ -26,16 +28,34 @@ export function SearchPage() {
   const [cats, setCats] = useState<Set<string>>(new Set())
   const [openPanel, setOpenPanel] = useState<'fmt' | 'theme' | 'cat' | null>(null)
 
-  const matches = useMemo(() => {
-    const lcQ = q.toLowerCase()
-    return MOCK_JOKES.filter(
-      (j) =>
-        (fmts.size === 0 || fmts.has(j.fmt)) &&
-        (themes.size === 0 || themes.has(j.theme)) &&
-        (cats.size === 0 || cats.has(j.cat)) &&
-        (lcQ === '' || (j.text ?? j.setup ?? '').toLowerCase().includes(lcQ)),
-    )
-  }, [q, fmts, themes, cats])
+  // Debounce the free-text keyword so we don't fire a request per keystroke.
+  const [debouncedQ, setDebouncedQ] = useState(initialQuery)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q.trim()), 300)
+    return () => clearTimeout(t)
+  }, [q])
+
+  // Compose the sentence-builder + keyword into a real /jokes/ query.
+  //   keyword input → q (full-text)
+  //   Format pills  → joke_format (backend format slug)
+  //   Theme pills   → context_tags (comma slugs)
+  //   Category pills→ tones (comma slugs)
+  // `page: 1` keeps the query enabled so the default listing shows real jokes.
+  const params = useMemo<JokeSearchParams>(() => {
+    const p: JokeSearchParams = { page: 1, page_size: 30 }
+    if (debouncedQ) p.q = debouncedQ
+    if (fmts.size > 0) {
+      p.joke_format = Array.from(fmts).map((f) => FLOW_FORMAT_TO_BACKEND_SLUG[f]).join(',')
+    }
+    if (themes.size > 0) p.context_tags = Array.from(themes).join(',')
+    if (cats.size > 0) p.tones = Array.from(cats).join(',')
+    if (!p.q) p.ordering = '-created_at'
+    return p
+  }, [debouncedQ, fmts, themes, cats])
+
+  const { data, isLoading, isError } = useJokeSearch(params)
+  const matches = data?.results ?? []
+  const totalCount = data?.count ?? 0
 
   const fmtLabel =
     fmts.size === 0
@@ -254,18 +274,50 @@ export function SearchPage() {
           {/* Results header */}
           <div style={{ marginTop: 36, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span className="eyebrow-mono">
-              {matches.length} match{matches.length === 1 ? '' : 'es'}
+              {totalCount} match{totalCount === 1 ? '' : 'es'}
             </span>
-            <span className="eyebrow-mono">Sort: relevance ↓</span>
+            <span className="eyebrow-mono">Sort: {debouncedQ ? 'relevance' : 'newest'} ↓</span>
           </div>
 
-          {matches.length > 0 ? (
+          {isLoading ? (
+            <div style={{ marginTop: 14, columnCount: 3, columnGap: 18 }} aria-busy="true">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    breakInside: 'avoid',
+                    marginBottom: 18,
+                    height: 160 + (i % 3) * 40,
+                    background: '#F2F0F0',
+                    borderRadius: 18,
+                  }}
+                />
+              ))}
+            </div>
+          ) : isError ? (
+            <div
+              style={{
+                marginTop: 14,
+                padding: '48px 32px',
+                border: '1px dashed #E9E8E7',
+                borderRadius: 18,
+                textAlign: 'center',
+                background: '#fff',
+              }}
+            >
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 28, color: '#1A1A1A', letterSpacing: '-0.02em' }}>
+                Couldn't run that search.
+              </div>
+              <p style={{ marginTop: 8, fontSize: 16, color: '#52525B' }}>Try again in a moment.</p>
+            </div>
+          ) : matches.length > 0 ? (
             <div style={{ marginTop: 14, columnCount: 3, columnGap: 18 }}>
-              {matches.map((j) => (
-                <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                  {/* Link to detail so a click logs a real view (?source=search). */}
-                  <Link to={`/jokes/${j.id}?source=search`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <FlowJokeCard joke={j} source="search" />
+              {matches.map((joke) => (
+                <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                  {/* Link to the real detail so a click opens the correct joke and
+                      logs a real view (?source=search). */}
+                  <Link to={`/jokes/${joke.id}?source=search`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <FlowJokeCard joke={jokeToFlowData(joke)} source="search" />
                   </Link>
                 </div>
               ))}
@@ -515,27 +567,4 @@ const QUICK_PROMPTS: { label: string; fmts: string[]; themes: string[]; cats: st
   { label: 'Dad-joke ammo', fmts: ['oneliner'], themes: ['family'], cats: ['dad'] },
   { label: 'Group-chat unhinged', fmts: [], themes: [], cats: ['edgy'] },
   { label: 'Office Slack-safe', fmts: ['oneliner', 'observ'], themes: ['work'], cats: ['office'] },
-]
-
-interface SearchJoke extends FlowJokeData {
-  theme: string
-  cat: string
-}
-
-const MOCK_JOKES: SearchJoke[] = [
-  { id: 1, fmt: 'setup', setup: "Why don't scientists trust atoms anymore?", punch: 'Because they make up everything.', theme: 'science', themeLabel: 'Science', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 2, fmt: 'oneliner', text: 'I told my wife she was drawing her eyebrows too high. She seemed surprised.', theme: 'family', themeLabel: 'Family', cat: 'dad', catLabel: 'Dad' },
-  { id: 3, fmt: 'observ', text: "Adulthood is just emailing 'Sounds good!' back and forth until one of you dies.", theme: 'work', themeLabel: 'Work', cat: 'office', catLabel: 'Office-proper' },
-  { id: 4, fmt: 'setup', setup: "What's the difference between a hippo and a Zippo?", punch: 'One is really heavy and the other is a little lighter.', theme: 'animals', themeLabel: 'Animals', cat: 'dad', catLabel: 'Dad' },
-  { id: 5, fmt: 'oneliner', text: 'I used to hate facial hair. But then it grew on me.', theme: 'family', themeLabel: 'Family', cat: 'wholesome', catLabel: 'Wholesome' },
-  { id: 6, fmt: 'setup', setup: 'Why did the scarecrow win an award?', punch: 'He was outstanding in his field.', theme: 'animals', themeLabel: 'Animals', cat: 'dad', catLabel: 'Dad' },
-  { id: 7, fmt: 'anti', setup: 'Why did the chicken cross the road?', punch: 'To get to the other side.', theme: 'animals', themeLabel: 'Animals', cat: 'surreal', catLabel: 'Surreal' },
-  { id: 8, fmt: 'observ', text: 'My therapist said growth is uncomfortable. So is this email.', theme: 'work', themeLabel: 'Work', cat: 'office', catLabel: 'Office-proper' },
-  { id: 9, fmt: 'oneliner', text: "I'm reading a book about anti-gravity. It's impossible to put down.", theme: 'science', themeLabel: 'Science', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 10, fmt: 'knock', lines: ['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing out here."], theme: 'weather', themeLabel: 'Weather', cat: 'kid', catLabel: 'Kid-safe' },
-  { id: 11, fmt: 'story', text: "A man walks into a library and asks the librarian for a book on paranoia. She whispers, 'They're right behind you.'", theme: 'work', themeLabel: 'Work', cat: 'surreal', catLabel: 'Surreal', read: '30 sec' },
-  { id: 12, fmt: 'observ', text: "Coffee doesn't ask silly questions. Coffee understands.", theme: 'food', themeLabel: 'Coffee', cat: 'wholesome', catLabel: 'Wholesome' },
-  { id: 13, fmt: 'oneliner', text: 'My password is the last 8 digits of pi.', theme: 'tech', themeLabel: 'Tech', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 14, fmt: 'setup', setup: 'How many programmers does it take to change a lightbulb?', punch: "None. That's a hardware problem.", theme: 'tech', themeLabel: 'Tech', cat: 'nerd', catLabel: 'Nerd' },
-  { id: 15, fmt: 'anti', setup: "What's red and bad for your teeth?", punch: 'A brick.', theme: 'food', themeLabel: 'Food', cat: 'surreal', catLabel: 'Surreal' },
 ]
