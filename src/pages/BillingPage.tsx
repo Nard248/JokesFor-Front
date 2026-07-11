@@ -9,6 +9,8 @@ import {
   useCreateCheckoutSession,
   useCreatePortalSession,
   isBillingUnavailable,
+  isActiveSubscriptionConflict,
+  getConflictPortalUrl,
 } from '@/features/billing'
 import type { BillingPlan, BillingEntitlements } from '@/features/billing'
 
@@ -53,10 +55,18 @@ export function BillingPage() {
   const [demoMessage, setDemoMessage] = useState<string | null>(null)
   // Dormant: Stripe not configured on backend
   const [dormant, setDormant] = useState(false)
+  // Shown when checkout is rejected with 409 active_subscription and we have no
+  // portal_url to redirect to — offers a Manage button instead of a raw error.
+  const [activeSubNotice, setActiveSubNotice] = useState(false)
 
   const sub = subscriptionQuery.data
   const currentPlanSlug = sub?.plan_slug ?? 'free'
-  const isSubscribed = sub?.status === 'active' || sub?.status === 'trialing'
+  // Live paid states mirror the backend Subscription.LIVE_PAID_STATUSES guard:
+  // while any of these is active, a second checkout would double-bill, so plan
+  // changes must route through the Customer Portal instead of a new Subscribe.
+  const LIVE_PAID_STATUSES = ['active', 'trialing', 'past_due']
+  const hasLiveSubscription = sub ? LIVE_PAID_STATUSES.includes(sub.status) : false
+  const isSubscribed = hasLiveSubscription
 
   // Human-friendly line describing the subscription's renewal / cancellation state.
   const subscriptionStatusLine = (() => {
@@ -89,12 +99,29 @@ export function BillingPage() {
       onError: (err) => {
         if (isBillingUnavailable(err)) {
           setDormant(true)
+          return
+        }
+        // Backend blocked a second checkout because a live subscription exists.
+        // Route to the portal (redirect if a portal_url came back) instead of
+        // surfacing a raw error or opening a duplicate subscription.
+        if (isActiveSubscriptionConflict(err)) {
+          const portalUrl = getConflictPortalUrl(err)
+          if (portalUrl) {
+            if (USE_MOCKS) {
+              setDemoMessage(`(demo) Would redirect to Stripe Portal — URL: ${portalUrl}`)
+            } else {
+              window.location.href = portalUrl
+            }
+            return
+          }
+          setActiveSubNotice(true)
         }
       },
     })
   }
 
   function handleManageBilling() {
+    setActiveSubNotice(false)
     portalMutation.mutate(undefined, {
       onSuccess: (data) => {
         if (USE_MOCKS) {
@@ -175,6 +202,53 @@ export function BillingPage() {
             </div>
           )}
 
+          {/* Active-subscription notice — shown when checkout was blocked (409)
+              and no portal_url was available to redirect to. */}
+          {activeSubNotice && (
+            <div
+              role="alert"
+              data-testid="active-sub-notice"
+              style={{
+                marginTop: 24,
+                padding: 20,
+                background: '#F5F0FF',
+                border: '1px solid #C4B5FD',
+                borderRadius: 16,
+                display: 'flex',
+                gap: 14,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <CreditCard size={20} color="#6A1CF6" style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 15,
+                    color: '#1A1A1A',
+                  }}
+                >
+                  You already have an active subscription
+                </div>
+                <p style={{ marginTop: 4, fontSize: 13, color: '#52525B' }}>
+                  To switch plans or cancel, manage your subscription from the billing portal.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleManageBilling}
+                disabled={portalMutation.isPending}
+                className="btn-flow-primary"
+                style={{ height: 40, fontSize: 13 }}
+                data-testid="active-sub-manage-btn"
+              >
+                {portalMutation.isPending ? 'Opening…' : 'Manage subscription'}
+              </button>
+            </div>
+          )}
+
           {/* Demo redirect notice */}
           {demoMessage && (
             <div
@@ -230,7 +304,10 @@ export function BillingPage() {
                       plan={plan}
                       isCurrent={plan.slug === currentPlanSlug}
                       isPending={checkoutMutation.isPending && checkoutMutation.variables === plan.slug}
+                      hasLiveSubscription={hasLiveSubscription}
+                      isManaging={portalMutation.isPending}
                       onSubscribe={() => handleSubscribe(plan)}
+                      onManage={handleManageBilling}
                     />
                   ))}
               </div>
@@ -292,12 +369,18 @@ function PlanCard({
   plan,
   isCurrent,
   isPending,
+  hasLiveSubscription,
+  isManaging,
   onSubscribe,
+  onManage,
 }: {
   plan: BillingPlan
   isCurrent: boolean
   isPending: boolean
+  hasLiveSubscription: boolean
+  isManaging: boolean
   onSubscribe: () => void
+  onManage: () => void
 }) {
   const isFree = plan.slug === 'free'
   const priceLabel = plan.amount_display?.trim() || (isFree ? 'Free' : '—')
@@ -406,6 +489,19 @@ function PlanCard({
         >
           You're on this plan
         </div>
+      ) : hasLiveSubscription ? (
+        // A live paid subscription already exists — never open a second checkout.
+        // Route plan changes (and downgrades) through the Customer Portal.
+        <button
+          type="button"
+          onClick={onManage}
+          disabled={isManaging}
+          className="btn-flow-primary"
+          style={{ width: '100%', height: 42, fontSize: 14, marginTop: 4 }}
+          data-testid={`manage-plan-btn-${plan.slug}`}
+        >
+          {isManaging ? 'Opening…' : 'Manage subscription'}
+        </button>
       ) : (
         <button
           type="button"
