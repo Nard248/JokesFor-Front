@@ -1,6 +1,8 @@
 export {
   billingKeys,
   isBillingUnavailable,
+  isActiveSubscriptionConflict,
+  getConflictPortalUrl,
   useBillingPlans,
   useMySubscription,
   useEntitlements,

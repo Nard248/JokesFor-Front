@@ -173,6 +173,26 @@ describe('BillingPage', () => {
       expect(screen.queryByTestId('subscribe-btn-free')).toBeNull()
     })
 
+    it('shows "Manage subscription" (not Subscribe) on other plans when subscribed', () => {
+      // supporter is the active/current plan; free + creator_pro are other paid/free plans
+      mockUseMySubscription.mockReturnValue({ data: MOCK_SUBSCRIPTION_ACTIVE, isLoading: false })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      expect(screen.getByTestId('manage-plan-btn-creator_pro')).toBeDefined()
+      expect(screen.getByTestId('manage-plan-btn-free')).toBeDefined()
+      // No second-checkout Subscribe buttons while a live subscription exists.
+      expect(screen.queryByTestId('subscribe-btn-creator_pro')).toBeNull()
+      expect(screen.queryByTestId('subscribe-btn-free')).toBeNull()
+    })
+
+    it('routes a plan-card "Manage subscription" click to the portal', () => {
+      const portalSpy = vi.fn()
+      mockUseCreatePortalSession.mockReturnValue({ mutate: portalSpy, isPending: false })
+      mockUseMySubscription.mockReturnValue({ data: MOCK_SUBSCRIPTION_ACTIVE, isLoading: false })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      fireEvent.click(screen.getByTestId('manage-plan-btn-creator_pro'))
+      expect(portalSpy).toHaveBeenCalled()
+    })
+
     it('renders plans grid', () => {
       render(<BillingPage />, { wrapper: makeWrapper() })
       expect(screen.getByTestId('plans-grid')).toBeDefined()
@@ -214,6 +234,52 @@ describe('BillingPage', () => {
         expect(screen.getByTestId('demo-message')).toBeDefined()
         expect(screen.getByTestId('demo-message').textContent).toContain('(demo)')
       })
+    })
+  })
+
+  describe('active subscription conflict (409) on checkout', () => {
+    it('redirects to the portal (demo) when the 409 returns a portal_url', async () => {
+      const mutateSpy = vi.fn().mockImplementation((_slug, { onError }) => {
+        onError({
+          response: {
+            status: 409,
+            data: { code: 'active_subscription', portal_url: 'https://billing.stripe.com/p/guard' },
+          },
+        })
+      })
+      mockUseCreateCheckoutSession.mockReturnValue({ mutate: mutateSpy, isPending: false, variables: undefined })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      fireEvent.click(screen.getByTestId('subscribe-btn-supporter'))
+      await waitFor(() => {
+        expect(screen.getByTestId('demo-message').textContent).toContain('Portal')
+        expect(screen.getByTestId('demo-message').textContent).toContain('billing.stripe.com')
+      })
+    })
+
+    it('shows a Manage notice when the 409 has no portal_url', async () => {
+      const mutateSpy = vi.fn().mockImplementation((_slug, { onError }) => {
+        onError({ response: { status: 409, data: { code: 'active_subscription' } } })
+      })
+      mockUseCreateCheckoutSession.mockReturnValue({ mutate: mutateSpy, isPending: false, variables: undefined })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      fireEvent.click(screen.getByTestId('subscribe-btn-supporter'))
+      await waitFor(() => {
+        expect(screen.getByTestId('active-sub-notice')).toBeDefined()
+      })
+    })
+
+    it('the 409 notice Manage button opens the portal', async () => {
+      const portalSpy = vi.fn()
+      mockUseCreatePortalSession.mockReturnValue({ mutate: portalSpy, isPending: false })
+      const mutateSpy = vi.fn().mockImplementation((_slug, { onError }) => {
+        onError({ response: { status: 409, data: { code: 'active_subscription' } } })
+      })
+      mockUseCreateCheckoutSession.mockReturnValue({ mutate: mutateSpy, isPending: false, variables: undefined })
+      render(<BillingPage />, { wrapper: makeWrapper() })
+      fireEvent.click(screen.getByTestId('subscribe-btn-supporter'))
+      await waitFor(() => screen.getByTestId('active-sub-notice'))
+      fireEvent.click(screen.getByTestId('active-sub-manage-btn'))
+      expect(portalSpy).toHaveBeenCalled()
     })
   })
 

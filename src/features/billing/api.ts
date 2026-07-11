@@ -17,6 +17,23 @@ export function isBillingUnavailable(error: unknown): boolean {
   return status === 503
 }
 
+/**
+ * Returns true if checkout was rejected because the user already has a live
+ * paid subscription (backend 409 with code `active_subscription`). Callers must
+ * route the user to the Customer Portal instead of opening a second checkout.
+ */
+export function isActiveSubscriptionConflict(error: unknown): boolean {
+  const res = (error as { response?: { status?: number; data?: { code?: string } } })?.response
+  return res?.status === 409 && res?.data?.code === 'active_subscription'
+}
+
+/** Extracts a portal_url from a 409 active_subscription response, if present. */
+export function getConflictPortalUrl(error: unknown): string | null {
+  return (
+    (error as { response?: { data?: { portal_url?: string } } })?.response?.data?.portal_url ?? null
+  )
+}
+
 export function useBillingPlans() {
   return useQuery({
     queryKey: billingKeys.plans(),
