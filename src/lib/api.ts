@@ -50,6 +50,10 @@ export interface GoogleAuthRequest {
    * SocialLoginSerializer accepts it). Send it from the frontend so origin-aware
    * OAuth works on localhost without backend changes. */
   redirect_uri?: string
+  /** ISO 'YYYY-MM-DD'. Required for NEW Google users (COPPA age gate). Omitted
+   * on the first exchange; sent when resubmitting after a `dob_required` 400.
+   * Returning/linked users never need it. */
+  date_of_birth?: string
 }
 
 export interface PasswordResetRequest {
