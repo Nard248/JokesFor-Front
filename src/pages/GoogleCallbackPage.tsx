@@ -3,25 +3,45 @@ import { useNavigate, useSearchParams, Link } from 'react-router'
 import { Loader2, AlertCircle } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import { useGoogleAuth } from '@/features/auth'
-import { consumeReturnTo, getOAuthRedirectUri } from '@/features/auth/google-oauth'
+import {
+  consumeReturnTo,
+  consumeSignupDob,
+  getOAuthRedirectUri,
+} from '@/features/auth/google-oauth'
 import { Button } from '@/components/ui/button'
 
 interface ApiError {
   detail?: string
   non_field_errors?: string[]
-  code?: string[]
+  /** COPPA gate: a NEW Google user with no DOB on file → `{"code":"dob_required"}`. */
+  code?: string
+  /** Under-13 rejection mirrors the email path: `{"date_of_birth": ["…"]}`. */
+  date_of_birth?: string[]
 }
+
+// Shown to a new user who came via the LOGIN button (no DOB stashed). We can't
+// reuse the now-spent code, so send them to /register to sign up DOB-first.
+const NEW_USER_NOTICE =
+  "Looks like you're new — add your date of birth to sign up."
 
 /**
  * OAuth callback landing.
  * URL pattern: /auth/google/callback?code=AUTH_CODE
  * On error from Google: /auth/google/callback?error=access_denied&...
  *
+ * Google auth codes are SINGLE-USE, so we never do a dob_required round-trip
+ * and re-POST a spent code. Instead the signup path validates DOB (>=13) up
+ * front and stashes it in sessionStorage; here we read it and send it on the
+ * ONE code-exchange POST.
+ *
  * Flow:
- *   1. Read `code` (or `error`) from URL.
- *   2. POST `code` to backend `/auth/google/`.
- *   3. On success: navigate to stashed returnTo (or `/`).
- *   4. On failure: show error + link back to /login.
+ *   1. Read `code` (or `error`) from URL and the stashed signup DOB.
+ *   2. POST { code, redirect_uri, date_of_birth? } to `/auth/google/` ONCE.
+ *   3. Success: navigate to stashed returnTo (or `/`).
+ *   4. dob_required (new user via the login button, no DOB): route to /register
+ *      with a notice. The spent code is discarded, never reused.
+ *   5. Under-13: show the same message the email path shows.
+ *   6. Other failure: show error + link back to /login.
  */
 export function GoogleCallbackPage() {
   const [searchParams] = useSearchParams()
@@ -55,6 +75,12 @@ export function GoogleCallbackPage() {
     }
 
     exchanged.current = true
+
+    // Read + clear the stashed DOB exactly once. Present ⇒ signup (send it);
+    // absent ⇒ login (send nothing). Consuming here also satisfies "clear the
+    // stored DOB after success and on error" — either way it's gone now.
+    const signupDob = consumeSignupDob()
+
     // Use mutateAsync, NOT mutate's call-level callbacks. Under React 18
     // StrictMode the effect mounts → unmounts → remounts in dev; TanStack
     // Query drops the onSuccess/onError passed to mutate() when the issuing
@@ -67,17 +93,31 @@ export function GoogleCallbackPage() {
     // Send redirect_uri too — it MUST match what we sent to Google in step 1,
     // or Google rejects the code exchange.
     googleAuth
-      .mutateAsync({ code, redirect_uri: getOAuthRedirectUri() })
+      .mutateAsync({
+        code,
+        redirect_uri: getOAuthRedirectUri(),
+        ...(signupDob ? { date_of_birth: signupDob } : {}),
+      })
       .then(() => {
         navigate(consumeReturnTo(), { replace: true })
       })
       .catch((err) => {
         const axiosError = err as AxiosError<ApiError>
         const data = axiosError.response?.data
+        // New user came via the login button (no DOB). The code is now spent —
+        // do NOT reuse it. Send them to sign up DOB-first.
+        if (data?.code === 'dob_required') {
+          navigate('/register', { replace: true, state: { notice: NEW_USER_NOTICE } })
+          return
+        }
+        // Under-13 — same message/contract as the email signup path.
+        if (data?.date_of_birth?.[0]) {
+          setErrorMessage(data.date_of_birth[0])
+          return
+        }
         setErrorMessage(
           data?.detail ||
             data?.non_field_errors?.[0] ||
-            data?.code?.[0] ||
             'Sign-in failed. Please try again.',
         )
       })
