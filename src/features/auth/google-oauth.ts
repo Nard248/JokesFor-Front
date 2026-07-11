@@ -16,6 +16,7 @@
 const GOOGLE_OAUTH_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = ['openid', 'email', 'profile']
 const RETURN_TO_KEY = 'auth.returnTo'
+const SIGNUP_DOB_KEY = 'auth.signupDob'
 
 /**
  * Compute the canonical redirect URI for OAuth.
@@ -69,4 +70,28 @@ export function consumeReturnTo(): string {
   const value = sessionStorage.getItem(RETURN_TO_KEY)
   sessionStorage.removeItem(RETURN_TO_KEY)
   return value || '/'
+}
+
+// ── Signup DOB stash (COPPA age gate) ───────────────────────────────────────
+// Google authorization codes are single-use, so we CANNOT do a dob_required
+// round-trip and reuse the code. Instead the signup path validates DOB (>=13)
+// up front, stashes it here, and the callback reads it to send date_of_birth on
+// the single code-exchange POST. sessionStorage survives the Google redirect
+// (same origin, same tab), just like returnTo above.
+
+/** Stash the signup DOB (ISO YYYY-MM-DD) before redirecting to Google. */
+export function stashSignupDob(dob: string): void {
+  sessionStorage.setItem(SIGNUP_DOB_KEY, dob)
+}
+
+/** Read and clear the stashed signup DOB. Returns null if none (login path). */
+export function consumeSignupDob(): string | null {
+  const value = sessionStorage.getItem(SIGNUP_DOB_KEY)
+  sessionStorage.removeItem(SIGNUP_DOB_KEY)
+  return value || null
+}
+
+/** Clear any stashed signup DOB (e.g. on the login path or after an error). */
+export function clearSignupDob(): void {
+  sessionStorage.removeItem(SIGNUP_DOB_KEY)
 }

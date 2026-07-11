@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router'
 import { ArrowRight, Loader2, Flame } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import { useLogin } from '@/features/auth'
-import { getGoogleAuthUrl } from '@/features/auth/google-oauth'
+import { getGoogleAuthUrl, clearSignupDob } from '@/features/auth/google-oauth'
 
 /**
  * LoginPage — split-canvas redesign per
@@ -36,6 +36,9 @@ export function LoginPage() {
 
   const handleGoogleSignIn = () => {
     setError(null)
+    // Login path sends NO date_of_birth. Clear any DOB a prior signup attempt
+    // may have stashed so it can't leak onto this sign-in.
+    clearSignupDob()
     try {
       window.location.href = getGoogleAuthUrl(returnTo)
     } catch (err) {

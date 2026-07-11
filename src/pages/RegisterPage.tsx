@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate, useLocation, Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import { useRegister, useUpdateUser } from '@/features/auth'
-import { getGoogleAuthUrl } from '@/features/auth/google-oauth'
+import { getGoogleAuthUrl, stashSignupDob } from '@/features/auth/google-oauth'
+import { isAtLeast13 } from '@/features/consent/age'
 
 /**
  * RegisterPage — 2-step create-account, redesigned per
@@ -50,10 +51,19 @@ type VenueId = typeof VENUE_OPTIONS[number]['id']
 // Today (ISO 'YYYY-MM-DD') — caps the DOB picker to discourage future dates.
 const TODAY_ISO = new Date().toISOString().slice(0, 10)
 
+// Same COPPA copy the backend/email path returns for an under-13 rejection.
+const UNDER_13_MSG = 'You must be at least 13 years old to use Jokes For.'
+
 export function RegisterPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const registerMutation = useRegister()
   const updateUser = useUpdateUser()
+
+  // A new user routed here from the login page's Google button lands with a
+  // notice (they must sign up DOB-first — the spent code can't be reused).
+  const routedNotice =
+    (location.state as { notice?: string } | null)?.notice ?? null
 
   // Step 1 fields
   const [firstName, setFirstName] = useState('')
@@ -94,7 +104,20 @@ export function RegisterPage() {
 
   const handleGoogleSignUp = () => {
     setError(null)
+    setDobError(null)
+    // Google auth codes are single-use, so we must collect + validate DOB
+    // BEFORE the OAuth redirect (same >=13 rule as the email path) and carry it
+    // through sessionStorage — never a dob_required round-trip on a spent code.
+    if (!dob) {
+      setDobError('Enter your date of birth first to continue with Google.')
+      return
+    }
+    if (!isAtLeast13(dob)) {
+      setDobError(UNDER_13_MSG)
+      return
+    }
     try {
+      stashSignupDob(dob)
       window.location.href = getGoogleAuthUrl('/flow')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in unavailable.')
@@ -209,6 +232,23 @@ export function RegisterPage() {
           <div style={{ height: 4, borderRadius: 2, background: step >= 1 ? '#6A1CF6' : '#E9E8E7' }} />
           <div style={{ height: 4, borderRadius: 2, background: step >= 2 ? '#6A1CF6' : '#E9E8E7' }} />
         </div>
+
+        {routedNotice && !error && (
+          <div
+            role="status"
+            style={{
+              marginTop: 24,
+              padding: 14,
+              borderRadius: 12,
+              background: '#F2E9FF',
+              border: '1px solid rgba(106, 28, 246, 0.25)',
+              color: '#5D00E4',
+              fontSize: 14,
+            }}
+          >
+            {routedNotice}
+          </div>
+        )}
 
         {error && (
           <div
