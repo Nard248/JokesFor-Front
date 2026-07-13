@@ -15,6 +15,8 @@ export {
   usePasswordResetConfirm,
   useResendVerification,
   useVerifyEmail,
+  useDeleteAccount,
+  useDataExport,
 } from './api'
 
 // Convenience hooks

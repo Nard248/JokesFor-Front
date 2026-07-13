@@ -73,6 +73,21 @@ export interface PasswordChangeRequest {
   new_password2: string
 }
 
+/**
+ * Body for DELETE /users/me/ (UserAccountDeleteView).
+ *
+ * The backend re-auth gate is branch-dependent:
+ *   - Accounts WITH a usable password → `password` is required and verified.
+ *   - OAuth / unusable-password accounts → must send `confirm: "DELETE"`.
+ * The SPA can't tell which branch applies (the User payload carries no
+ * has_usable_password flag), so we send BOTH: the backend uses whichever its
+ * branch needs and ignores the other.
+ */
+export interface AccountDeleteRequest {
+  password?: string
+  confirm?: string
+}
+
 export interface UpdateUserRequest {
   username?: string
   first_name?: string
@@ -119,6 +134,17 @@ export const authApi = {
 
   resendVerification: (email: string) =>
     api.post<{ detail: string }>('/auth/resend-verification/', { email }),
+
+  // ── Account (GDPR) ──
+  // DELETE /users/me/ — irreversible hard delete (UserAccountDeleteView).
+  // Returns 204 No Content on success.
+  deleteAccount: (payload: AccountDeleteRequest) =>
+    api.delete<void>('/users/me/', { data: payload }),
+
+  // GET /users/me/data-export/ — synchronous GDPR export (DataExportView).
+  // Responds with a zipped JSON file (application/zip attachment) — read as a blob.
+  dataExport: () =>
+    api.get<Blob>('/users/me/data-export/', { responseType: 'blob' }),
 }
 
 // Joke types (from backend models)

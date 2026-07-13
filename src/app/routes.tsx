@@ -17,6 +17,8 @@ import {
   RegisterPage,
   GoogleCallbackPage,
   LibraryPage,
+  CollectionsPage,
+  CollectionDetailPage,
   TrendingPage,
   FavoritesPage,
   ProfilePage,
@@ -75,6 +77,10 @@ export const routes: RouteObject[] = [
   { path: '/settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
   { path: '/settings/billing', element: <ProtectedRoute><BillingPage /></ProtectedRoute> },
 
+  // Collections — hub + per-collection detail (lists that collection's saves)
+  { path: '/collections', element: <ProtectedRoute><CollectionsPage /></ProtectedRoute> },
+  { path: '/collections/:id', element: <ProtectedRoute><CollectionDetailPage /></ProtectedRoute> },
+
   // Content creation — /create/* (specific paths before :draftId wildcard)
   { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
   { path: '/create/insights', element: <ProtectedRoute><CreatorInsightsPage /></ProtectedRoute> },
@@ -111,7 +117,6 @@ export const routes: RouteObject[] = [
   { path: '/packs/:slug', element: <PackDetailPage /> },
 
   // Backward compat aliases
-  { path: '/collections', element: <Navigate to="/library" replace /> },
   { path: '/onboarding', element: <Navigate to="/flow" replace /> },
 
   // ─────────────────────────────────────────────────────────────────────

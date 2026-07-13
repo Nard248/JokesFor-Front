@@ -1,11 +1,28 @@
 import { useState } from 'react'
+import type { AxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router'
-import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard, UserX } from 'lucide-react'
+import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard, UserX, Download, KeyRound } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { PublicIdentityEditor } from '@/components/PublicIdentityEditor'
 import { BlockedUsersList } from '@/components/BlockedUsersList'
-import { useAuth, useLogout } from '@/features/auth'
+import { Modal } from '@/components/ui/modal'
+import { useToast } from '@/components/ui/toast'
+import { useAuth, useLogout, usePasswordChange, useDeleteAccount, useDataExport } from '@/features/auth'
 import { usePreferences, useUpdatePreferences } from '@/features/preferences'
+
+/** Flatten a DRF field-error body ({ field: ["msg"] } or { detail: "msg" }) to one message. */
+function firstApiError(err: unknown, fallback: string): string {
+  const data = (err as AxiosError)?.response?.data as Record<string, unknown> | string | undefined
+  if (typeof data === 'string') return data || fallback
+  if (data && typeof data === 'object') {
+    if (typeof data.detail === 'string') return data.detail
+    for (const value of Object.values(data)) {
+      if (Array.isArray(value) && typeof value[0] === 'string') return value[0]
+      if (typeof value === 'string') return value
+    }
+  }
+  return fallback
+}
 
 /**
  * SettingsPage — redesigned for iteration 4.
@@ -19,12 +36,88 @@ import { usePreferences, useUpdatePreferences } from '@/features/preferences'
  */
 export function SettingsPage() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const { user } = useAuth()
   const { data: prefs } = usePreferences()
   const updatePrefs = useUpdatePreferences()
   const logout = useLogout()
+  const passwordChange = usePasswordChange()
+  const deleteAccount = useDeleteAccount()
+  const dataExport = useDataExport()
 
   const [theme, setTheme] = useState(prefs?.theme ?? 'light')
+
+  // Change-password modal
+  const [pwOpen, setPwOpen] = useState(false)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword1, setNewPassword1] = useState('')
+  const [newPassword2, setNewPassword2] = useState('')
+  const [pwError, setPwError] = useState<string | null>(null)
+
+  // Delete-account modal
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const resetPwForm = () => {
+    setOldPassword('')
+    setNewPassword1('')
+    setNewPassword2('')
+    setPwError(null)
+  }
+
+  const submitPasswordChange = (e: React.FormEvent) => {
+    e.preventDefault()
+    setPwError(null)
+    if (!oldPassword || !newPassword1 || !newPassword2) {
+      setPwError('All fields are required.')
+      return
+    }
+    if (newPassword1 !== newPassword2) {
+      setPwError('New passwords do not match.')
+      return
+    }
+    if (newPassword1.length < 8) {
+      setPwError('New password must be at least 8 characters.')
+      return
+    }
+    passwordChange.mutate(
+      { old_password: oldPassword, new_password1: newPassword1, new_password2: newPassword2 },
+      {
+        onSuccess: () => {
+          toast({ message: 'Password changed.', variant: 'success' })
+          setPwOpen(false)
+          resetPwForm()
+        },
+        onError: (err) => setPwError(firstApiError(err, 'Could not change password.')),
+      },
+    )
+  }
+
+  const submitDeleteAccount = () => {
+    if (confirmText !== 'DELETE') return
+    setDeleteError(null)
+    // Send both re-auth signals — the backend uses whichever its branch needs
+    // (password for usable-password accounts, confirm=DELETE for OAuth ones).
+    const payload: { confirm: string; password?: string } = { confirm: 'DELETE' }
+    if (deletePassword) payload.password = deletePassword
+    deleteAccount.mutate(payload, {
+      onSuccess: () => {
+        // Auth state was cleared by the hook; drop to a logged-out page.
+        setDeleteOpen(false)
+        navigate('/login', { replace: true })
+      },
+      onError: (err) => setDeleteError(firstApiError(err, 'Could not delete account.')),
+    })
+  }
+
+  const handleExport = () => {
+    dataExport.mutate(undefined, {
+      onSuccess: () => toast({ message: 'Your data export is downloading.', variant: 'success' }),
+      onError: () => toast({ message: 'Could not export your data. Please try again.', variant: 'error' }),
+    })
+  }
 
   const updateNotifications = (key: 'dailyJoke' | 'trendingAlerts' | 'collectionUpdates' | 'emailDigest', value: boolean) => {
     if (!prefs) return
@@ -86,7 +179,15 @@ export function SettingsPage() {
               <Link to="/profile" className="btn-flow-primary" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
                 Edit profile
               </Link>
-              <button type="button" className="btn-flow-ghost" style={{ height: 40, fontSize: 13 }}>
+              <button
+                type="button"
+                className="btn-flow-ghost"
+                style={{ height: 40, fontSize: 13 }}
+                onClick={() => {
+                  resetPwForm()
+                  setPwOpen(true)
+                }}
+              >
                 Change password
               </button>
             </div>
@@ -164,6 +265,38 @@ export function SettingsPage() {
               checked={prefs?.privacy?.shareAnalytics ?? false}
               onChange={(v) => updatePrivacy('shareAnalytics', v)}
             />
+          </SettingsSection>
+
+          {/* Your data (GDPR) */}
+          <SettingsSection icon={<Download size={18} />} title="Your data" subtitle="Download everything we hold about you.">
+            <div
+              style={{
+                padding: 18,
+                background: '#FBFAF7',
+                border: '1px solid #E9E8E7',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>Export my data</div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                  A ZIP of your account, saves, collections, and activity as JSON.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={dataExport.isPending}
+                className="btn-flow-ghost"
+                style={{ height: 40, fontSize: 13 }}
+              >
+                <Download size={14} /> {dataExport.isPending ? 'Preparing…' : 'Export my data'}
+              </button>
+            </div>
           </SettingsSection>
 
           {/* Blocked users */}
@@ -250,6 +383,12 @@ export function SettingsPage() {
               </div>
               <button
                 type="button"
+                onClick={() => {
+                  setConfirmText('')
+                  setDeletePassword('')
+                  setDeleteError(null)
+                  setDeleteOpen(true)
+                }}
                 style={{
                   height: 40,
                   padding: '0 16px',
@@ -269,7 +408,184 @@ export function SettingsPage() {
           </SettingsSection>
         </div>
       </FlowAppShell>
+
+      {/* Change-password modal */}
+      <Modal
+        open={pwOpen}
+        onClose={() => {
+          setPwOpen(false)
+          resetPwForm()
+        }}
+        title="Change password"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-flow-ghost"
+              style={{ height: 40, fontSize: 13 }}
+              onClick={() => {
+                setPwOpen(false)
+                resetPwForm()
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="change-password-form"
+              className="btn-flow-primary"
+              style={{ height: 40, fontSize: 13 }}
+              disabled={passwordChange.isPending}
+            >
+              <KeyRound size={14} /> {passwordChange.isPending ? 'Saving…' : 'Save password'}
+            </button>
+          </>
+        }
+      >
+        <form id="change-password-form" onSubmit={submitPasswordChange} style={{ display: 'grid', gap: 12 }}>
+          <ModalField label="Current password">
+            <input
+              type="password"
+              autoComplete="current-password"
+              aria-label="Current password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              style={modalInputStyle}
+            />
+          </ModalField>
+          <ModalField label="New password">
+            <input
+              type="password"
+              autoComplete="new-password"
+              aria-label="New password"
+              value={newPassword1}
+              onChange={(e) => setNewPassword1(e.target.value)}
+              style={modalInputStyle}
+            />
+          </ModalField>
+          <ModalField label="Confirm new password">
+            <input
+              type="password"
+              autoComplete="new-password"
+              aria-label="Confirm new password"
+              value={newPassword2}
+              onChange={(e) => setNewPassword2(e.target.value)}
+              style={modalInputStyle}
+            />
+          </ModalField>
+          {pwError && (
+            <div role="alert" style={{ fontSize: 13, color: '#A02B16' }}>
+              {pwError}
+            </div>
+          )}
+        </form>
+      </Modal>
+
+      {/* Delete-account modal */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete account"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-flow-ghost"
+              style={{ height: 40, fontSize: 13 }}
+              onClick={() => setDeleteOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitDeleteAccount}
+              disabled={confirmText !== 'DELETE' || deleteAccount.isPending}
+              style={{
+                height: 40,
+                padding: '0 16px',
+                background: confirmText === 'DELETE' && !deleteAccount.isPending ? '#A02B16' : '#E5B8AE',
+                color: '#fff',
+                border: 0,
+                borderRadius: 9999,
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: confirmText === 'DELETE' && !deleteAccount.isPending ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {deleteAccount.isPending ? 'Deleting…' : 'Delete forever'}
+            </button>
+          </>
+        }
+      >
+        <p style={{ fontSize: 14, color: '#52525B', marginBottom: 14 }}>
+          This permanently removes your account, saves, drafts, and history. This{' '}
+          <strong style={{ color: '#A02B16' }}>cannot be undone</strong>.
+        </p>
+        <ModalField label={'Type DELETE to confirm'}>
+          <input
+            type="text"
+            aria-label="Type DELETE to confirm"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="DELETE"
+            autoComplete="off"
+            style={modalInputStyle}
+          />
+        </ModalField>
+        <div style={{ marginTop: 12 }}>
+          <ModalField label="Current password (if you sign in with a password)">
+            <input
+              type="password"
+              autoComplete="current-password"
+              aria-label="Current password for account deletion"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              style={modalInputStyle}
+            />
+          </ModalField>
+        </div>
+        {deleteError && (
+          <div role="alert" style={{ marginTop: 12, fontSize: 13, color: '#A02B16' }}>
+            {deleteError}
+          </div>
+        )}
+      </Modal>
     </div>
+  )
+}
+
+const modalInputStyle: React.CSSProperties = {
+  width: '100%',
+  height: 40,
+  padding: '0 14px',
+  borderRadius: 12,
+  border: '1px solid #E9E8E7',
+  background: '#fff',
+  color: '#1A1A1A',
+  fontSize: 14,
+  fontFamily: 'var(--font-sans)',
+  outline: 'none',
+}
+
+function ModalField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'block' }}>
+      <span
+        style={{
+          display: 'block',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: '#52525B',
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
   )
 }
 
