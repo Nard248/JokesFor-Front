@@ -11,7 +11,7 @@ import type {
   VerifyEmailRequest,
 } from '@/lib/api'
 import { useAuthStore } from './store'
-import { setAccessToken } from '@/lib/axios'
+import { setAccessToken, fetchCsrfToken } from '@/lib/axios'
 
 export const authKeys = {
   all: ['auth'] as const,
@@ -41,6 +41,9 @@ export function useLogin() {
       return response.data
     },
     onSuccess: (data) => {
+      // Refresh the CSRF token now that a session (JWT cookie) exists, so any
+      // cookie-only mutation this session is covered.
+      void fetchCsrfToken()
       if (data.user) {
         setAuth(data.user, data.access)
       } else {
@@ -66,6 +69,7 @@ export function useRegister() {
       // Gated mode (EMAIL_VERIFICATION_REQUIRED on): no tokens — do NOT log in.
       // RegisterPage reads `data.email` and routes to /verify-email.
       if ('access' in data) {
+        void fetchCsrfToken() // session established → refresh CSRF token
         setAuth(data.user, data.access)
         queryClient.invalidateQueries({ queryKey: authKeys.user() })
       }
@@ -93,6 +97,7 @@ export function useVerifyEmail() {
       // refresh hiccups, don't strand them in an error state — establish auth
       // from the verified user with an empty in-memory token; the axios 401
       // interceptor will acquire one lazily on the first authenticated request.
+      void fetchCsrfToken() // verified → session (cookies) established, refresh CSRF token
       const user = data.user ?? (await authApi.getUser().then((r) => r.data).catch(() => data.user))
       try {
         const refresh = await authApi.refreshToken()
@@ -116,6 +121,7 @@ export function useGoogleAuth() {
       return response.data
     },
     onSuccess: (data) => {
+      void fetchCsrfToken() // session established → refresh CSRF token
       if (data.user) {
         setAuth(data.user, data.access)
       } else {

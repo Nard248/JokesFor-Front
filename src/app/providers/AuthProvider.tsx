@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/features/auth'
+import { ensureCsrfToken } from '@/lib/axios'
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
@@ -18,6 +19,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Prevent double-check in React StrictMode and on re-renders
     if (hasCheckedAuth.current) return
     hasCheckedAuth.current = true
+
+    // Obtain a CSRF token (+ cookie) up front so it is ready before any
+    // authenticated cookie-only mutation. Fire-and-forget; independent of auth
+    // state and of the refresh below (the refresh endpoint is not CSRF-checked).
+    void ensureCsrfToken()
 
     async function checkAuth() {
       try {
