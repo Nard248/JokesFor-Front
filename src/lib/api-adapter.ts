@@ -6,7 +6,6 @@ import type {
   FavoriteJoke,
   DraftJoke,
   UserProfile,
-  ActivityItem,
   Achievement,
   UserPreferences,
 } from './mock-data'
@@ -231,18 +230,147 @@ export const draftsAdapter = {
 }
 
 // ── Profile Adapter ──
+//
+// Real path hits the same GET /users/me/profile/ the Settings "Public identity"
+// editor uses (via profileApi), plus /users/me/activity/ and
+// /users/me/achievements/. The backend returns richer, snake_case data than the
+// speculative UserProfileDTO in api.ts, so we map from the real runtime shape
+// here into the camelCase types the UI renders.
+
+/** Real GET /users/me/profile/ response (backend truth). */
+interface RealUserProfile {
+  name?: string
+  username?: string
+  display_name?: string
+  handle?: string | null
+  email?: string
+  bio?: string | null
+  avatar_url?: string | null
+  member_since?: string
+  is_premium?: boolean
+  stats?: { jokes_saved?: number; jokes_shared?: number; collections?: number; days_active?: number }
+  humor_dna?: { type: string; percentage: number }[]
+}
+
+/** UserProfile plus the real avatar URL the profile page renders. */
+export interface ProfileView extends UserProfile {
+  avatarUrl: string | null
+}
+
+function mapProfile(d: RealUserProfile): ProfileView {
+  return {
+    name: d.name ?? '',
+    username: d.username ?? '',
+    email: d.email ?? '',
+    bio: d.bio ?? '',
+    memberSince: d.member_since ?? '',
+    isPremium: !!d.is_premium,
+    stats: {
+      jokesSaved: d.stats?.jokes_saved ?? 0,
+      jokesShared: d.stats?.jokes_shared ?? 0,
+      collections: d.stats?.collections ?? 0,
+      daysActive: d.stats?.days_active ?? 0,
+    },
+    humorDNA: d.humor_dna ?? [],
+    avatarUrl: d.avatar_url ?? null,
+  }
+}
+
+/** Real GET /users/me/activity/ row. `id` is a string like "rating_5". */
+interface RealActivityRow {
+  id: string | number
+  type: string
+  description: string
+  created_at: string
+}
+
+/** Activity as the UI renders it (icon + relative time derived client-side). */
+export interface ActivityView {
+  id: string | number
+  type: string
+  description: string
+  timeAgo: string
+  icon: string
+}
+
+function activityIcon(type: string): string {
+  switch (type) {
+    case 'save': return '🔖'
+    case 'like': return '❤️'
+    case 'dislike': return '👎'
+    case 'share': return '📤'
+    case 'achievement': return '🏆'
+    case 'collection': return '📁'
+    case 'draft': return '✏️'
+    default: return '•'
+  }
+}
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const mins = Math.floor((Date.now() - then) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
+  const weeks = Math.floor(days / 7)
+  return `${weeks} week${weeks === 1 ? '' : 's'} ago`
+}
+
+/** Real GET /users/me/achievements/ row. */
+interface RealAchievementRow {
+  id: string
+  title: string
+  description: string
+  icon: string | null
+  unlocked: boolean
+  unlocked_at: string | null
+}
+
+function mapAchievement(a: RealAchievementRow): Achievement {
+  return {
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    icon: a.icon ?? '🏆',
+    unlocked: a.unlocked,
+    unlockedAt: a.unlocked_at ?? undefined,
+  }
+}
+
 export const profileAdapter = {
-  get: (): Promise<UserProfile> =>
-    mockProfileApi.get(),
+  get: (): Promise<ProfileView> =>
+    USE_MOCKS
+      ? mockProfileApi.get().then((p) => ({ ...p, avatarUrl: null }))
+      : profileApi.get().then((r) => mapProfile(r.data as unknown as RealUserProfile)),
 
-  update: (data: Partial<UserProfile>): Promise<UserProfile> =>
-    mockProfileApi.update(data),
+  update: (data: Partial<UserProfile>): Promise<ProfileView> =>
+    USE_MOCKS
+      ? mockProfileApi.update(data).then((p) => ({ ...p, avatarUrl: null }))
+      : profileApi.update({ bio: data.bio }).then((r) => mapProfile(r.data as unknown as RealUserProfile)),
 
-  getActivity: (limit?: number): Promise<ActivityItem[]> =>
-    mockProfileApi.getActivity(limit),
+  getActivity: (limit?: number): Promise<ActivityView[]> =>
+    USE_MOCKS
+      ? mockProfileApi.getActivity(limit)
+      : profileApi
+          .activity(limit)
+          .then((r) => ((r.data as unknown as { results: RealActivityRow[] }).results ?? []).map((row) => ({
+            id: row.id,
+            type: row.type,
+            description: row.description,
+            timeAgo: relativeTime(row.created_at),
+            icon: activityIcon(row.type),
+          }))),
 
   getAchievements: (): Promise<Achievement[]> =>
-    mockProfileApi.getAchievements(),
+    USE_MOCKS
+      ? mockProfileApi.getAchievements()
+      : profileApi
+          .achievements()
+          .then((r) => ((r.data as unknown as { results: RealAchievementRow[] }).results ?? []).map(mapAchievement)),
 }
 
 // ── Public Identity Adapter ──

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/features/auth'
-import { FlowJokeCard, jokeToFlowData, type FlowJokeData } from '@/components/FlowJokeCard'
+import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodayAugmented, useTomorrowTeaser, useTasteProfile } from '@/features/insights'
 import { useStreak } from '@/features/streak'
@@ -251,27 +251,28 @@ export function FlowCanvasPage() {
             </Link>
           </div>
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-            {forYouJokes && forYouJokes.results.length > 0
-              ? forYouJokes.results.slice(0, 3).map((j) => (
-                  <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} source="feed" />
-                ))
-              : SAMPLE_JOKES.slice(0, 3).map((j) => <FlowJokeCard key={j.id} joke={j} />)}
+            {forYouJokes && forYouJokes.results.length > 0 ? (
+              forYouJokes.results.slice(0, 3).map((j) => (
+                <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} source="feed" />
+              ))
+            ) : (
+              <p style={{ fontSize: 15, color: '#52525B', gridColumn: '1 / -1', padding: '8px 0' }}>
+                We're still learning your taste — read and save a few jokes and picks will show up here.
+              </p>
+            )}
           </div>
 
           {/* ── 7-day archive · newspaper strip ────────────────── */}
           <SevenDayArchive history={history?.results} />
 
-          {/* ── Mixed-format showcase ──────────────────────────── */}
-          <MixedFormatShowcase />
-
           {/* ── Top jokesters + Weekly special ─────────────────── */}
           <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} />
 
-          {/* ── Stats + Themes + Test on a friend ──────────────── */}
-          <StatsRow tasteProfile={tasteProfile} todayText={today?.joke?.text ?? today?.joke?.punchline ?? ''} />
+          {/* ── This-month stats + taste pills ─────────────────── */}
+          <StatsRow tasteProfile={tasteProfile} />
 
           {/* ── Brand pull-quote footer ─────────────────────────── */}
-          <BrandQuoteFooter />
+          <BrandQuoteFooter issueLabel={today?.issue_label} />
         </div>
       </FlowAppShell>
     </div>
@@ -710,36 +711,27 @@ function ContinueBanner({ pack }: { pack?: { slug: string; title: string; joke_c
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// 7-day archive — newspaper-strip layout. Static mock; would pull from
-// /daily-jokes/history/ when the page transitions to real data.
+// 7-day archive — newspaper-strip layout, built entirely from the real
+// /daily-jokes/history/ feed. Hidden until there's real history to show.
 // ──────────────────────────────────────────────────────────────────────────
 
 function SevenDayArchive({ history }: { history?: { joke: { text: string; format?: { name: string } }; date: string }[] }) {
-  const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)', 'transparent', '#F2E9FF', 'transparent']
+  // No real history yet → render nothing rather than a fabricated week.
+  if (!history || history.length === 0) return null
 
-  // Build the days array from real history. If history is empty, show placeholder.
-  const days = history && history.length > 0
-    ? history.slice(0, 7).map((h, i) => {
-        const d = new Date(h.date)
-        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' })
-        const num = String(99 - i).padStart(3, '0') // crude — backend should expose issue_label per entry
-        return {
-          d: dayLabel,
-          n: num,
-          t: (h.joke?.text ?? '').slice(0, 60),
-          v: h.joke?.format?.name ?? '',
-          bg: tints[i % tints.length],
-        }
-      })
-    : [
-        { d: 'Wed', n: '041', t: 'On scientists trusting atoms.', v: 'Nerd', bg: 'transparent' },
-        { d: 'Tue', n: '040', t: 'On eyebrows drawn too high.', v: 'One-liner', bg: 'rgba(202, 253, 0, 0.12)' },
-        { d: 'Mon', n: '039', t: 'On adulthood as email reply chain.', v: 'Observ.', bg: 'transparent' },
-        { d: 'Sun', n: '038', t: 'On hippos vs. Zippos.', v: 'Pun', bg: '#F2E9FF' },
-        { d: 'Sat', n: '037', t: 'On facial hair growing on you.', v: 'Pun', bg: 'transparent' },
-        { d: 'Fri', n: '036', t: 'On the outstanding scarecrow.', v: 'Dad', bg: 'rgba(255, 201, 101, 0.18)' },
-        { d: 'Thu', n: '035', t: 'On the chicken & the road.', v: 'Anti', bg: 'transparent' },
-      ]
+  const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)', 'transparent', '#F2E9FF', 'transparent']
+  const days = history.slice(0, 7).map((h, i) => {
+    const d = new Date(h.date)
+    return {
+      key: h.date,
+      d: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      t: (h.joke?.text ?? '').slice(0, 60),
+      v: h.joke?.format?.name ?? '',
+      bg: tints[i % tints.length],
+    }
+  })
+
   return (
     <div style={{ marginTop: 56 }}>
       <div
@@ -754,7 +746,7 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
         }}
       >
         <div>
-          <span className="eyebrow-mono">The Week in Punchlines · Vol. I · Nos. 035–041</span>
+          <span className="eyebrow-mono">The Week in Punchlines</span>
           <h3
             style={{
               fontFamily: 'var(--font-serif)',
@@ -766,37 +758,34 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
               lineHeight: 1.05,
             }}
           >
-            Last seven mornings.
+            Your last {days.length === 1 ? 'morning' : `${days.length} mornings`}.
           </h3>
         </div>
-        <span className="tag-flow">7-day archive</span>
+        <span className="tag-flow">Recent archive</span>
       </div>
       <div
         style={{
           marginTop: 18,
           display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+          gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
           gap: 0,
           borderTop: '1px solid #E9E8E7',
         }}
       >
         {days.map((d, i) => (
           <button
-            key={d.n}
+            key={d.key}
             type="button"
             style={{
               padding: '18px 14px',
-              borderRight: i < 6 ? '1px solid #E9E8E7' : '0',
+              borderRight: i < days.length - 1 ? '1px solid #E9E8E7' : '0',
               background: d.bg,
               minHeight: 160,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               cursor: 'pointer',
-              border: i < 6 ? '0' : '0',
-              borderBottom: 0,
-              borderTop: 0,
-              borderLeft: 0,
+              border: 0,
               textAlign: 'left',
               fontFamily: 'inherit',
               color: 'inherit',
@@ -804,7 +793,7 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
           >
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
-                {d.d.toUpperCase()} · No. {d.n}
+                {d.d.toUpperCase()} · {d.date}
               </div>
               <div
                 style={{
@@ -839,77 +828,6 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Mixed-format showcase — "Same library. Different rhythm."
-// One big card + two smaller cards in different formats.
-// ──────────────────────────────────────────────────────────────────────────
-
-function MixedFormatShowcase() {
-  return (
-    <div style={{ marginTop: 56 }}>
-      <span className="eyebrow-mono">By format · Try a different shape today</span>
-      <h3
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: 32,
-          marginTop: 6,
-          letterSpacing: '-0.02em',
-          lineHeight: 1.05,
-          color: '#1A1A1A',
-        }}
-      >
-        Same library. <em className="wink">Different rhythm.</em>
-      </h3>
-      <div
-        style={{
-          marginTop: 22,
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)',
-          gap: 18,
-          alignItems: 'start',
-        }}
-      >
-        <FlowJokeCard
-          big
-          joke={{
-            id: 'showcase-oneliner',
-            fmt: 'oneliner',
-            text: 'I told my wife she was drawing her eyebrows too high. She seemed surprised.',
-            themeLabel: 'Family',
-            catLabel: 'Dad',
-            saves: '2.8K',
-            laughs: '411',
-          }}
-        />
-        <FlowJokeCard
-          joke={{
-            id: 'showcase-knock',
-            fmt: 'knock',
-            lines: ['Knock, knock.', "Who's there?", 'Lettuce.', 'Lettuce who?', "Lettuce in. It's freezing out here."],
-            themeLabel: 'Weather',
-            catLabel: 'Kid-safe',
-            saves: '1.4K',
-            laughs: '267',
-          }}
-        />
-        <FlowJokeCard
-          joke={{
-            id: 'showcase-anti',
-            fmt: 'anti',
-            setup: 'Why did the chicken cross the road?',
-            punch: 'To get to the other side.',
-            themeLabel: 'Animals',
-            catLabel: 'Surreal',
-            saves: '771',
-            laughs: '189',
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
 // Top jokesters (left, 1fr) + Weekly special (right, 1.4fr).
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -937,34 +855,32 @@ function TopJokestersAndSpecial({
     { avatarBg: '#1A1A1A', avatarFg: '#fff' },
   ]
 
-  const jokesters = realList.length > 0
-    ? realList.slice(0, 5).map((j, i) => ({
-        rank: j.rank ?? i + 1,
-        name: j.name,
-        handle: j.username ? `@${j.username}` : '',
-        // Backend uses `punchline_count`; legacy mock uses `punchlineCount` (camelCase).
-        punchlines: String(j.punchline_count ?? j.punchlineCount ?? 0),
-        desc: (j.top_vibes ?? []).slice(0, 2).map((v) => v.label).join(' · ') || '—',
-        avatarBg: palettes[i].avatarBg,
-        avatarFg: palettes[i].avatarFg,
-      }))
-    : [
-        { rank: 1, name: 'Maya Okonkwo',  handle: '@mayatypes', punchlines: '1,204', desc: 'Office · Observ.', avatarBg: '#6A1CF6', avatarFg: '#fff' },
-        { rank: 2, name: 'Dev Patel',     handle: '@devpuns',   punchlines: '982',   desc: 'Pun · Dad',        avatarBg: '#CAFD00', avatarFg: '#3A4A00' },
-        { rank: 3, name: 'Sara Rumi',     handle: '@srumi',     punchlines: '844',   desc: 'Wholesome',        avatarBg: '#FFC965', avatarFg: '#5F4200' },
-        { rank: 4, name: 'Kai Bennett',   handle: '@kaib',      punchlines: '712',   desc: 'Anti · Surreal',   avatarBg: '#1A1A1A', avatarFg: '#fff' },
-        { rank: 5, name: 'Lena Park',     handle: '@lenap',     punchlines: '611',   desc: 'One-liners',       avatarBg: '#1A1A1A', avatarFg: '#fff' },
-      ]
-  const specialJokes = [
-    "Why don't teachers ever get bored?",
-    'I asked my pencil for advice…',
-    'First day of class, the principal said…',
-    'The school clock has only two hands.',
-    "Geometry teacher's favorite season?",
-  ]
+  // Real leaderboard only — no fabricated fallback list.
+  const jokesters = realList.slice(0, 5).map((j, i) => ({
+    rank: j.rank ?? i + 1,
+    name: j.name,
+    handle: j.username ? `@${j.username}` : '',
+    // Backend uses `punchline_count`; legacy mock uses `punchlineCount` (camelCase).
+    punchlines: String(j.punchline_count ?? j.punchlineCount ?? 0),
+    desc: (j.top_vibes ?? []).slice(0, 2).map((v) => v.label).join(' · ') || '—',
+    avatarBg: palettes[i % palettes.length].avatarBg,
+    avatarFg: palettes[i % palettes.length].avatarFg,
+  }))
+
+  // Real featured-pack joke previews for the Weekly Special (no invented snippets).
+  const specialJokes = (featuredPack?.jokes ?? []).slice(0, 5).map((e) => e.joke.text)
+
+  const hasJokesters = jokesters.length > 0
+
+  // Nothing real to show → render nothing rather than fabricated content.
+  if (!hasJokesters && !featuredPack) return null
+
+  const gridCols = hasJokesters && featuredPack ? 'minmax(0, 1fr) minmax(0, 1.4fr)' : 'minmax(0, 1fr)'
+
   return (
-    <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 24 }}>
+    <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: gridCols, gap: 24 }}>
       {/* Top jokesters */}
+      {hasJokesters && (
       <div style={{ padding: 28, background: '#fff', border: '1px solid #E9E8E7', borderRadius: 22 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
           <div>
@@ -983,7 +899,7 @@ function TopJokestersAndSpecial({
             </h4>
           </div>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', color: '#52525B' }}>
-            FEB 06 → 12
+            {weekRangeLabel()}
           </span>
         </div>
         <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column' }}>
@@ -1058,8 +974,10 @@ function TopJokestersAndSpecial({
           ))}
         </div>
       </div>
+      )}
 
       {/* Weekly special */}
+      {featuredPack && (
       <div
         style={{
           borderRadius: 22,
@@ -1096,17 +1014,15 @@ function TopJokestersAndSpecial({
                 letterSpacing: '-0.02em',
               }}
             >
-              {featuredPack ? renderTitle(featuredPack.title) : (
-                <>Back-to-school <em className="wink" style={{ color: '#5F4200' }}>survival kit.</em></>
-              )}
+              {renderTitle(featuredPack.title)}
             </h3>
             <p style={{ marginTop: 10, fontSize: 14, color: '#5F4200', opacity: 0.85, maxWidth: 280 }}>
-              {featuredPack?.description ?? '45 jokes engineered to win over a Monday-morning classroom.'}
+              {featuredPack.description}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
             <Link
-              to={featuredPack ? `/packs/${featuredPack.slug}` : '/library'}
+              to={`/packs/${featuredPack.slug}`}
               style={{
                 height: 44,
                 padding: '0 24px',
@@ -1196,6 +1112,7 @@ function TopJokestersAndSpecial({
           ))}
         </div>
       </div>
+      )}
     </div>
   )
 }
@@ -1207,42 +1124,25 @@ function TopJokestersAndSpecial({
 
 function StatsRow({
   tasteProfile,
-  todayText,
 }: {
   tasteProfile: ReturnType<typeof useTasteProfile>['data']
-  todayText: string
 }) {
-  // Combine themes + categories + formats into a single pill cloud, biggest first.
-  const themesData =
-    tasteProfile
-      ? [
-          ...tasteProfile.top_themes,
-          ...tasteProfile.top_categories,
-          ...tasteProfile.top_formats,
-        ]
-      : []
+  // No taste profile yet → hide the whole section rather than invent numbers.
+  if (!tasteProfile) return null
 
-  // Mark top 3 as "big" pills.
-  const sortedThemes = themesData
+  // Combine themes + categories + formats into a single pill cloud, biggest first.
+  // Real data only — no fabricated fallback pills.
+  const themes = [
+    ...tasteProfile.top_themes,
+    ...tasteProfile.top_categories,
+    ...tasteProfile.top_formats,
+  ]
     .sort((a, b) => b.count - a.count)
     .slice(0, 12)
     .map((p, i) => ({ t: p.label, s: p.count, big: i < 3 }))
 
-  // Fallback to mock pills if no data yet.
-  const themes: { t: string; s: number; big?: boolean }[] =
-    sortedThemes.length > 0
-      ? sortedThemes
-      : [
-          { t: 'Office life', s: 42, big: true },
-          { t: 'Puns', s: 38, big: true },
-          { t: 'Wholesome', s: 24 },
-          { t: 'One-liners', s: 21, big: true },
-          { t: 'Dad', s: 18 },
-        ]
-  // Use real 28-day reads from taste-profile if available; otherwise mock.
-  const barHeights = tasteProfile?.daily_reads_28d && tasteProfile.daily_reads_28d.length === 28
-    ? tasteProfile.daily_reads_28d
-    : [12, 18, 8, 22, 14, 28, 16, 24, 20, 30, 18, 26, 14, 32, 22, 28, 18, 34, 26, 32, 22, 38, 28, 36, 30, 32, 40, 28]
+  // Real 28-day reads sparkline. Only render bars when the real array is present.
+  const barHeights = tasteProfile.daily_reads_28d?.length === 28 ? tasteProfile.daily_reads_28d : []
   const barMax = Math.max(1, ...barHeights)
 
   return (
@@ -1283,30 +1183,34 @@ function StatsRow({
           />
           <StatCell value={tasteProfile?.top_vibe?.label ?? '—'} label="TOP VIBE" valueColor="#fff" />
         </div>
-        <div style={{ marginTop: 20, display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
-          {barHeights.map((h, i) => (
+        {barHeights.length > 0 && (
+          <>
+            <div style={{ marginTop: 20, display: 'flex', gap: 3, alignItems: 'flex-end', height: 40 }}>
+              {barHeights.map((h, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: `${(h * 100) / barMax}%`,
+                    background: i >= 21 ? '#CAFD00' : 'rgba(202, 253, 0, 0.3)',
+                    borderRadius: 1,
+                  }}
+                />
+              ))}
+            </div>
             <div
-              key={i}
               style={{
-                flex: 1,
-                height: `${(h * 100) / barMax}%`,
-                background: i >= 21 ? '#CAFD00' : 'rgba(202, 253, 0, 0.3)',
-                borderRadius: 1,
+                marginTop: 6,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.18em',
+                color: 'rgba(255, 255, 255, 0.4)',
               }}
-            />
-          ))}
-        </div>
-        <div
-          style={{
-            marginTop: 6,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            color: 'rgba(255, 255, 255, 0.4)',
-          }}
-        >
-          JAN 16 ────────── FEB 12
-        </div>
+            >
+              {last28DaysLabel()}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Themes you laugh at most */}
@@ -1324,6 +1228,11 @@ function StatsRow({
         >
           Your taste, in pills.
         </h4>
+        {themes.length === 0 && (
+          <p style={{ marginTop: 14, fontSize: 14, color: '#52525B' }}>
+            Read and save a few jokes and your taste will start showing up here.
+          </p>
+        )}
         <div style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {themes.map((p, i) => {
             const isBig = !!p.big
@@ -1362,104 +1271,6 @@ function StatsRow({
           See full taste profile <ArrowRight size={14} />
         </button>
       </div>
-
-      {/* Test on a friend */}
-      <div
-        style={{
-          padding: 28,
-          background: '#6A1CF6',
-          color: '#fff',
-          borderRadius: 22,
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            bottom: -60,
-            right: -60,
-            width: 200,
-            height: 200,
-            borderRadius: '50%',
-            background: 'rgba(202, 253, 0, 0.2)',
-          }}
-        />
-        <div style={{ position: 'relative' }}>
-          <span className="eyebrow-mono" style={{ color: '#CAFD00' }}>
-            Test it on a friend
-          </span>
-          <h4
-            style={{
-              color: '#fff',
-              marginTop: 6,
-              fontSize: 22,
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Did today's land?
-          </h4>
-          <p style={{ fontSize: 13, marginTop: 8, color: 'rgba(255, 255, 255, 0.8)', maxWidth: 240 }}>
-            Share the punchline. We'll tell you if they laughed (or lied).
-          </p>
-        </div>
-        <div
-          style={{
-            position: 'relative',
-            marginTop: 18,
-            padding: 14,
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            borderRadius: 14,
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}
-        >
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: 'rgba(255, 255, 255, 0.5)' }}>
-            TO · SAM
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14, marginTop: 6, lineHeight: 1.4 }}>
-            "{todayText}" 😂
-          </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-            <span className="tag-flow" style={{ background: '#CAFD00', color: '#3A4A00' }}>
-              😂 Laughed
-            </span>
-            <span className="tag-flow" style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#fff' }}>
-              🙄 Lied
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          style={{
-            position: 'relative',
-            marginTop: 14,
-            height: 44,
-            padding: '0 20px',
-            background: '#CAFD00',
-            color: '#3A4A00',
-            border: 0,
-            borderRadius: 9999,
-            fontFamily: 'var(--font-sans)',
-            fontWeight: 700,
-            fontSize: 14,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            justifyContent: 'center',
-          }}
-        >
-          <Share2 size={14} /> Share today's joke
-        </button>
-      </div>
     </div>
   )
 }
@@ -1485,7 +1296,8 @@ function StatCell({ value, label, valueColor }: { value: string; label: string; 
   )
 }
 
-function BrandQuoteFooter() {
+function BrandQuoteFooter({ issueLabel }: { issueLabel?: string }) {
+  const countdown = timeUntilNextDrop()
   return (
     <div
       style={{
@@ -1539,15 +1351,15 @@ function BrandQuoteFooter() {
             color: '#52525B',
           }}
         >
-          The JokesFor Editors · Vol. I · No. 042
+          The JokesFor Editors{issueLabel ? ` · ${issueLabel}` : ''}
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
         <span className="eyebrow-mono">Tomorrow at 9:00 AM</span>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 48, color: '#1A1A1A', lineHeight: 0.95 }}>
-          15h
+          {countdown.h}h
           <br />
-          <span style={{ color: '#6A1CF6' }}>22m</span>
+          <span style={{ color: '#6A1CF6' }}>{countdown.m}m</span>
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
           UNTIL THE NEXT ONE
@@ -1619,36 +1431,30 @@ function renderTitle(title: string) {
   )
 }
 
-// Sample jokes — local mock data shaped to FlowJokeData. Replace with real
-// API fetches once the backend grows the format/themeLabel/laughs/saves
-// fields the design uses.
-const SAMPLE_JOKES: FlowJokeData[] = [
-  {
-    id: 2,
-    fmt: 'oneliner',
-    text: "I told my wife she was drawing her eyebrows too high. She seemed surprised.",
-    themeLabel: 'Family',
-    catLabel: 'Dad',
-    saves: '2.8K',
-    laughs: '411',
-  },
-  {
-    id: 3,
-    fmt: 'observ',
-    text: "Adulthood is just emailing 'Sounds good!' back and forth until one of you dies.",
-    themeLabel: 'Work',
-    catLabel: 'Office-proper',
-    saves: '4.8K',
-    laughs: '904',
-  },
-  {
-    id: 7,
-    fmt: 'anti',
-    setup: 'Why did the chicken cross the road?',
-    punch: 'To get to the other side.',
-    themeLabel: 'Animals',
-    catLabel: 'Surreal',
-    saves: '771',
-    laughs: '189',
-  },
-]
+/** Real "this week" range label, e.g. "FEB 06 → 12", from the last 7 days. */
+function weekRangeLabel(): string {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(end.getDate() - 6)
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase()
+  return `${fmt(start)} → ${end.toLocaleDateString('en-US', { day: '2-digit' })}`
+}
+
+/** Real 28-day window label for the reads sparkline, e.g. "JAN 16 — FEB 12". */
+function last28DaysLabel(): string {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(end.getDate() - 27)
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase()
+  return `${fmt(start)} ────────── ${fmt(end)}`
+}
+
+/** Real time remaining until the next 9:00 AM local drop. */
+function timeUntilNextDrop(): { h: number; m: number } {
+  const now = new Date()
+  const next = new Date(now)
+  next.setHours(9, 0, 0, 0)
+  if (next <= now) next.setDate(next.getDate() + 1)
+  const totalMinutes = Math.max(0, Math.round((next.getTime() - now.getTime()) / 60000))
+  return { h: Math.floor(totalMinutes / 60), m: totalMinutes % 60 }
+}

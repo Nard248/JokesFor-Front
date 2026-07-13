@@ -83,7 +83,7 @@ function Hero({ isAuthenticated, firstName }: { isAuthenticated: boolean; firstN
             color: 'rgba(255, 255, 255, 0.7)',
           }}
         >
-          Volume I · Issue 042 · 312K daily readers
+          Volume I · A new joke every morning
         </span>
         <h1
           style={{
