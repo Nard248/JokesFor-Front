@@ -54,25 +54,33 @@ export function ProfilePage() {
               }}
             />
             <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap', position: 'relative' }}>
-              <div
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 28,
-                  background: '#6A1CF6',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 44,
-                  letterSpacing: '-0.02em',
-                  flexShrink: 0,
-                }}
-              >
-                {displayName[0]?.toUpperCase()}
-              </div>
+              {profile?.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={displayName}
+                  style={{ width: 100, height: 100, borderRadius: 28, objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 28,
+                    background: '#6A1CF6',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: 44,
+                    letterSpacing: '-0.02em',
+                    flexShrink: 0,
+                  }}
+                >
+                  {displayName[0]?.toUpperCase()}
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 240 }}>
                 <span className="eyebrow-mono">Member since {memberSince}</span>
                 <h1
@@ -108,9 +116,9 @@ export function ProfilePage() {
 
           {/* Stats row */}
           <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <ProfileStat icon={<Bookmark size={18} />} value={String(profile?.stats?.jokesSaved ?? 42)} label="Saved jokes" accent="purple" />
-            <ProfileStat icon={<FolderOpen size={18} />} value={String(profile?.stats?.collections ?? 5)} label="Collections" accent="amber" />
-            <ProfileStat icon={<Flame size={18} />} value={String(profile?.stats?.daysActive ?? 14)} label="Days active" accent="lime" />
+            <ProfileStat icon={<Bookmark size={18} />} value={profile?.stats ? String(profile.stats.jokesSaved) : '—'} label="Saved jokes" accent="purple" />
+            <ProfileStat icon={<FolderOpen size={18} />} value={profile?.stats ? String(profile.stats.collections) : '—'} label="Collections" accent="amber" />
+            <ProfileStat icon={<Flame size={18} />} value={profile?.stats ? String(profile.stats.daysActive) : '—'} label="Days active" accent="lime" />
           </div>
 
           {/* Activity + Achievements */}

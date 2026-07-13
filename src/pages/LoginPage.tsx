@@ -244,10 +244,10 @@ export function LoginPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>
-              Keep your 14-day streak alive.
+              Keep your streak alive.
             </div>
             <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-              You're 1 day from "Top 10% of readers."
+              Sign in to pick up where you left off.
             </div>
           </div>
         </div>
@@ -302,7 +302,7 @@ function BrandPanel() {
             color: 'rgba(255, 255, 255, 0.7)',
           }}
         >
-          Today's joke · Vol. I · No. 042
+          Today's joke · Volume I
         </span>
         <h1
           style={{
@@ -400,9 +400,9 @@ function BrandPanel() {
           flexWrap: 'wrap',
         }}
       >
-        <span>312K daily readers</span>
+        <span>Six formats</span>
         <span>·</span>
-        <span>10K+ jokes</span>
+        <span>A joke every morning</span>
         <span>·</span>
         <span>Updated 9:00 AM</span>
       </div>

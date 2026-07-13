@@ -15,7 +15,7 @@ const realApi = {
   savedJokesApi: {},
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
   preferencesApi: { get: vi.fn(), update: vi.fn() },
-  profileApi: { get: vi.fn(), update: vi.fn() },
+  profileApi: { get: vi.fn(), update: vi.fn(), activity: vi.fn(), achievements: vi.fn() },
   moderationApi: { report: vi.fn(), block: vi.fn(), unblock: vi.fn(), myBlocks: vi.fn() },
   notificationsApi: { list: vi.fn(), unreadCount: vi.fn(), markRead: vi.fn() },
   creatorInsightsApi: { get: vi.fn() },
@@ -244,6 +244,97 @@ describe('creatorInsightsAdapter (real path)', () => {
     expect(realApi.creatorInsightsApi.get).toHaveBeenCalledWith('month')
     expect(out.period).toBe('month')
     expect(out.overview.published_jokes).toBe(5)
+  })
+})
+
+describe('profileAdapter (real path)', () => {
+  it('get() maps the real backend profile (snake_case + stats) into the camelCase UI shape', async () => {
+    realApi.profileApi.get.mockResolvedValue({
+      data: {
+        name: 'Pun Queen',
+        username: '@punqueen',
+        display_name: 'Pun Queen',
+        handle: 'punqueen',
+        email: 'pq@example.com',
+        bio: 'Certified groan-maker.',
+        avatar_url: 'https://cdn.example.com/pq.png',
+        member_since: '2026-01-15',
+        is_premium: true,
+        stats: { jokes_saved: 9, jokes_shared: 4, collections: 2, days_active: 30 },
+        humor_dna: [{ type: 'Witty', percentage: 60 }],
+      },
+    })
+    const { profileAdapter } = await loadAdapterReal()
+    const out = await profileAdapter.get()
+    expect(realApi.profileApi.get).toHaveBeenCalled()
+    expect(out).toMatchObject({
+      name: 'Pun Queen',
+      username: '@punqueen',
+      bio: 'Certified groan-maker.',
+      memberSince: '2026-01-15',
+      isPremium: true,
+      avatarUrl: 'https://cdn.example.com/pq.png',
+      stats: { jokesSaved: 9, jokesShared: 4, collections: 2, daysActive: 30 },
+    })
+  })
+
+  it('get() defaults missing avatar/stats to null/0 (no fabricated numbers)', async () => {
+    realApi.profileApi.get.mockResolvedValue({
+      data: { name: 'user_5', username: '@user5', avatar_url: null },
+    })
+    const { profileAdapter } = await loadAdapterReal()
+    const out = await profileAdapter.get()
+    expect(out.avatarUrl).toBeNull()
+    expect(out.stats).toEqual({ jokesSaved: 0, jokesShared: 0, collections: 0, daysActive: 0 })
+  })
+
+  it('getActivity() unwraps results and derives icon + timeAgo from the real rows', async () => {
+    realApi.profileApi.activity.mockResolvedValue({
+      data: {
+        results: [
+          { id: 'save_3', type: 'save', description: "Saved '...'", created_at: new Date().toISOString() },
+          { id: 'rating_7', type: 'like', description: "Liked '...'", created_at: new Date().toISOString() },
+        ],
+      },
+    })
+    const { profileAdapter } = await loadAdapterReal()
+    const out = await profileAdapter.getActivity(8)
+    expect(realApi.profileApi.activity).toHaveBeenCalledWith(8)
+    expect(out).toHaveLength(2)
+    expect(out[0]).toMatchObject({ id: 'save_3', type: 'save', icon: '🔖' })
+    expect(out[1].icon).toBe('❤️')
+    expect(out[0].timeAgo).toBeTruthy()
+  })
+
+  it('getAchievements() maps unlocked_at -> unlockedAt and falls back icon null -> 🏆', async () => {
+    realApi.profileApi.achievements.mockResolvedValue({
+      data: {
+        results: [
+          { id: 'first_save', title: 'First Save', description: 'Saved one', icon: '🔖', unlocked: true, unlocked_at: '2026-02-01T00:00:00Z' },
+          { id: 'streak_7', title: '7-Day Streak', description: 'A week', icon: null, unlocked: false, unlocked_at: null },
+        ],
+      },
+    })
+    const { profileAdapter } = await loadAdapterReal()
+    const out = await profileAdapter.getAchievements()
+    expect(out[0]).toMatchObject({ id: 'first_save', unlocked: true, unlockedAt: '2026-02-01T00:00:00Z' })
+    expect(out[1]).toMatchObject({ id: 'streak_7', unlocked: false, icon: '🏆' })
+    expect(out[1].unlockedAt).toBeUndefined()
+  })
+})
+
+describe('profileAdapter (mock path)', () => {
+  it('get/getActivity/getAchievements do NOT hit the real api when mocks are on', async () => {
+    const { profileAdapter } = await loadAdapterMock()
+    const profile = await profileAdapter.get()
+    await profileAdapter.getActivity(5)
+    await profileAdapter.getAchievements()
+    expect(realApi.profileApi.get).not.toHaveBeenCalled()
+    expect(realApi.profileApi.activity).not.toHaveBeenCalled()
+    expect(realApi.profileApi.achievements).not.toHaveBeenCalled()
+    // Mock profile is still shaped for the UI (with the added avatarUrl field).
+    expect(profile).toHaveProperty('avatarUrl')
+    expect(typeof profile.name).toBe('string')
   })
 })
 
