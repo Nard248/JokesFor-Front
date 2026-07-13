@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router'
 import { Search as SearchIcon, Dice5 } from 'lucide-react'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { useJokeSearch, type JokeSearchParams } from '@/features/jokes'
+import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
 
 /**
  * Explore — three-axis chip-rail filter + format-aware masonry results.
@@ -23,25 +23,43 @@ export function ExplorePage() {
   const [themes, setThemes] = useState<Set<string>>(new Set())
   const [cats, setCats] = useState<Set<string>>(new Set())
 
-  // Build the real /jokes/ query from the three chip axes. `page: 1` keeps the
+  // Current page — bumped by "Load more". Reset to 1 whenever the filter axes
+  // change (below) so a new filter starts a fresh paginated listing.
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [fmts, themes, cats])
+
+  // Build the real /jokes/ query from the three chip axes. `page` keeps the
   // query enabled even with no filters (so the default listing shows real
   // jokes, not an empty grid). Filters map to the backend params per the API:
   //   Format chips  → joke_format (backend format slug)
   //   Theme chips   → context_tags (comma slugs)
   //   Category chips→ tones (comma slugs)
   const params = useMemo<JokeSearchParams>(() => {
-    const p: JokeSearchParams = { page: 1, page_size: 30, ordering: '-created_at' }
+    const p: JokeSearchParams = { page, page_size: 30, ordering: '-created_at' }
     if (fmts.size > 0) {
       p.joke_format = Array.from(fmts).map((f) => FLOW_FORMAT_TO_BACKEND_SLUG[f]).join(',')
     }
     if (themes.size > 0) p.context_tags = Array.from(themes).join(',')
     if (cats.size > 0) p.tones = Array.from(cats).join(',')
     return p
-  }, [fmts, themes, cats])
+  }, [fmts, themes, cats, page])
 
-  const { data, isLoading, isError } = useJokeSearch(params)
-  const jokes = data?.results ?? []
+  const { data, isLoading, isError, isFetching } = useJokeSearch(params)
   const totalCount = data?.count ?? 0
+
+  // Accumulate results across pages. Page 1 (fresh filter/first load) replaces;
+  // later pages append, deduped by id so a keepPreviousData transition can't
+  // double-insert the current page.
+  const [jokes, setJokes] = useState<Joke[]>([])
+  useEffect(() => {
+    if (!data) return
+    setJokes((prev) => {
+      if (page === 1) return data.results
+      const seen = new Set(prev.map((j) => j.id))
+      return [...prev, ...data.results.filter((j) => !seen.has(j.id))]
+    })
+  }, [data, page])
+  const hasMore = jokes.length < totalCount
 
   const activeCount = fmts.size + themes.size + cats.size
   const clearAll = () => {
@@ -237,6 +255,7 @@ export function ExplorePage() {
           ) : isError ? (
             <ErrorState />
           ) : jokes.length > 0 ? (
+            <>
             <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }}>
               {jokes.map((joke, i) => (
                 <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
@@ -288,6 +307,20 @@ export function ExplorePage() {
                 </div>
               ))}
             </div>
+            {hasMore && (
+              <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-flow-ghost"
+                  style={{ height: 44, padding: '0 24px' }}
+                  disabled={isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  {isFetching ? 'Loading…' : `Load more · ${jokes.length} of ${totalCount}`}
+                </button>
+              </div>
+            )}
+            </>
           ) : (
             <EmptyState onClear={clearAll} />
           )}
@@ -517,11 +550,14 @@ const THEMES = [
   { id: 'mondays', label: 'Mondays' },
 ]
 
+// `id` is the exact backend tone slug sent as `tones`. Verified against
+// /jokes/?tones=… — `office`/`kid` returned 0 rows, the real slugs are
+// `office-proper` (10) and `kid-safe` (22).
 const CATEGORIES = [
   { id: 'wholesome', label: 'Wholesome' },
-  { id: 'office', label: 'Office-proper' },
+  { id: 'office-proper', label: 'Office-proper' },
   { id: 'dad', label: 'Dad' },
-  { id: 'kid', label: 'Kid-safe' },
+  { id: 'kid-safe', label: 'Kid-safe' },
   { id: 'nerd', label: 'Nerd' },
   { id: 'surreal', label: 'Surreal' },
   { id: 'dark', label: 'Dark' },

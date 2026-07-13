@@ -1,5 +1,6 @@
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { JokeRenderer, type JokePayload } from './JokeRenderer'
+import { JokeRenderer, formatSlugToFlow, FLOW_FORMAT_TO_BACKEND_SLUG, type JokePayload } from './JokeRenderer'
 
 const base: JokePayload = { format: 'oneliner', text: '', setup: '', punchline: '', lines: null }
 
@@ -38,4 +39,45 @@ test('anti renders the auto footer', () => {
     />,
   )
   expect(screen.getByText(/That's it\. That's the joke\./i)).toBeInTheDocument()
+})
+
+describe('FLOW_FORMAT_TO_BACKEND_SLUG — real DB slugs', () => {
+  it('maps each flow format 1:1 onto the real backend joke_format slug', () => {
+    expect(FLOW_FORMAT_TO_BACKEND_SLUG).toEqual({
+      setup: 'setup',
+      oneliner: 'oneliner',
+      observ: 'observ',
+      anti: 'anti',
+      knock: 'knock',
+      story: 'story',
+    })
+  })
+})
+
+describe('formatSlugToFlow — saved/favorite joke skin resolution', () => {
+  it('resolves the REAL DB slugs to the right skin (setup stays setup, not oneliner)', () => {
+    // Regression: a saved setup-punchline (real slug `setup`) used to fall
+    // through to the oneliner skin because the local mapper only knew
+    // `setup_punchline`.
+    expect(formatSlugToFlow('setup')).toBe('setup')
+    expect(formatSlugToFlow('oneliner')).toBe('oneliner')
+    expect(formatSlugToFlow('observ')).toBe('observ')
+    expect(formatSlugToFlow('anti')).toBe('anti')
+    expect(formatSlugToFlow('knock')).toBe('knock')
+    expect(formatSlugToFlow('story')).toBe('story')
+    expect(formatSlugToFlow('short-story')).toBe('story')
+  })
+
+  it('still tolerates the legacy long-form slugs', () => {
+    expect(formatSlugToFlow('setup_punchline')).toBe('setup')
+    expect(formatSlugToFlow('one_liner')).toBe('oneliner')
+    expect(formatSlugToFlow('observational')).toBe('observ')
+    expect(formatSlugToFlow('knock_knock')).toBe('knock')
+  })
+
+  it('falls back to oneliner for unknown/empty slugs', () => {
+    expect(formatSlugToFlow('')).toBe('oneliner')
+    expect(formatSlugToFlow(undefined)).toBe('oneliner')
+    expect(formatSlugToFlow('who-knows')).toBe('oneliner')
+  })
 })
