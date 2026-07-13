@@ -37,6 +37,8 @@ vi.mock('@/pages', () => ({
   FlowCanvasPage: () => <div data-testid="page-flow-canvas" />,
   ExplorePage: () => <div data-testid="page-explore" />,
   LibraryPage: () => <div data-testid="page-library" />,
+  CollectionsPage: () => <div data-testid="page-collections" />,
+  CollectionDetailPage: () => <div data-testid="page-collection-detail" />,
   TrendingPage: () => <div data-testid="page-trending" />,
   FavoritesPage: () => <div data-testid="page-favorites" />,
   DraftsPage: () => <div data-testid="page-drafts" />,

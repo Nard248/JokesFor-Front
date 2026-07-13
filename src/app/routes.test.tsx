@@ -31,6 +31,8 @@ vi.mock('@/pages', () => ({
   RegisterPage: () => <div data-testid="page-register" />,
   GoogleCallbackPage: () => <div data-testid="page-google-callback" />,
   LibraryPage: () => <div data-testid="page-library" />,
+  CollectionsPage: () => <div data-testid="page-collections" />,
+  CollectionDetailPage: () => <div data-testid="page-collection-detail" />,
   TrendingPage: () => <div data-testid="page-trending" />,
   FavoritesPage: () => <div data-testid="page-favorites" />,
   ProfilePage: () => <div data-testid="page-profile" />,
@@ -129,5 +131,17 @@ describe('create routes', () => {
   it('/create/:draftId/view renders SubmissionDetailPage', async () => {
     renderAt('/create/42/view')
     expect(await screen.findByTestId('page-submission-detail')).toBeInTheDocument()
+  })
+})
+
+describe('collections routes', () => {
+  it('/collections renders CollectionsPage', async () => {
+    renderAt('/collections')
+    expect(await screen.findByTestId('page-collections')).toBeInTheDocument()
+  })
+
+  it('/collections/:id renders CollectionDetailPage', async () => {
+    renderAt('/collections/42')
+    expect(await screen.findByTestId('page-collection-detail')).toBeInTheDocument()
   })
 })

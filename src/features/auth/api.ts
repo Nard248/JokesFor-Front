@@ -7,6 +7,7 @@ import type {
   PasswordChangeRequest,
   PasswordResetRequest,
   PasswordResetConfirmRequest,
+  AccountDeleteRequest,
   UpdateUserRequest,
   VerifyEmailRequest,
 } from '@/lib/api'
@@ -206,6 +207,44 @@ export function useResendVerification() {
     mutationFn: async (email: string) => {
       const response = await authApi.resendVerification(email)
       return response.data
+    },
+  })
+}
+
+// Delete account (DELETE /users/me/) — irreversible. Clears local auth state on
+// success so the app drops to a logged-out state; the caller handles redirect.
+export function useDeleteAccount() {
+  const queryClient = useQueryClient()
+  const { logout } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (payload: AccountDeleteRequest) => {
+      await authApi.deleteAccount(payload)
+    },
+    onSuccess: () => {
+      logout()
+      queryClient.clear()
+    },
+  })
+}
+
+// Data export (GET /users/me/data-export/) — receives a zip blob and triggers a
+// browser download. Kept in the hook so any caller gets the download for free.
+export function useDataExport() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await authApi.dataExport()
+      return response.data
+    },
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'jokes-for-data-export.zip'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
     },
   })
 }
