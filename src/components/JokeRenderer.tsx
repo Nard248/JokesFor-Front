@@ -29,18 +29,56 @@ export const FORMAT_LABEL: Record<FlowJokeFormat, string> = {
 }
 
 /**
- * Map a UI FlowJokeFormat back to the backend JokeFormat slug for the
- * `joke_format` query param (JokeViewSet.list). These are the canonical
- * long-form slugs the backend serializes (`format.slug`), matching the
- * reverse mapping in FlowJokeCard.jokeToFlowData.
+ * Map a UI FlowJokeFormat to the backend JokeFormat slug for the
+ * `joke_format` query param (JokeViewSet.list). These are the REAL slugs
+ * stored in the DB (verified against /jokes/?joke_format=…): the flow
+ * formats map 1:1 onto the short-form slugs the backend actually filters on.
+ * (The long-form guesses `setup_punchline`/`one_liner`/etc. returned 0 rows.)
  */
 export const FLOW_FORMAT_TO_BACKEND_SLUG: Record<FlowJokeFormat, string> = {
-  setup: 'setup_punchline',
-  oneliner: 'one_liner',
-  observ: 'observational',
-  anti: 'anti_joke',
-  knock: 'knock_knock',
+  setup: 'setup',
+  oneliner: 'oneliner',
+  observ: 'observ',
+  anti: 'anti',
+  knock: 'knock',
   story: 'story',
+}
+
+/**
+ * Resolve a backend format slug (from `format.slug` on a saved/favorite joke)
+ * to the UI FlowJokeFormat that picks the render skin. Tolerant of BOTH the
+ * real DB slugs (`setup`/`oneliner`/`observ`/`anti`/`knock`/`story`/`short-story`)
+ * and the older long-form guesses (`setup_punchline`/`one_liner`/…) so a saved
+ * joke never silently renders in the wrong skin (e.g. a setup as a one-liner).
+ */
+export function formatSlugToFlow(rawSlug: string | null | undefined): FlowJokeFormat {
+  switch ((rawSlug ?? '').toLowerCase()) {
+    case 'setup':
+    case 'setup_punchline':
+    case 'setup-punchline':
+      return 'setup'
+    case 'oneliner':
+    case 'one_liner':
+    case 'one-liner':
+      return 'oneliner'
+    case 'observ':
+    case 'observational':
+      return 'observ'
+    case 'anti':
+    case 'anti_joke':
+    case 'anti-joke':
+      return 'anti'
+    case 'knock':
+    case 'knock_knock':
+    case 'knock-knock':
+      return 'knock'
+    case 'story':
+    case 'short-story':
+    case 'short_story':
+      return 'story'
+    default:
+      return 'oneliner'
+  }
 }
 
 export function formatLabelFor(fmt: FlowJokeFormat): string { return FORMAT_LABEL[fmt] }

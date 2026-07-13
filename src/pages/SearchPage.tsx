@@ -4,7 +4,7 @@ import { Search as SearchIcon, Dice5 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
-import { useJokeSearch, type JokeSearchParams } from '@/features/jokes'
+import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
 
 /**
  * SearchPage — Sentence Builder redesign per
@@ -35,14 +35,19 @@ export function SearchPage() {
     return () => clearTimeout(t)
   }, [q])
 
+  // Current page — bumped by "Load more". Reset to 1 whenever the query or any
+  // filter axis changes so a new sentence starts a fresh paginated listing.
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [debouncedQ, fmts, themes, cats])
+
   // Compose the sentence-builder + keyword into a real /jokes/ query.
   //   keyword input → q (full-text)
   //   Format pills  → joke_format (backend format slug)
   //   Theme pills   → context_tags (comma slugs)
   //   Category pills→ tones (comma slugs)
-  // `page: 1` keeps the query enabled so the default listing shows real jokes.
+  // `page` keeps the query enabled so the default listing shows real jokes.
   const params = useMemo<JokeSearchParams>(() => {
-    const p: JokeSearchParams = { page: 1, page_size: 30 }
+    const p: JokeSearchParams = { page, page_size: 30 }
     if (debouncedQ) p.q = debouncedQ
     if (fmts.size > 0) {
       p.joke_format = Array.from(fmts).map((f) => FLOW_FORMAT_TO_BACKEND_SLUG[f]).join(',')
@@ -51,11 +56,23 @@ export function SearchPage() {
     if (cats.size > 0) p.tones = Array.from(cats).join(',')
     if (!p.q) p.ordering = '-created_at'
     return p
-  }, [debouncedQ, fmts, themes, cats])
+  }, [debouncedQ, fmts, themes, cats, page])
 
-  const { data, isLoading, isError } = useJokeSearch(params)
-  const matches = data?.results ?? []
+  const { data, isLoading, isError, isFetching } = useJokeSearch(params)
   const totalCount = data?.count ?? 0
+
+  // Accumulate results across pages (page 1 replaces, later pages append,
+  // deduped by id).
+  const [matches, setMatches] = useState<Joke[]>([])
+  useEffect(() => {
+    if (!data) return
+    setMatches((prev) => {
+      if (page === 1) return data.results
+      const seen = new Set(prev.map((j) => j.id))
+      return [...prev, ...data.results.filter((j) => !seen.has(j.id))]
+    })
+  }, [data, page])
+  const hasMore = matches.length < totalCount
 
   const fmtLabel =
     fmts.size === 0
@@ -311,6 +328,7 @@ export function SearchPage() {
               <p style={{ marginTop: 8, fontSize: 16, color: '#52525B' }}>Try again in a moment.</p>
             </div>
           ) : matches.length > 0 ? (
+            <>
             <div style={{ marginTop: 14, columnCount: 3, columnGap: 18 }}>
               {matches.map((joke) => (
                 <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
@@ -322,6 +340,20 @@ export function SearchPage() {
                 </div>
               ))}
             </div>
+            {hasMore && (
+              <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="btn-flow-ghost"
+                  style={{ height: 44, padding: '0 24px' }}
+                  disabled={isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  {isFetching ? 'Loading…' : `Load more · ${matches.length} of ${totalCount}`}
+                </button>
+              </div>
+            )}
+            </>
           ) : (
             <div
               style={{
@@ -550,11 +582,14 @@ const THEMES = [
   { id: 'mondays', label: 'Mondays' },
 ]
 
+// `id` is the exact backend tone slug sent as `tones`. Verified against
+// /jokes/?tones=… — `office`/`kid` returned 0 rows; real slugs are
+// `office-proper` and `kid-safe`.
 const CATEGORIES = [
   { id: 'wholesome', label: 'Wholesome' },
-  { id: 'office', label: 'Office-proper' },
+  { id: 'office-proper', label: 'Office-proper' },
   { id: 'dad', label: 'Dad' },
-  { id: 'kid', label: 'Kid-safe' },
+  { id: 'kid-safe', label: 'Kid-safe' },
   { id: 'nerd', label: 'Nerd' },
   { id: 'surreal', label: 'Surreal' },
   { id: 'dark', label: 'Dark' },
@@ -566,5 +601,5 @@ const QUICK_PROMPTS: { label: string; fmts: string[]; themes: string[]; cats: st
   { label: 'Wedding toast', fmts: [], themes: ['dating'], cats: ['wholesome'] },
   { label: 'Dad-joke ammo', fmts: ['oneliner'], themes: ['family'], cats: ['dad'] },
   { label: 'Group-chat unhinged', fmts: [], themes: [], cats: ['edgy'] },
-  { label: 'Office Slack-safe', fmts: ['oneliner', 'observ'], themes: ['work'], cats: ['office'] },
+  { label: 'Office Slack-safe', fmts: ['oneliner', 'observ'], themes: ['work'], cats: ['office-proper'] },
 ]

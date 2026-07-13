@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router'
 import { Heart, ArrowRight, Calendar, TrendingUp } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { formatSlugToFlow } from '@/components/JokeRenderer'
 import { useFavorites, useFavoriteStats } from '@/features/favorites'
+
+type RawFavorite = { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }
 
 /**
  * FavoritesPage — redesigned for iteration 4.
@@ -19,11 +22,33 @@ import { useFavorites, useFavoriteStats } from '@/features/favorites'
  */
 export function FavoritesPage() {
   const [tone, setTone] = useState<string | null>(null)
-  const { data: favoritesData, isLoading } = useFavorites({ tones: tone ?? undefined })
+
+  // Current page — bumped by "Load more". Reset to 1 when the tone filter
+  // changes so a new tone starts a fresh paginated listing.
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [tone])
+
+  const { data: favoritesData, isLoading, isError, isFetching } = useFavorites({
+    tones: tone ?? undefined,
+    page,
+  })
   const { data: stats } = useFavoriteStats()
 
-  const favorites = favoritesData?.results ?? []
   const total = favoritesData?.count ?? 0
+
+  // Accumulate favorites across pages (page 1 replaces, later pages append,
+  // deduped by the underlying joke id).
+  const [favorites, setFavorites] = useState<RawFavorite[]>([])
+  useEffect(() => {
+    if (!favoritesData) return
+    const results = favoritesData.results as unknown as RawFavorite[]
+    setFavorites((prev) => {
+      if (page === 1) return results
+      const seen = new Set(prev.map((f) => f.joke?.id))
+      return [...prev, ...results.filter((f) => !seen.has(f.joke?.id))]
+    })
+  }, [favoritesData, page])
+  const hasMore = favorites.length < total
 
   const flowFavorites = useMemo(
     () => favorites.map((f, idx) => favoriteToFlowData(f, idx)),
@@ -32,7 +57,7 @@ export function FavoritesPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell active="library">
+      <FlowAppShell active="favorites">
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
           {/* Hero */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
@@ -109,7 +134,7 @@ export function FavoritesPage() {
             <span className="eyebrow-mono">Filter by tone</span>
             <ToneChip label="All" active={tone === null} onClick={() => setTone(null)} />
             {TONES.map((t) => (
-              <ToneChip key={t} label={t} active={tone === t} onClick={() => setTone(t)} />
+              <ToneChip key={t.slug} label={t.label} active={tone === t.slug} onClick={() => setTone(t.slug)} />
             ))}
           </div>
 
@@ -117,14 +142,31 @@ export function FavoritesPage() {
           <section style={{ marginTop: 24 }}>
             {isLoading ? (
               <FavoritesSkeleton />
+            ) : isError ? (
+              <FavoritesError />
             ) : flowFavorites.length > 0 ? (
-              <div style={{ columnCount: 3, columnGap: 18 }}>
-                {flowFavorites.map((j) => (
-                  <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={j} source="other" />
+              <>
+                <div style={{ columnCount: 3, columnGap: 18 }}>
+                  {flowFavorites.map((j) => (
+                    <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                      <FlowJokeCard joke={j} source="other" />
+                    </div>
+                  ))}
+                </div>
+                {hasMore && (
+                  <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn-flow-ghost"
+                      style={{ height: 44, padding: '0 24px' }}
+                      disabled={isFetching}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      {isFetching ? 'Loading…' : `Load more · ${favorites.length} of ${total}`}
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
               <FavoritesEmpty filtering={tone !== null} />
             )}
@@ -268,6 +310,25 @@ function FavoritesEmpty({ filtering }: { filtering: boolean }) {
   )
 }
 
+function FavoritesError() {
+  return (
+    <div
+      style={{
+        padding: '48px 32px',
+        border: '1px dashed #E9E8E7',
+        borderRadius: 18,
+        textAlign: 'center',
+        background: '#fff',
+      }}
+    >
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 28, color: '#1A1A1A', letterSpacing: '-0.02em' }}>
+        Couldn't load your favorites.
+      </div>
+      <p style={{ marginTop: 8, fontSize: 16, color: '#52525B' }}>Check your connection and try again in a moment.</p>
+    </div>
+  )
+}
+
 function FavoritesSkeleton() {
   return (
     <div style={{ columnCount: 3, columnGap: 18 }}>
@@ -298,30 +359,24 @@ function FavoritesSkeleton() {
 // FavoriteJoke from mock-data.ts has the joke text/setup/punchline + tones/etc.
 // ──────────────────────────────────────────────────────────────────────────
 
-function favoriteToFlowData(fav: { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }, idx: number): FlowJokeData {
-  const slug = fav.joke?.format?.slug ?? 'oneliner'
-  const fmt: FlowJokeFormat =
-    slug === 'setup_punchline' || slug === 'setup-punchline'
-      ? 'setup'
-      : slug === 'one_liner' || slug === 'one-liner'
-      ? 'oneliner'
-      : slug === 'observational'
-      ? 'observ'
-      : slug === 'anti_joke' || slug === 'anti-joke'
-      ? 'anti'
-      : slug === 'knock_knock' || slug === 'knock-knock'
-      ? 'knock'
-      : slug === 'story'
-      ? 'story'
-      : 'oneliner'
-
+export function favoriteToFlowData(fav: RawFavorite, idx: number): FlowJokeData {
   return {
     id: fav.joke?.id ?? idx,
-    fmt,
+    fmt: formatSlugToFlow(fav.joke?.format?.slug),
     setup: fav.joke?.setup ?? undefined,
     punch: fav.joke?.punchline ?? undefined,
     text: fav.joke?.text ?? undefined,
   }
 }
 
-const TONES = ['Wholesome', 'Office', 'Dad', 'Nerd', 'Surreal', 'Dark', 'Edgy']
+// `slug` is the exact backend tone slug sent as the `tones` filter; `label`
+// is the display text. `office` isn't a real tone — it's `office-proper`.
+const TONES: { slug: string; label: string }[] = [
+  { slug: 'wholesome', label: 'Wholesome' },
+  { slug: 'office-proper', label: 'Office' },
+  { slug: 'dad', label: 'Dad' },
+  { slug: 'nerd', label: 'Nerd' },
+  { slug: 'surreal', label: 'Surreal' },
+  { slug: 'dark', label: 'Dark' },
+  { slug: 'edgy', label: 'Edgy' },
+]

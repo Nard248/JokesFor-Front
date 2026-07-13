@@ -17,7 +17,7 @@ import { NotificationsPanel } from './NotificationsPanel'
  * Falls back gracefully for anonymous users: default avatar, no streak
  * shown. Streak chip pulls real data from /users/me/streak/.
  */
-export type FlowNavKey = 'today' | 'explore' | 'search' | 'library'
+export type FlowNavKey = 'today' | 'explore' | 'search' | 'trending' | 'daily' | 'favorites' | 'library'
 
 interface FlowAppShellProps {
   active?: FlowNavKey
@@ -30,6 +30,9 @@ const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
   ['today', 'Today', '/flow-canvas'],
   ['explore', 'Explore', '/explore'],
   ['search', 'Search', '/search'],
+  ['trending', 'Trending', '/trending'],
+  ['daily', 'Daily', '/daily'],
+  ['favorites', 'Favorites', '/favorites'],
   ['library', 'Library', '/library'],
 ]
 
@@ -85,7 +88,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
               JokesFor
             </span>
           </Link>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             {NAV_ITEMS.map(([key, label, to]) => (
               <Link
                 key={key}

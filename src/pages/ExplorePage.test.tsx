@@ -95,10 +95,15 @@ describe('ExplorePage — real backend search', () => {
     expect(p.context_tags).toBeUndefined()
   })
 
-  it('maps a Format chip to the backend joke_format slug', () => {
+  it('maps a Format chip to the REAL backend joke_format slug', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'One-liner' }))
-    expect(lastParams().joke_format).toBe('one_liner')
+    // The real DB slug is `oneliner`, not the invented `one_liner` (which
+    // returned 0 rows). See FLOW_FORMAT_TO_BACKEND_SLUG.
+    expect(lastParams().joke_format).toBe('oneliner')
+    fireEvent.click(screen.getByRole('button', { name: 'Setup → Punchline' }))
+    // Multiple formats join as comma slugs, both real.
+    expect(lastParams().joke_format).toBe('oneliner,setup')
   })
 
   it('maps a Theme chip to context_tags and a Category chip to tones', () => {
@@ -108,6 +113,15 @@ describe('ExplorePage — real backend search', () => {
     const p = lastParams()
     expect(p.context_tags).toBe('work')
     expect(p.tones).toBe('dad')
+  })
+
+  it('sends the REAL tone slug for remapped Category chips (office-proper / kid-safe)', () => {
+    renderPage()
+    // These chips used to send `office` / `kid`, which return 0 rows.
+    fireEvent.click(screen.getByRole('button', { name: 'Office-proper' }))
+    expect(lastParams().tones).toBe('office-proper')
+    fireEvent.click(screen.getByRole('button', { name: 'Kid-safe' }))
+    expect(lastParams().tones).toBe('office-proper,kid-safe')
   })
 
   it('renders a loading skeleton while fetching', () => {
@@ -120,5 +134,33 @@ describe('ExplorePage — real backend search', () => {
     mockUseJokeSearch.mockReturnValue({ data: page([]), isLoading: false, isError: false })
     renderPage()
     expect(screen.getByText(/No jokes match/)).toBeDefined()
+  })
+
+  it('paginates: "Load more" fetches page 2 and appends the new results', () => {
+    // Page 1 has 2 of 3 total (hasMore); page 2 delivers the third joke.
+    const p1 = {
+      data: { count: 3, next: 'x', previous: null, results: [makeJoke(11), makeJoke(12)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    const p2 = {
+      data: { count: 3, next: null, previous: 'x', results: [makeJoke(13)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    // Return STABLE references per page so the accumulation effect only fires
+    // when the page actually changes.
+    mockUseJokeSearch.mockImplementation((p: JokeSearchParams) => ((p.page ?? 1) >= 2 ? p2 : p1))
+
+    renderPage()
+    // Page 1 rendered; page 3 not yet requested.
+    expect(screen.getByText('joke-11')).toBeDefined()
+    expect(screen.queryByText('joke-13')).toBeNull()
+    expect(lastParams().page).toBe(1)
+
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }))
+
+    // Page 2 requested, and its result is appended to the accumulated grid.
+    expect(lastParams().page).toBe(2)
+    expect(screen.getByText('joke-11')).toBeDefined()
+    expect(screen.getByText('joke-13')).toBeDefined()
   })
 })

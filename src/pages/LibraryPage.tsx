@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Search, Plus, ArrowRight, Bookmark } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { formatSlugToFlow } from '@/components/JokeRenderer'
 import { useCollections } from '@/features/collections'
 import { useSavedJokes } from '@/features/saved-jokes'
 
@@ -60,9 +61,15 @@ export function LibraryPage() {
                 Every joke you've kept. Organized into collections, searchable, retrievable in seconds.
               </p>
             </div>
-            <button type="button" className="btn-flow-primary" style={{ height: 48, fontSize: 14 }}>
+            {/* Collection creation lives on the dedicated /collections page
+                (inline create form + POST /collections/). Route there. */}
+            <Link
+              to="/collections"
+              className="btn-flow-primary"
+              style={{ height: 48, fontSize: 14, textDecoration: 'none' }}
+            >
               <Plus size={16} /> New collection
-            </button>
+            </Link>
           </div>
 
           {/* Search bar */}
@@ -150,7 +157,7 @@ export function LibraryPage() {
                 }}
               >
                 {filteredCollections.map((c, i) => (
-                  <CollectionTile key={c.id} name={c.name} count={c.joke_count} isDefault={c.is_default} index={i} />
+                  <CollectionTile key={c.id} id={c.id} name={c.name} count={c.joke_count} isDefault={c.is_default} index={i} />
                 ))}
               </div>
             ) : (
@@ -216,13 +223,14 @@ export function LibraryPage() {
 // ──────────────────────────────────────────────────────────────────────────
 
 interface CollectionTileProps {
+  id: number
   name: string
   count: number
   isDefault: boolean
   index: number
 }
 
-function CollectionTile({ name, count, isDefault, index }: CollectionTileProps) {
+function CollectionTile({ id, name, count, isDefault, index }: CollectionTileProps) {
   // Cycle through 4 background tints to give the grid visual rhythm.
   const tints = [
     { bg: '#fff', border: '#E9E8E7', accent: '#6A1CF6' },
@@ -233,8 +241,9 @@ function CollectionTile({ name, count, isDefault, index }: CollectionTileProps) 
   const tint = tints[index % tints.length]
 
   return (
-    <button
-      type="button"
+    <Link
+      to={`/collections/${id}`}
+      aria-label={`Open collection ${name}`}
       style={{
         position: 'relative',
         padding: 24,
@@ -242,6 +251,7 @@ function CollectionTile({ name, count, isDefault, index }: CollectionTileProps) 
         border: `1px solid ${tint.border}`,
         borderRadius: 18,
         textAlign: 'left',
+        textDecoration: 'none',
         cursor: 'pointer',
         minHeight: 160,
         display: 'flex',
@@ -302,7 +312,7 @@ function CollectionTile({ name, count, isDefault, index }: CollectionTileProps) 
           {isDefault && ' · Default'}
         </div>
       </div>
-    </button>
+    </Link>
   )
 }
 
@@ -341,9 +351,13 @@ function CollectionsEmpty({ searching }: { searching: boolean }) {
           ? 'Try a shorter search, or create a new collection.'
           : 'Group your saved jokes into themes — "Office-safe", "Wedding speech", "Dad jokes" — anything that helps you find them later.'}
       </p>
-      <button type="button" className="btn-flow-primary" style={{ marginTop: 16, height: 42, fontSize: 13 }}>
+      <Link
+        to="/collections"
+        className="btn-flow-primary"
+        style={{ display: 'inline-flex', marginTop: 16, height: 42, fontSize: 13, textDecoration: 'none' }}
+      >
         <Plus size={14} /> Create collection
-      </button>
+      </Link>
     </div>
   )
 }
@@ -393,29 +407,13 @@ function SavesEmpty({ searching }: { searching: boolean }) {
 // Format inference is lossy (legacy Joke has format.slug; we map to FlowJokeFormat).
 // ──────────────────────────────────────────────────────────────────────────
 
-function savedJokeToFlowData(saved: {
+export function savedJokeToFlowData(saved: {
   id: number
   joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } }
 }): FlowJokeData {
-  const slug = saved.joke?.format?.slug ?? 'oneliner'
-  const fmt =
-    slug === 'setup_punchline' || slug === 'setup-punchline'
-      ? 'setup'
-      : slug === 'one_liner' || slug === 'one-liner'
-      ? 'oneliner'
-      : slug === 'observational'
-      ? 'observ'
-      : slug === 'anti_joke' || slug === 'anti-joke'
-      ? 'anti'
-      : slug === 'knock_knock' || slug === 'knock-knock'
-      ? 'knock'
-      : slug === 'story'
-      ? 'story'
-      : 'oneliner'
-
   return {
     id: saved.id,
-    fmt,
+    fmt: formatSlugToFlow(saved.joke?.format?.slug),
     setup: saved.joke?.setup ?? undefined,
     punch: saved.joke?.punchline ?? undefined,
     text: saved.joke?.text ?? undefined,

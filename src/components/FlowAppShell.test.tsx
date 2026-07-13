@@ -82,6 +82,16 @@ describe('FlowAppShell', () => {
     expect(screen.getByText('content')).toBeInTheDocument()
   })
 
+  it('exposes nav links for Trending, Daily and Favorites (reachable from the canonical shell)', () => {
+    renderShell(true)
+    expect(screen.getByRole('link', { name: 'Trending' }).getAttribute('href')).toBe('/trending')
+    expect(screen.getByRole('link', { name: 'Daily' }).getAttribute('href')).toBe('/daily')
+    expect(screen.getByRole('link', { name: 'Favorites' }).getAttribute('href')).toBe('/favorites')
+    // Existing entries still present.
+    expect(screen.getByRole('link', { name: 'Explore' }).getAttribute('href')).toBe('/explore')
+    expect(screen.getByRole('link', { name: 'Library' }).getAttribute('href')).toBe('/library')
+  })
+
   it('active is optional — renders without active prop and no nav item is highlighted', () => {
     // Just checks it doesn't throw when active is undefined
     mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false })

@@ -87,9 +87,17 @@ describe('SearchPage — real backend search', () => {
     // "Dad-joke ammo" → fmts: [oneliner], themes: [family], cats: [dad]
     fireEvent.click(screen.getByRole('button', { name: 'Dad-joke ammo' }))
     const p = lastParams()
-    expect(p.joke_format).toBe('one_liner')
+    // Real backend slug is `oneliner`, not `one_liner`.
+    expect(p.joke_format).toBe('oneliner')
     expect(p.context_tags).toBe('family')
     expect(p.tones).toBe('dad')
+  })
+
+  it('quick prompt sends the REAL office-proper tone slug', () => {
+    renderPage()
+    // "Office Slack-safe" → cats: [office-proper] (was the empty-returning `office`)
+    fireEvent.click(screen.getByRole('button', { name: 'Office Slack-safe' }))
+    expect(lastParams().tones).toBe('office-proper')
   })
 
   it('wires the debounced keyword box to the real full-text q param', () => {
@@ -111,6 +119,28 @@ describe('SearchPage — real backend search', () => {
     mockUseJokeSearch.mockReturnValue({ data: page([]), isLoading: false, isError: false })
     renderPage()
     expect(screen.getByText(/No jokes for that exact/)).toBeDefined()
+  })
+
+  it('paginates: "Load more" fetches page 2 and appends the new results', () => {
+    const p1 = {
+      data: { count: 3, next: 'x', previous: null, results: [makeJoke(21), makeJoke(22)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    const p2 = {
+      data: { count: 3, next: null, previous: 'x', results: [makeJoke(23)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    mockUseJokeSearch.mockImplementation((p: JokeSearchParams) => ((p.page ?? 1) >= 2 ? p2 : p1))
+
+    renderPage()
+    expect(screen.getByText('joke-21')).toBeDefined()
+    expect(screen.queryByText('joke-23')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }))
+
+    expect(lastParams().page).toBe(2)
+    expect(screen.getByText('joke-21')).toBeDefined()
+    expect(screen.getByText('joke-23')).toBeDefined()
   })
 })
 
