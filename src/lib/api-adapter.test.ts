@@ -21,6 +21,7 @@ const realApi = {
   creatorInsightsApi: { get: vi.fn() },
   followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
   creatorProfileApi: { get: vi.fn() },
+  draftsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), submit: vi.fn(), delete: vi.fn() },
 }
 vi.mock('@/lib/api', () => realApi)
 
@@ -427,6 +428,73 @@ describe('moderationAdapter', () => {
     await moderationAdapter.unblock(1)
     expect(await moderationAdapter.myBlocks()).toEqual([])
     expect(realApi.moderationApi.block).not.toHaveBeenCalled()
+  })
+})
+
+describe('draftsAdapter', () => {
+  const dtoRow = {
+    id: 501,
+    text: '',
+    setup: 'Why did the dev quit?',
+    punchline: 'No arrays.',
+    format: { id: 2, name: 'Setup & Punchline', slug: 'setup' },
+    age_rating: null,
+    status: 'submitted' as const,
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-02T00:00:00Z',
+  }
+
+  it('list (prod config) calls the REAL draftsApi.list and maps DTO->DraftJoke, never the mock fixtures', async () => {
+    realApi.draftsApi.list.mockResolvedValue({
+      data: { count: 1, next: null, previous: null, results: [dtoRow] },
+    })
+    const { draftsAdapter } = await loadAdapterReal()
+    const out = await draftsAdapter.list()
+    expect(realApi.draftsApi.list).toHaveBeenCalled()
+    expect(out.results[0]).toMatchObject({
+      id: 501,
+      setup: 'Why did the dev quit?',
+      punchline: 'No arrays.',
+      format: 'Setup & Punchline',
+      status: 'pending', // backend 'submitted' -> UI 'pending'
+      lastEditedAt: '2026-06-02T00:00:00Z',
+    })
+    // The seeded mock fixtures (ids 101/102/103) must NOT leak into prod.
+    expect(out.results.map((d) => d.id)).not.toContain(101)
+  })
+
+  it('mock path: list returns the seeded fixtures and does NOT hit the real draftsApi', async () => {
+    const { draftsAdapter } = await loadAdapterMock()
+    const out = await draftsAdapter.list()
+    expect(realApi.draftsApi.list).not.toHaveBeenCalled()
+    expect(out.results.length).toBeGreaterThan(0)
+  })
+
+  it('create (prod) forwards only the cleanly-mappable text fields and maps the response back', async () => {
+    realApi.draftsApi.create.mockResolvedValue({
+      data: {
+        id: 900, text: 'one liner', setup: null, punchline: null,
+        format: null, age_rating: null, status: 'draft',
+        created_at: 'x', updated_at: 'y',
+      },
+    })
+    const { draftsAdapter } = await loadAdapterReal()
+    // Shape SubmitJokePage sends (note the excess `text` field + display-label format).
+    const payload = { setup: '', punchline: '', text: 'one liner', format: 'One-Liner', status: 'draft' as const, tones: [], lastEditedAt: 'z' }
+    const out = await draftsAdapter.create(payload)
+    // display-label `format`/`tones` have no backend id here, so they're dropped.
+    expect(realApi.draftsApi.create).toHaveBeenCalledWith({ setup: null, punchline: null, text: 'one liner' })
+    expect(out).toMatchObject({ id: 900, setup: 'one liner', status: 'draft' })
+  })
+
+  it('submit/delete (prod) call the real endpoints, not the mock', async () => {
+    realApi.draftsApi.submit.mockResolvedValue({ data: { ...dtoRow, status: 'submitted' } })
+    realApi.draftsApi.delete.mockResolvedValue({})
+    const { draftsAdapter } = await loadAdapterReal()
+    await draftsAdapter.submit(501)
+    expect(realApi.draftsApi.submit).toHaveBeenCalledWith(501)
+    await expect(draftsAdapter.delete(501)).resolves.toBeUndefined()
+    expect(realApi.draftsApi.delete).toHaveBeenCalledWith(501)
   })
 })
 

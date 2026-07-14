@@ -136,6 +136,20 @@ describe('ExplorePage — real backend search', () => {
     expect(screen.getByText(/No jokes match/)).toBeDefined()
   })
 
+  it('does NOT interleave the fabricated "Curator note" editorial tile', () => {
+    // Enough results that the old code would have injected the hardcoded
+    // editorial quote at result index 4. No real curation source exists.
+    mockUseJokeSearch.mockReturnValue({
+      data: page([11, 12, 13, 14, 15, 16].map(makeJoke)),
+      isLoading: false,
+      isError: false,
+    })
+    renderPage()
+    expect(screen.queryByText(/Curator note/i)).toBeNull()
+    expect(screen.queryByText(/leaned hard into puns/i)).toBeNull()
+    expect(screen.queryByText(/The JokesFor desk/i)).toBeNull()
+  })
+
   it('paginates: "Load more" fetches page 2 and appends the new results', () => {
     // Page 1 has 2 of 3 total (hasMore); page 2 delivers the third joke.
     const p1 = {

@@ -27,7 +27,7 @@ export function DailyJokePage() {
           {/* Hero strip */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <span className="eyebrow-mono">Daily · Vol. I · No. 042</span>
+              <span className="eyebrow-mono">{today?.issue_label ? `Daily · ${today.issue_label}` : 'Daily'}</span>
               <h2
                 style={{
                   marginTop: 8,
@@ -309,7 +309,6 @@ function HistoryTile({ text, date, index }: { text?: string; date?: string; inde
   const bg = tints[index % tints.length]
   const dateline = date ? new Date(date) : null
   const day = dateline?.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() ?? '—'
-  const num = dateline ? String(40 - index).padStart(3, '0') : '—'
 
   return (
     <button
@@ -332,7 +331,7 @@ function HistoryTile({ text, date, index }: { text?: string; date?: string; inde
     >
       <div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
-          {day} · No. {num}
+          {day}
         </div>
         <div
           style={{

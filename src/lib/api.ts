@@ -235,7 +235,9 @@ export const jokesApi = {
 // Daily joke API
 export const dailyJokeApi = {
   getToday: () =>
-    api.get<{ joke: Joke; date: string }>('/daily-jokes/today/'),
+    // `issue_label` ("Vol. I · No. 042") is returned by the backend; optional so
+    // the mock/older fixtures without it still type-check.
+    api.get<{ joke: Joke; date: string; issue_label?: string }>('/daily-jokes/today/'),
 
   getHistory: () =>
     api.get<PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/'),
