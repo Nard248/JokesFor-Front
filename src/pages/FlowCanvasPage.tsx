@@ -13,7 +13,9 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { useDailyJokeHistory } from '@/features/daily-joke'
 import { useTopJokesters } from '@/features/trending'
 import { recordShare, useDwell } from '@/features/telemetry'
+import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal } from '@/lib/telemetry'
+import { timeUntilDailyReset, dailyResetLocalLabel } from '@/lib/dailyReset'
 
 /**
  * Flow Canvas — the "Today" hub, redesigned per Docs/JokesFor/parts/flow-screens.jsx
@@ -54,6 +56,8 @@ export function FlowCanvasPage() {
   const { data: tasteProfile } = useTasteProfile('month')
   const { data: history } = useDailyJokeHistory()
   const { data: jokesters } = useTopJokesters(5)
+  // The daily joke rotates at MIDNIGHT UTC; prefer the server's reset_at.
+  const { resetAt } = useDailyReads()
   // "Three you'll probably save" — filter by user's top vibe; fall back to recent.
   const topVibe = tasteProfile?.top_vibe?.slug
   const { data: forYouJokes } = useJokeSearch(topVibe ? { vibe: topVibe, page_size: 3 } : { page_size: 3, ordering: '-created_at' })
@@ -209,7 +213,7 @@ export function FlowCanvasPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <StreakRail days={streak?.current_count ?? 0} streakState={streak} />
               <MysteryBox status={mysteryStatus} />
-              <TomorrowTeaser tomorrow={tomorrow} />
+              <TomorrowTeaser tomorrow={tomorrow} resetAt={resetAt} />
             </div>
           </div>
 
@@ -272,7 +276,7 @@ export function FlowCanvasPage() {
           <StatsRow tasteProfile={tasteProfile} />
 
           {/* ── Brand pull-quote footer ─────────────────────────── */}
-          <BrandQuoteFooter issueLabel={today?.issue_label} />
+          <BrandQuoteFooter issueLabel={today?.issue_label} resetAt={resetAt} />
         </div>
       </FlowAppShell>
     </div>
@@ -626,13 +630,21 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
   )
 }
 
-function TomorrowTeaser({ tomorrow }: { tomorrow: ReturnType<typeof useTomorrowTeaser>['data'] }) {
+function TomorrowTeaser({
+  tomorrow,
+  resetAt,
+}: {
+  tomorrow: ReturnType<typeof useTomorrowTeaser>['data']
+  resetAt?: string | null
+}) {
   const previewText = tomorrow?.preview ?? "Tomorrow's joke is brewing…"
   const formatName = tomorrow?.format ? formatLabel(tomorrow.format) : 'TBD'
+  // Next joke drops at midnight UTC — shown in the reader's local time.
+  const resetLocal = dailyResetLocalLabel(resetAt)
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#0F0E12', color: '#fff' }}>
       <span className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>
-        Tomorrow · 9:00 AM
+        Next joke · {resetLocal}
       </span>
       <div
         style={{
@@ -1296,8 +1308,11 @@ function StatCell({ value, label, valueColor }: { value: string; label: string; 
   )
 }
 
-function BrandQuoteFooter({ issueLabel }: { issueLabel?: string }) {
-  const countdown = timeUntilNextDrop()
+function BrandQuoteFooter({ issueLabel, resetAt }: { issueLabel?: string; resetAt?: string | null }) {
+  // Count down to the real rotation instant: MIDNIGHT UTC (or the server's
+  // reset_at), NOT 9 AM local. Display stays in the reader's local time.
+  const countdown = timeUntilDailyReset(resetAt)
+  const resetLocal = dailyResetLocalLabel(resetAt)
   return (
     <div
       style={{
@@ -1355,7 +1370,7 @@ function BrandQuoteFooter({ issueLabel }: { issueLabel?: string }) {
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
-        <span className="eyebrow-mono">Tomorrow at 9:00 AM</span>
+        <span className="eyebrow-mono">Next joke at {resetLocal}</span>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 48, color: '#1A1A1A', lineHeight: 0.95 }}>
           {countdown.h}h
           <br />
@@ -1447,14 +1462,4 @@ function last28DaysLabel(): string {
   start.setDate(end.getDate() - 27)
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase()
   return `${fmt(start)} ────────── ${fmt(end)}`
-}
-
-/** Real time remaining until the next 9:00 AM local drop. */
-function timeUntilNextDrop(): { h: number; m: number } {
-  const now = new Date()
-  const next = new Date(now)
-  next.setHours(9, 0, 0, 0)
-  if (next <= now) next.setDate(next.getDate() + 1)
-  const totalMinutes = Math.max(0, Math.round((next.getTime() - now.getTime()) / 60000))
-  return { h: Math.floor(totalMinutes / 60), m: totalMinutes % 60 }
 }

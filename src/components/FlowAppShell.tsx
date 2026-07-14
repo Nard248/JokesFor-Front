@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
 import { useUnseenSubmissionChange } from '@/features/create/store'
 import { useUnreadCount } from '@/features/notifications'
+import { DailyReadsNudge } from '@/features/daily-reads'
 import { ProfileMenu } from './ProfileMenu'
 import { NotificationsPanel } from './NotificationsPanel'
 
@@ -227,6 +228,10 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
         </div>
       </header>
       <main key={pathname} className="page-enter">{children}</main>
+
+      {/* One-time freemium nudge — shown once the first moment the user crosses
+          the free daily-reads cap. Silent (and network-free) when uncapped. */}
+      {isAuthenticated && <DailyReadsNudge />}
 
       {/* Local button styles — duplicated across Flow* pages, kept here so
           the shell renders cleanly even if a page forgot to inline them. */}

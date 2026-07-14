@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Lock } from 'lucide-react'
 
 export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story'
 
@@ -108,7 +108,19 @@ interface JokeRendererProps {
   /** Fired once when the user reveals the payoff (setup→punchline tap, or the
    * knock-knock chain reaching its final line). Used for real reveal telemetry. */
   onReveal?: () => void
+  /**
+   * Paywall: when true the payoff is LOCKED — the blur is forced on over a
+   * redacted placeholder, the reveal affordance is replaced by an "Unlock with
+   * Supporter" CTA, and `onReveal` is NEVER fired (there's nothing to reveal).
+   * The `setup` teaser (when present) still shows as the free hook.
+   */
+  locked?: boolean
+  /** Invoked when the user taps the locked CTA (parent routes to billing). */
+  onUnlock?: () => void
 }
+
+/** Redacted filler shown under the blur when the payoff has been stripped. */
+const LOCKED_FILL = '████ ███████ ██ ████ ████████ ███'
 
 /**
  * Pure, format-aware joke body renderer. Single source of rendering truth shared by
@@ -116,11 +128,18 @@ interface JokeRendererProps {
  */
 export function JokeRenderer({
   payload, big = false, revealed: revealedProp, interactive = true, read, className, onReveal,
+  locked = false, onUnlock,
 }: JokeRendererProps) {
   const { format: fmt } = payload
   const skin = SKIN[fmt] ?? SKIN.setup
   const [localRevealed, setLocalRevealed] = useState(fmt !== 'setup')
   const [knockStep, setKnockStep] = useState(0)
+
+  // Paywall: a locked payoff short-circuits every format's interactive path, so
+  // the reveal handlers (and onReveal telemetry) can never fire for it.
+  if (locked) {
+    return <LockedBody payload={payload} skin={skin} big={big} className={className} onUnlock={onUnlock} />
+  }
 
   const revealed = revealedProp ?? localRevealed
   const lines = payload.lines ?? []
@@ -223,4 +242,86 @@ export function JokeRenderer({
   }
 
   return null
+}
+
+/**
+ * Locked payoff — shared by every format. Shows the free `setup` teaser (when
+ * present), forces the `.punch-blur` ON over a redacted placeholder, and swaps
+ * the reveal affordance for the "Unlock with Supporter" CTA. No reveal fires.
+ */
+function LockedBody({
+  payload, skin, big, className, onUnlock,
+}: {
+  payload: JokePayload
+  skin: SkinSpec
+  big?: boolean
+  className?: string
+  onUnlock?: () => void
+}) {
+  const hasTeaser = !!payload.setup
+  const titleSize = big ? 24 : 16
+  const punchSize = big ? 44 : 22
+  return (
+    <div className={className} style={{ marginTop: 14 }}>
+      {hasTeaser && (
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: titleSize, color: skin.fg, lineHeight: 1.3 }}>
+          {payload.setup}
+        </div>
+      )}
+      <div
+        className="punch-blur"
+        aria-hidden
+        style={{
+          marginTop: hasTeaser ? 12 : 0,
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: punchSize,
+          letterSpacing: '-0.02em',
+          color: skin.fg,
+          lineHeight: 1.05,
+        }}
+      >
+        {LOCKED_FILL}
+      </div>
+      <UnlockCta skin={skin} onUnlock={onUnlock} />
+    </div>
+  )
+}
+
+/**
+ * "Unlock with Supporter" CTA. A plain button (not a Link) so JokeRenderer stays
+ * router-free and testable; the parent wires `onUnlock` to navigation
+ * (/settings/billing). Stops propagation so a card wrapped in a detail <Link>
+ * doesn't also navigate to the joke.
+ */
+function UnlockCta({ skin, onUnlock }: { skin: SkinSpec; onUnlock?: () => void }) {
+  return (
+    <button
+      type="button"
+      data-testid="unlock-supporter-cta"
+      onClick={(e) => {
+        e.stopPropagation()
+        e.preventDefault()
+        onUnlock?.()
+      }}
+      style={{
+        marginTop: 16,
+        height: 40,
+        padding: '0 18px',
+        borderRadius: 9999,
+        border: 0,
+        background: skin.fg,
+        color: skin.bg,
+        fontFamily: 'var(--font-sans)',
+        fontWeight: 700,
+        fontSize: 13,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <Lock size={14} /> Unlock with Supporter
+    </button>
+  )
 }

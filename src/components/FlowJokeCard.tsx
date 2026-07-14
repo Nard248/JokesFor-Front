@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react'
 import { useReactToJoke, useReactions } from '@/features/reactions'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { useImpression, useDwell, recordShare } from '@/features/telemetry'
+import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import type { Joke, ReactionSlug } from '@/lib/api'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from './JokeRenderer'
@@ -50,6 +52,10 @@ export interface FlowJokeData {
 
   // Story extras
   read?: string          // "2 min" / "30 sec"
+
+  /** Paywall: server-stripped payoff (`is_locked`). When true the card renders
+   * the locked state (blurred payoff + "Unlock with Supporter" CTA). */
+  isLocked?: boolean
 }
 
 interface FlowJokeCardProps {
@@ -66,9 +72,20 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   const skin = SKIN[joke.fmt] ?? SKIN.setup
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
+  const navigate = useNavigate()
+  const { canReveal, registerReveal } = useDailyReads()
 
   const numericId = typeof joke.id === 'number' ? joke.id : undefined
   const telemetryId = source ? numericId : undefined
+
+  // Locked = server strip (hard boundary) OR client-side cap tightening: on a
+  // reveal-gated format (setup / knock), once the user is over their free cap,
+  // a not-yet-revealed joke is blocked with the same CTA. Already-revealed and
+  // uncapped jokes stay open (canReveal handles both).
+  const revealGated = joke.fmt === 'setup' || joke.fmt === 'knock'
+  const softLocked =
+    numericId !== undefined && revealGated && !joke.isLocked && !canReveal(numericId)
+  const locked = !!joke.isLocked || softLocked
   // Impression: fire once when ≥50% visible for ~1s (no-op without a real id
   // or telemetry source; gating lives in the telemetry client).
   const impressionRef = useImpression<HTMLElement>(telemetryId, source ?? 'other')
@@ -85,7 +102,11 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   }
 
   const handleReveal = () => {
-    if (numericId !== undefined && source) trackReveal(numericId, source)
+    // Never reached for a locked card (JokeRenderer short-circuits), but guard
+    // anyway so a genuine reveal is what decrements the cap.
+    if (locked || numericId === undefined) return
+    registerReveal(numericId)
+    if (source) trackReveal(numericId, source)
   }
 
   const handleShare = (e: React.MouseEvent) => {
@@ -155,6 +176,8 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
         big={big}
         read={joke.read}
         onReveal={handleReveal}
+        locked={locked}
+        onUnlock={() => navigate('/settings/billing')}
       />
 
       {/* Reaction row: only for real jokes with numeric IDs (skip previews/mocks). */}
@@ -376,5 +399,8 @@ export function jokeToFlowData(joke: Joke): FlowJokeData {
     lines: joke.lines ?? undefined,
     themeLabel,
     catLabel,
+    // GRACEFUL DEGRADATION: only lock when the backend explicitly says so.
+    // A missing `is_locked` (backend not deployed) reads as unlocked.
+    isLocked: joke.is_locked === true,
   }
 }
