@@ -16,7 +16,6 @@ import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/joke
  *   - CATEGORY ("how it feels"): wholesome, office, dad, kid, nerd, surreal, dark, edgy
  *
  * Results render as a 3-column masonry of FlowJokeCard. Stack any chips.
- * Editorial tiles (curator note, weekly special) interleave when there's room.
  */
 export function ExplorePage() {
   const [fmts, setFmts] = useState<Set<FlowJokeFormat>>(new Set())
@@ -257,53 +256,13 @@ export function ExplorePage() {
           ) : jokes.length > 0 ? (
             <>
             <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }}>
-              {jokes.map((joke, i) => (
+              {jokes.map((joke) => (
                 <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                   {/* Link to the real detail so a click opens the correct joke and
                       logs a real view (?source=explore). */}
                   <Link to={`/jokes/${joke.id}?source=explore`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <FlowJokeCard joke={jokeToFlowData(joke)} source="explore" />
                   </Link>
-                  {/* Curator note interleaved */}
-                  {i === 4 && (
-                    <div
-                      style={{
-                        marginTop: 18,
-                        padding: 28,
-                        borderRadius: 18,
-                        background: '#6A1CF6',
-                        color: '#fff',
-                      }}
-                    >
-                      <span className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                        Curator note
-                      </span>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-serif)',
-                          fontStyle: 'italic',
-                          fontWeight: 600,
-                          fontSize: 24,
-                          lineHeight: 1.25,
-                          marginTop: 10,
-                        }}
-                      >
-                        “This week leaned hard into puns. <em style={{ color: '#CAFD00' }}>We're not apologizing.</em>”
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 14,
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 11,
-                          letterSpacing: '0.18em',
-                          textTransform: 'uppercase',
-                          opacity: 0.7,
-                        }}
-                      >
-                        — The JokesFor desk
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

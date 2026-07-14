@@ -10,7 +10,8 @@ import type {
   UserPreferences,
 } from './mock-data'
 import type { BlockedUser, ContentReportInput, NotificationDTO } from './api'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi, draftsApi } from './api'
+import type { DraftJokeDTO } from './api'
 import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
   mockJokesApi,
@@ -61,7 +62,9 @@ export const jokesAdapter = {
 
 // ── Daily Joke Adapter ──
 export const dailyJokeAdapter = {
-  getToday: (): Promise<{ joke: Joke; date: string }> =>
+  // `issue_label` is optional so the mock (which omits it) stays assignable; the
+  // real backend response includes it and the daily hero renders it when present.
+  getToday: (): Promise<{ joke: Joke; date: string; issue_label?: string }> =>
     USE_MOCKS
       ? mockDailyJokeApi.getToday()
       : dailyJokeApi.getToday().then((r) => r.data),
@@ -211,22 +214,67 @@ export const favoritesAdapter = {
         })),
 }
 
+// ── Drafts mappers ──
+// The real DraftJokeDTO (snake_case, nested format object, backend status enum)
+// doesn't line up with the camelCase DraftJoke the legacy drafts UI renders, so
+// map between them. Only the cleanly-mappable text fields cross the write
+// boundary; the legacy display-label `format`/`tones` have no backend-id
+// equivalent here, so they're dropped rather than sent as bogus values.
+const draftStatusFromDTO: Record<DraftJokeDTO['status'], DraftJoke['status']> = {
+  draft: 'draft',
+  submitted: 'pending',
+  approved: 'published',
+  rejected: 'rejected',
+}
+
+function draftFromDTO(d: DraftJokeDTO): DraftJoke {
+  return {
+    id: d.id,
+    setup: d.setup ?? d.text ?? '',
+    punchline: d.punchline ?? '',
+    format: d.format?.name ?? '',
+    status: draftStatusFromDTO[d.status] ?? 'draft',
+    tones: [],
+    lastEditedAt: d.updated_at || d.created_at || '',
+  }
+}
+
+function draftToDTO(data: Partial<DraftJoke>): Partial<DraftJokeDTO> {
+  const dto: Partial<DraftJokeDTO> = {}
+  if (data.setup !== undefined) dto.setup = data.setup || null
+  if (data.punchline !== undefined) dto.punchline = data.punchline || null
+  // SubmitJokePage forwards a `text` field (excess prop on Partial<DraftJoke>).
+  const text = (data as { text?: string }).text
+  if (text !== undefined) dto.text = text
+  return dto
+}
+
 // ── Drafts Adapter ──
 export const draftsAdapter = {
   list: (): Promise<PaginatedResponse<DraftJoke>> =>
-    mockDraftsApi.list(),
+    USE_MOCKS
+      ? mockDraftsApi.list()
+      : draftsApi.list().then((r) => ({ ...r.data, results: r.data.results.map(draftFromDTO) })),
 
   create: (data: Partial<DraftJoke>): Promise<DraftJoke> =>
-    mockDraftsApi.create(data),
+    USE_MOCKS
+      ? mockDraftsApi.create(data)
+      : draftsApi.create(draftToDTO(data)).then((r) => draftFromDTO(r.data)),
 
   update: (id: number, data: Partial<DraftJoke>): Promise<DraftJoke> =>
-    mockDraftsApi.update(id, data),
+    USE_MOCKS
+      ? mockDraftsApi.update(id, data)
+      : draftsApi.update(id, draftToDTO(data)).then((r) => draftFromDTO(r.data)),
 
   submit: (id: number): Promise<DraftJoke> =>
-    mockDraftsApi.submit(id),
+    USE_MOCKS
+      ? mockDraftsApi.submit(id)
+      : draftsApi.submit(id).then((r) => draftFromDTO(r.data)),
 
   delete: (id: number): Promise<void> =>
-    mockDraftsApi.delete(id),
+    USE_MOCKS
+      ? mockDraftsApi.delete(id)
+      : draftsApi.delete(id).then(() => undefined),
 }
 
 // ── Profile Adapter ──

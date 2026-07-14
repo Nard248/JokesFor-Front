@@ -1,9 +1,7 @@
 import type { Joke } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
-import { Avatar } from '@/components/ui/avatar'
 import { Copy, Share2, Bookmark } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { mockAuthors } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
 import { ReportJokeButton } from '@/components/ReportJokeButton'
 
@@ -26,8 +24,6 @@ const toneBadgeVariant: Record<string, 'default' | 'lime' | 'amber' | 'purple' |
 }
 
 export function JokeCard({ joke, className, showBookmark, showReport }: JokeCardProps) {
-  const author = mockAuthors[(joke.id % Object.keys(mockAuthors).length) + 1] || mockAuthors[1]
-
   const handleCopy = () => {
     navigator.clipboard.writeText(joke.text)
   }
@@ -74,21 +70,17 @@ export function JokeCard({ joke, className, showBookmark, showReport }: JokeCard
       {/* Separator */}
       <hr className="border-[#E9E8E7]" />
 
-      {/* Author + Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Avatar initials={author.initials} color={author.color} size="sm" />
-          <span className="text-sm text-[#6B7280]">{author.username}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleCopy} className="size-8 flex items-center justify-center rounded-full hover:bg-[#F2F0F0] text-[#6B7280] transition-colors">
-            <Copy className="size-4" />
-          </button>
-          <button className="size-8 flex items-center justify-center rounded-full hover:bg-[#F2F0F0] text-[#6B7280] transition-colors">
-            <Share2 className="size-4" />
-          </button>
-          {showReport && <ReportJokeButton jokeId={joke.id} />}
-        </div>
+      {/* Actions — no author byline: the Joke payload carries no author, so a
+          per-card handle would be fabricated. On the single-creator profile page
+          the creator identity is shown in the page header above the grid. */}
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={handleCopy} className="size-8 flex items-center justify-center rounded-full hover:bg-[#F2F0F0] text-[#6B7280] transition-colors">
+          <Copy className="size-4" />
+        </button>
+        <button className="size-8 flex items-center justify-center rounded-full hover:bg-[#F2F0F0] text-[#6B7280] transition-colors">
+          <Share2 className="size-4" />
+        </button>
+        {showReport && <ReportJokeButton jokeId={joke.id} />}
       </div>
     </Card>
   )
