@@ -168,6 +168,17 @@ export interface Joke {
   text: string
   setup: string | null
   punchline: string | null
+  /**
+   * Freemium paywall (backend contract): true when the backend has STRIPPED the
+   * payoff for this joke because the reader is over their free daily-reads cap.
+   * When true, `punchline`/`lines` are null (and `text` is null for text-only
+   * formats); `setup` still carries the free teaser. Absent/false for paid users,
+   * anonymous readers, already-read-today jokes, and the daily editorial joke.
+   *
+   * GRACEFUL DEGRADATION: when this field is missing entirely (backend not yet
+   * deployed), treat the joke as UNLOCKED — the paywall stays invisible.
+   */
+  is_locked?: boolean
   /** P10: array of dialogue lines for `format=knock-knock` jokes; null otherwise.
    * Optional in the type since legacy mock fixtures pre-date this field. */
   lines?: string[] | null
@@ -241,6 +252,33 @@ export const dailyJokeApi = {
 
   getHistory: () =>
     api.get<PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/'),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Freemium daily-reads cap (paywall)
+//
+// GET /jokes/daily-reads/ (auth) reports how many distinct joke reveals the
+// user has left today. Free users get a finite `limit`; paid/unlimited users
+// get `limit: null` (no cap). Resets at midnight UTC (`reset_at`).
+//
+// GRACEFUL DEGRADATION: if this endpoint 404s / errors (backend not deployed
+// yet), the caller treats it as "no cap" and the paywall stays inactive.
+// ─────────────────────────────────────────────────────────────────────────
+export interface DailyReadsStatus {
+  /** Free daily reveal cap, or null for paid/unlimited (no cap). */
+  limit: number | null
+  /** Distinct reveals used today, or null for unlimited. */
+  used: number | null
+  /** Reveals remaining today, or null for unlimited. */
+  remaining: number | null
+  /** True once the free cap is exhausted. Always false for unlimited. */
+  over: boolean
+  /** ISO timestamp of the next reset (next midnight UTC). */
+  reset_at: string
+}
+
+export const dailyReadsApi = {
+  get: () => api.get<DailyReadsStatus>('/jokes/daily-reads/'),
 }
 
 // Collections API

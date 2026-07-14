@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5 } from 'lucide-react'
+import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5, Lock } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { jokeDetailApi, type JokeSource, type Joke } from '@/lib/api'
@@ -15,6 +15,7 @@ import { useJokeSearch } from '@/features/jokes'
 import { useRollMysteryBox } from '@/features/mystery-box'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
+import { dailyResetLocalLabel } from '@/lib/dailyReset'
 import type { ReactionSlug } from '@/lib/api'
 
 /** Map the URL ?source= (JokeSource) onto the telemetry source vocabulary. */
@@ -64,11 +65,12 @@ export function JokeDetailPage() {
     enabled: !!jokeId && !isNaN(jokeId),
   })
 
-  // The detail view always shows the punchline, so loading it IS the reveal.
-  // Deduped per session by the telemetry client.
+  // The detail view normally shows the punchline, so loading it IS the reveal.
+  // Deduped per session by the telemetry client. A LOCKED joke (server-stripped
+  // payoff) has nothing to reveal, so no reveal is fired.
   useEffect(() => {
-    if (joke?.id) trackReveal(joke.id, telemetrySourceFor(source))
-  }, [joke?.id, source])
+    if (joke?.id && !joke.is_locked) trackReveal(joke.id, telemetrySourceFor(source))
+  }, [joke?.id, joke?.is_locked, source])
 
   if (isLoading || !joke) {
     return (
@@ -137,8 +139,10 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
   const { toast } = useToast()
+  const navigate = useNavigate()
   // Read-time: dwell on the joke content with scroll depth (strongest signal).
   const dwellRef = useDwell<HTMLElement>(joke.id, source)
+  const locked = joke.is_locked === true
 
   const themes = joke.themes ?? joke.context_tags ?? []
   const categories = joke.categories ?? joke.tones ?? []
@@ -221,7 +225,59 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
         </div>
 
         {/* Body */}
-        {joke.setup && joke.punchline ? (
+        {locked ? (
+          <div data-testid="detail-locked">
+            {joke.setup && (
+              <>
+                <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+                  Setup
+                </span>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 600,
+                    fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+                    color: '#1A1A1A',
+                    lineHeight: 1.25,
+                    marginTop: 8,
+                  }}
+                >
+                  {joke.setup}
+                </div>
+              </>
+            )}
+            <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 24, display: 'block' }}>
+              Punchline
+            </span>
+            <div
+              aria-hidden
+              className="punch-blur"
+              style={{
+                marginTop: 8,
+                fontFamily: 'var(--font-display)',
+                fontWeight: 900,
+                fontSize: 'clamp(2rem, 5vw, 4rem)',
+                letterSpacing: '-0.025em',
+                color: '#1A1A1A',
+                lineHeight: 1.02,
+              }}
+            >
+              ████ ███████ ██ ████
+            </div>
+            <p style={{ marginTop: 18, fontSize: 15, color: '#52525B', maxWidth: 460 }}>
+              You've hit your free daily jokes. Go unlimited with Supporter to reveal every punchline.
+            </p>
+            <button
+              type="button"
+              data-testid="detail-unlock-cta"
+              onClick={() => navigate('/settings/billing')}
+              className="btn-flow-reward"
+              style={{ marginTop: 16 }}
+            >
+              <Lock size={16} /> Unlock with Supporter
+            </button>
+          </div>
+        ) : joke.setup && joke.punchline ? (
           <>
             <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
               Setup
@@ -490,7 +546,7 @@ function StreakSavedRail() {
           {streak.streak_at_risk_today ? "Don't drop it." : 'Keep going.'}
         </div>
       </div>
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Tomorrow's joke unlocks at 9:00 AM</span>
+      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Next joke unlocks at {dailyResetLocalLabel()}</span>
     </section>
   )
 }
