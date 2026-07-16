@@ -8,6 +8,7 @@ import { useDrafts, DraftCard } from '@/features/create'
 import type { ContentDraft, SubmissionStatus } from '@/features/create'
 import { track } from '@/features/create/analytics'
 import { useCreatorStore } from '@/features/create/store'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 type TabId = 'all' | SubmissionStatus
 
@@ -32,6 +33,7 @@ function sortByLastEdited(drafts: ContentDraft[]): ContentDraft[] {
 
 export function CreatorHubPage() {
   const navigate = useNavigate()
+  const { isMobile } = useBreakpoint()
   const { data, isLoading, isError, refetch } = useDrafts()
   const [activeTab, setActiveTab] = useState<TabId>('all')
   const { markSeen } = useCreatorStore()
@@ -59,7 +61,7 @@ export function CreatorHubPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell>
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 800, margin: '0 auto' }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
             <h1
@@ -80,6 +82,7 @@ export function CreatorHubPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/create/insights')}
+                style={{ height: isMobile ? 44 : undefined }}
               >
                 Insights
               </Button>
@@ -87,6 +90,7 @@ export function CreatorHubPage() {
                 variant="pill"
                 size="lg"
                 onClick={() => navigate('/create/new')}
+                style={{ height: isMobile ? 44 : undefined }}
               >
                 <Plus size={16} />
                 New
@@ -113,7 +117,8 @@ export function CreatorHubPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    padding: '6px 14px',
+                    padding: isMobile ? '6px 16px' : '6px 14px',
+                    minHeight: isMobile ? 44 : undefined,
                     borderRadius: 9999,
                     border: isActive ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
                     background: isActive ? '#F7F0FF' : 'transparent',

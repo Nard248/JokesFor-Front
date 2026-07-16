@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useAuthStore } from '@/features/auth/store'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useFollow, useUnfollow } from './api'
 
 interface FollowButtonProps {
@@ -11,6 +12,7 @@ interface FollowButtonProps {
 export function FollowButton({ creatorId, isFollowing, followerCount: _followerCount }: FollowButtonProps) {
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const { isMobile } = useBreakpoint()
   const followMutation = useFollow()
   const unfollowMutation = useUnfollow()
 
@@ -37,7 +39,8 @@ export function FollowButton({ creatorId, isFollowing, followerCount: _followerC
       disabled={isPending}
       onClick={handleClick}
       style={{
-        padding: '8px 20px',
+        padding: isMobile ? '11px 20px' : '8px 20px',
+        minHeight: isMobile ? 44 : undefined,
         borderRadius: 9999,
         border: isFollowing ? '1px solid #AC8EFF' : 'none',
         background: isFollowing ? '#F7F0FF' : '#6A1CF6',

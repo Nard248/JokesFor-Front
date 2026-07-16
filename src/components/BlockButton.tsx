@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useMyBlocks, useBlockUser, useUnblockUser } from '@/features/moderation'
 import { useAuthStore } from '@/features/auth/store'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import type { BlockedUser } from '@/lib/api'
 
 /** Block/unblock toggle for a user. Auth-gated; reflects current block state. */
 export function BlockButton({ user, onBlocked }: { user: BlockedUser; onBlocked?: () => void }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const navigate = useNavigate()
+  const { isMobile } = useBreakpoint()
   const { data: blocks } = useMyBlocks()
   const block = useBlockUser()
   const unblock = useUnblockUser()
@@ -28,7 +30,13 @@ export function BlockButton({ user, onBlocked }: { user: BlockedUser; onBlocked?
   }
 
   return (
-    <Button variant="ghost" onClick={onClick} disabled={pending} data-testid="block-button">
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      disabled={pending}
+      data-testid="block-button"
+      style={{ minHeight: isMobile ? 44 : undefined }}
+    >
       {isBlocked ? 'Unblock' : 'Block'}
     </Button>
   )

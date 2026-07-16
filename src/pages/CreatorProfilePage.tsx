@@ -31,7 +31,7 @@ export function CreatorProfilePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell>
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 860, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 860, margin: '0 auto' }}>
           {isLoading && <ProfileSkeleton />}
 
           {is404 && (
