@@ -6,6 +6,7 @@ import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
 import { formatSlugToFlow } from '@/components/JokeRenderer'
 import { useCollections } from '@/features/collections'
 import { useSavedJokes } from '@/features/saved-jokes'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * LibraryPage — redesigned in the dev iteration to match the new design
@@ -17,6 +18,8 @@ import { useSavedJokes } from '@/features/saved-jokes'
  * (untouched, used elsewhere) but this page no longer imports them.
  */
 export function LibraryPage() {
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [query, setQuery] = useState('')
   const { data: collectionsData } = useCollections()
   const { data: savedJokesData } = useSavedJokes()
@@ -39,7 +42,7 @@ export function LibraryPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* Hero */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
@@ -201,7 +204,7 @@ export function LibraryPage() {
             </div>
 
             {filteredSaves.length > 0 ? (
-              <div style={{ columnCount: 3, columnGap: 18 }}>
+              <div style={{ columnCount: masonryCols, columnGap: 18 }}>
                 {filteredSaves.slice(0, 12).map((s) => (
                   <div key={s.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                     <FlowJokeCard joke={savedJokeToFlowData(s)} source="other" />

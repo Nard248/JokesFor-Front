@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Flame, TrendingUp, ArrowRight } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import {
   useTrendingJokes,
   useTrendingTags,
@@ -22,6 +23,8 @@ import {
  *   5. Trending tags + popular themes (combined chip cloud)
  */
 export function TrendingPage() {
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [period, setPeriod] = useState<'24h' | 'week' | 'month'>('week')
 
   const { data: trendingJokes } = useTrendingJokes(period)
@@ -33,7 +36,7 @@ export function TrendingPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="explore">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* Hero */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
@@ -75,9 +78,9 @@ export function TrendingPage() {
           {/* Period selector */}
           <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span className="eyebrow-mono">Period</span>
-            <PeriodChip label="Last 24h" active={period === '24h'} onClick={() => setPeriod('24h')} />
-            <PeriodChip label="This week" active={period === 'week'} onClick={() => setPeriod('week')} />
-            <PeriodChip label="This month" active={period === 'month'} onClick={() => setPeriod('month')} />
+            <PeriodChip label="Last 24h" active={period === '24h'} onClick={() => setPeriod('24h')} isMobile={isMobile} />
+            <PeriodChip label="This week" active={period === 'week'} onClick={() => setPeriod('week')} isMobile={isMobile} />
+            <PeriodChip label="This month" active={period === 'month'} onClick={() => setPeriod('month')} isMobile={isMobile} />
           </div>
 
           {/* Trending jokes */}
@@ -91,7 +94,7 @@ export function TrendingPage() {
               }
             />
             {trendingJokes && trendingJokes.length > 0 ? (
-              <div style={{ marginTop: 18, columnCount: 3, columnGap: 18 }}>
+              <div style={{ marginTop: 18, columnCount: masonryCols, columnGap: 18 }}>
                 {trendingJokes.slice(0, 9).map((tj, i) => (
                   <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                     <FlowJokeCard joke={trendingToFlowData(tj, i)} source="feed" />
@@ -104,7 +107,7 @@ export function TrendingPage() {
           </section>
 
           {/* Rising topics + Top jokesters */}
-          <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 24 }}>
+          <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: isMobile ? 18 : 24 }}>
             {/* Rising topics — lime band */}
             <div style={{ padding: 28, background: '#CAFD00', color: '#3A4A00', borderRadius: 22 }}>
               <span className="eyebrow-mono" style={{ color: '#3A4A00' }}>
@@ -315,7 +318,7 @@ export function TrendingPage() {
 // Sub-components
 // ──────────────────────────────────────────────────────────────────────────
 
-function PeriodChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function PeriodChip({ label, active, onClick, isMobile }: { label: string; active: boolean; onClick: () => void; isMobile?: boolean }) {
   return (
     <button
       type="button"
@@ -323,7 +326,7 @@ function PeriodChip({ label, active, onClick }: { label: string; active: boolean
       aria-pressed={active}
       style={{
         cursor: 'pointer',
-        height: 36,
+        height: isMobile ? 44 : 36,
         padding: '0 16px',
         fontSize: 13,
         background: active ? '#1A1A1A' : '#fff',

@@ -76,7 +76,7 @@ export function JokeDetailPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
         <FlowAppShell active="today">
-          <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+          <div style={{ padding: '40px 0' }}>
             <DetailSkeleton />
           </div>
         </FlowAppShell>
@@ -87,7 +87,7 @@ export function JokeDetailPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="today">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 1100, margin: '0 auto' }}>
           <button
             type="button"
             onClick={() => navigate(-1)}

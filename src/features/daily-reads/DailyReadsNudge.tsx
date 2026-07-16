@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { Sparkles, X } from 'lucide-react'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDailyReads } from './api'
 import { useDailyReadsStore } from './store'
 
@@ -15,6 +16,7 @@ export function DailyReadsNudge() {
   const { over } = useDailyReads()
   const dismissed = useDailyReadsStore((s) => s.nudgeDismissed)
   const dismissNudge = useDailyReadsStore((s) => s.dismissNudge)
+  const { isMobile } = useBreakpoint()
 
   if (!over || dismissed) return null
 
@@ -26,7 +28,9 @@ export function DailyReadsNudge() {
       className="dropdown-enter"
       style={{
         position: 'fixed',
-        bottom: 20,
+        // On mobile, lift above the fixed bottom tab bar (64px + safe area);
+        // desktop keeps the original bottom offset.
+        bottom: isMobile ? 'calc(64px + env(safe-area-inset-bottom) + 12px)' : 20,
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 200,

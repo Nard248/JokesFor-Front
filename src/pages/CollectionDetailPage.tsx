@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
 import { useCollections, useCollectionJokes } from '@/features/collections'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * CollectionDetailPage — lists the saved jokes in a single collection.
@@ -16,6 +17,8 @@ import { useCollections, useCollectionJokes } from '@/features/collections'
 export function CollectionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const collectionId = Number(id)
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
 
   // The jokes endpoint doesn't return the collection's own name, so pull it
   // from the already-cached collections list for the header.
@@ -32,7 +35,7 @@ export function CollectionDetailPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1080, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 1080, margin: '0 auto' }}>
           <Link
             to="/collections"
             style={{
@@ -86,7 +89,7 @@ export function CollectionDetailPage() {
                 No jokes in this collection yet. Save jokes to it from anywhere in the app and they'll show up here.
               </StateCard>
             ) : (
-              <div style={{ columnCount: 3, columnGap: 18 }}>
+              <div style={{ columnCount: masonryCols, columnGap: 18 }}>
                 {flowJokes.map((joke) => (
                   <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                     <FlowJokeCard joke={joke} source="other" />

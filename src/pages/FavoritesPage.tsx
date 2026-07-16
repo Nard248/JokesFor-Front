@@ -5,6 +5,7 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
 import { formatSlugToFlow } from '@/components/JokeRenderer'
 import { useFavorites, useFavoriteStats } from '@/features/favorites'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 type RawFavorite = { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }
 
@@ -21,6 +22,8 @@ type RawFavorite = { joke: { id: number; text: string; setup: string | null; pun
  * real-API methods exist in api.ts for future flip).
  */
 export function FavoritesPage() {
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [tone, setTone] = useState<string | null>(null)
 
   // Current page — bumped by "Load more". Reset to 1 when the tone filter
@@ -58,7 +61,7 @@ export function FavoritesPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="favorites">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* Hero */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
@@ -132,21 +135,21 @@ export function FavoritesPage() {
           {/* Tone filter rail */}
           <div style={{ marginTop: 36, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span className="eyebrow-mono">Filter by tone</span>
-            <ToneChip label="All" active={tone === null} onClick={() => setTone(null)} />
+            <ToneChip label="All" active={tone === null} onClick={() => setTone(null)} isMobile={isMobile} />
             {TONES.map((t) => (
-              <ToneChip key={t.slug} label={t.label} active={tone === t.slug} onClick={() => setTone(t.slug)} />
+              <ToneChip key={t.slug} label={t.label} active={tone === t.slug} onClick={() => setTone(t.slug)} isMobile={isMobile} />
             ))}
           </div>
 
           {/* Results */}
           <section style={{ marginTop: 24 }}>
             {isLoading ? (
-              <FavoritesSkeleton />
+              <FavoritesSkeleton cols={masonryCols} />
             ) : isError ? (
               <FavoritesError />
             ) : flowFavorites.length > 0 ? (
               <>
-                <div style={{ columnCount: 3, columnGap: 18 }}>
+                <div style={{ columnCount: masonryCols, columnGap: 18 }}>
                   {flowFavorites.map((j) => (
                     <div key={j.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                       <FlowJokeCard joke={j} source="other" />
@@ -246,7 +249,7 @@ function StatCard({ eyebrow, value, label, icon, accent }: StatCardProps) {
 // Tone chip
 // ──────────────────────────────────────────────────────────────────────────
 
-function ToneChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function ToneChip({ label, active, onClick, isMobile }: { label: string; active: boolean; onClick: () => void; isMobile?: boolean }) {
   return (
     <button
       type="button"
@@ -254,8 +257,8 @@ function ToneChip({ label, active, onClick }: { label: string; active: boolean; 
       aria-pressed={active}
       style={{
         cursor: 'pointer',
-        height: 32,
-        padding: '0 14px',
+        height: isMobile ? 44 : 32,
+        padding: isMobile ? '0 16px' : '0 14px',
         fontSize: 13,
         background: active ? '#1A1A1A' : '#fff',
         color: active ? '#fff' : '#1A1A1A',
@@ -329,9 +332,9 @@ function FavoritesError() {
   )
 }
 
-function FavoritesSkeleton() {
+function FavoritesSkeleton({ cols = 3 }: { cols?: number }) {
   return (
-    <div style={{ columnCount: 3, columnGap: 18 }}>
+    <div style={{ columnCount: cols, columnGap: 18 }}>
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
