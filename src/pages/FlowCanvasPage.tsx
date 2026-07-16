@@ -4,6 +4,7 @@ import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight }
 import { useAuth } from '@/features/auth'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useTodayAugmented, useTomorrowTeaser, useTasteProfile } from '@/features/insights'
 import { useStreak } from '@/features/streak'
 import { useMysteryBoxStatus, useRollMysteryBox } from '@/features/mystery-box'
@@ -42,6 +43,7 @@ import { timeUntilDailyReset, dailyResetLocalLabel } from '@/lib/dailyReset'
  */
 export function FlowCanvasPage() {
   const { user } = useAuth()
+  const { isMobile } = useBreakpoint()
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
@@ -70,7 +72,7 @@ export function FlowCanvasPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="today">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* ── Hero strip ─────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
@@ -94,11 +96,11 @@ export function FlowCanvasPage() {
                 One joke today. Two if you finish yesterday's saved set.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn-flow-ghost">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="btn-flow-ghost" style={{ height: isMobile ? 44 : undefined }}>
                 <History size={14} /> Yesterday
               </button>
-              <button type="button" className="btn-flow-ghost">
+              <button type="button" className="btn-flow-ghost" style={{ height: isMobile ? 44 : undefined }}>
                 <Dice5 size={14} /> Mystery box{' '}
                 <span className="tag-flow lime" style={{ marginLeft: 6 }}>
                   {(mysteryStatus?.rolls_remaining_today ?? 3)} LEFT
@@ -108,7 +110,7 @@ export function FlowCanvasPage() {
           </div>
 
           {/* ── Main grid: JOTD hero + right rail ─────────────── */}
-          <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
+          <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: isMobile ? 18 : 24, alignItems: 'start' }}>
             {/* JOTD hero */}
             <article
               ref={heroDwellRef}
@@ -267,16 +269,16 @@ export function FlowCanvasPage() {
           </div>
 
           {/* ── 7-day archive · newspaper strip ────────────────── */}
-          <SevenDayArchive history={history?.results} />
+          <SevenDayArchive history={history?.results} isMobile={isMobile} />
 
           {/* ── Top jokesters + Weekly special ─────────────────── */}
-          <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} />
+          <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} isMobile={isMobile} />
 
           {/* ── This-month stats + taste pills ─────────────────── */}
           <StatsRow tasteProfile={tasteProfile} />
 
           {/* ── Brand pull-quote footer ─────────────────────────── */}
-          <BrandQuoteFooter issueLabel={today?.issue_label} resetAt={resetAt} />
+          <BrandQuoteFooter issueLabel={today?.issue_label} resetAt={resetAt} isMobile={isMobile} />
         </div>
       </FlowAppShell>
     </div>
@@ -727,7 +729,7 @@ function ContinueBanner({ pack }: { pack?: { slug: string; title: string; joke_c
 // /daily-jokes/history/ feed. Hidden until there's real history to show.
 // ──────────────────────────────────────────────────────────────────────────
 
-function SevenDayArchive({ history }: { history?: { joke: { text: string; format?: { name: string } }; date: string }[] }) {
+function SevenDayArchive({ history, isMobile }: { history?: { joke: { text: string; format?: { name: string } }; date: string }[]; isMobile?: boolean }) {
   // No real history yet → render nothing rather than a fabricated week.
   if (!history || history.length === 0) return null
 
@@ -779,9 +781,15 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
         style={{
           marginTop: 18,
           display: 'grid',
-          gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+          // On mobile the 7-day strip becomes a horizontal-scroll rail with
+          // fixed-width cells (each stays readable); desktop keeps equal columns.
+          gridTemplateColumns: isMobile
+            ? `repeat(${days.length}, 150px)`
+            : `repeat(${days.length}, minmax(0, 1fr))`,
           gap: 0,
           borderTop: '1px solid #E9E8E7',
+          overflowX: isMobile ? 'auto' : undefined,
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {days.map((d, i) => (
@@ -846,9 +854,11 @@ function SevenDayArchive({ history }: { history?: { joke: { text: string; format
 function TopJokestersAndSpecial({
   featuredPack,
   jokesters: realJokesters,
+  isMobile,
 }: {
   featuredPack: ReturnType<typeof useFeaturedPack>['data']
   jokesters: unknown // adapter currently returns mock TopJokester[]; backend returns {results: TopJokesterDTO[]}
+  isMobile?: boolean
 }) {
   // Backend returns either {results: [...]} or [...] directly. Normalize.
   type Row = { name: string; username?: string; punchlineCount?: number; punchline_count?: number; rank?: number; top_vibes?: { slug: string; label: string; icon: string }[] }
@@ -887,10 +897,14 @@ function TopJokestersAndSpecial({
   // Nothing real to show → render nothing rather than fabricated content.
   if (!hasJokesters && !featuredPack) return null
 
-  const gridCols = hasJokesters && featuredPack ? 'minmax(0, 1fr) minmax(0, 1.4fr)' : 'minmax(0, 1fr)'
+  const gridCols = isMobile
+    ? '1fr'
+    : hasJokesters && featuredPack
+    ? 'minmax(0, 1fr) minmax(0, 1.4fr)'
+    : 'minmax(0, 1fr)'
 
   return (
-    <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: gridCols, gap: 24 }}>
+    <div style={{ marginTop: 56, display: 'grid', gridTemplateColumns: gridCols, gap: isMobile ? 18 : 24 }}>
       {/* Top jokesters */}
       {hasJokesters && (
       <div style={{ padding: 28, background: '#fff', border: '1px solid #E9E8E7', borderRadius: 22 }}>
@@ -998,12 +1012,12 @@ function TopJokestersAndSpecial({
           color: '#5F4200',
           position: 'relative',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)',
         }}
       >
         <div
           style={{
-            padding: 36,
+            padding: isMobile ? 24 : 36,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1308,7 +1322,7 @@ function StatCell({ value, label, valueColor }: { value: string; label: string; 
   )
 }
 
-function BrandQuoteFooter({ issueLabel, resetAt }: { issueLabel?: string; resetAt?: string | null }) {
+function BrandQuoteFooter({ issueLabel, resetAt, isMobile }: { issueLabel?: string; resetAt?: string | null; isMobile?: boolean }) {
   // Count down to the real rotation instant: MIDNIGHT UTC (or the server's
   // reset_at), NOT 9 AM local. Display stays in the reader's local time.
   const countdown = timeUntilDailyReset(resetAt)
@@ -1323,7 +1337,7 @@ function BrandQuoteFooter({ issueLabel, resetAt }: { issueLabel?: string; resetA
         border: '1px solid #E9E8E7',
         display: 'flex',
         alignItems: 'center',
-        gap: 48,
+        gap: isMobile ? 20 : 48,
         position: 'relative',
         overflow: 'hidden',
         flexWrap: 'wrap',

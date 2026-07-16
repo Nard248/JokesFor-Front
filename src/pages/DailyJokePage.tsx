@@ -23,7 +23,7 @@ export function DailyJokePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="today">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* Hero strip */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>

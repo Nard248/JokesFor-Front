@@ -45,7 +45,7 @@ export function CollectionsPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1080, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 1080, margin: '0 auto' }}>
           {/* Hero */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>

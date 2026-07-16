@@ -5,6 +5,7 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * SearchPage — Sentence Builder redesign per
@@ -19,6 +20,8 @@ import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/joke
  * dimensions, swap the filter to TanStack Query against api-adapter.jokes.search.
  */
 export function SearchPage() {
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [searchParams] = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
 
@@ -98,7 +101,7 @@ export function SearchPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="search">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', position: 'relative' }}>
+        <div style={{ padding: '40px 0', position: 'relative' }}>
           <span className="eyebrow-mono">Search · Build the moment</span>
           <h2
             style={{
@@ -272,8 +275,8 @@ export function SearchPage() {
                 }}
                 style={{
                   cursor: 'pointer',
-                  height: 32,
-                  padding: '0 14px',
+                  height: isMobile ? 44 : 32,
+                  padding: isMobile ? '0 16px' : '0 14px',
                   fontSize: 12,
                   borderRadius: 9999,
                   border: '1px solid #E9E8E7',
@@ -297,7 +300,7 @@ export function SearchPage() {
           </div>
 
           {isLoading ? (
-            <div style={{ marginTop: 14, columnCount: 3, columnGap: 18 }} aria-busy="true">
+            <div style={{ marginTop: 14, columnCount: masonryCols, columnGap: 18 }} aria-busy="true">
               {Array.from({ length: 9 }).map((_, i) => (
                 <div
                   key={i}
@@ -329,7 +332,7 @@ export function SearchPage() {
             </div>
           ) : matches.length > 0 ? (
             <>
-            <div style={{ marginTop: 14, columnCount: 3, columnGap: 18 }}>
+            <div style={{ marginTop: 14, columnCount: masonryCols, columnGap: 18 }}>
               {matches.map((joke) => (
                 <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                   {/* Link to the real detail so a click opens the correct joke and
@@ -458,6 +461,7 @@ interface SBPanelProps<T extends string> {
 }
 
 function SBPanel<T extends string>({ items, selected, onToggle, color, onClose, onClear }: SBPanelProps<T>) {
+  const { isMobile } = useBreakpoint()
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -486,8 +490,11 @@ function SBPanel<T extends string>({ items, selected, onToggle, color, onClose, 
         borderRadius: 18,
         padding: 18,
         boxShadow: '0 12px 40px rgba(15,14,18,0.16)',
-        minWidth: 380,
-        maxWidth: 520,
+        // On phones, cap to the viewport so the panel never forces horizontal
+        // scroll (the pill can sit far right in the sentence).
+        minWidth: isMobile ? 0 : 380,
+        width: isMobile ? 'min(320px, calc(100vw - 32px))' : undefined,
+        maxWidth: isMobile ? 'calc(100vw - 32px)' : 520,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -520,8 +527,8 @@ function SBPanel<T extends string>({ items, selected, onToggle, color, onClose, 
               aria-pressed={active}
               style={{
                 cursor: 'pointer',
-                height: 32,
-                padding: '0 12px',
+                height: isMobile ? 44 : 32,
+                padding: isMobile ? '0 16px' : '0 12px',
                 fontSize: 13,
                 borderRadius: 9999,
                 background: active ? color : '#fff',

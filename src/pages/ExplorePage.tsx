@@ -5,6 +5,7 @@ import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * Explore — three-axis chip-rail filter + format-aware masonry results.
@@ -18,6 +19,8 @@ import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/joke
  * Results render as a 3-column masonry of FlowJokeCard. Stack any chips.
  */
 export function ExplorePage() {
+  const { isMobile, isTablet } = useBreakpoint()
+  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [fmts, setFmts] = useState<Set<FlowJokeFormat>>(new Set())
   const [themes, setThemes] = useState<Set<string>>(new Set())
   const [cats, setCats] = useState<Set<string>>(new Set())
@@ -70,9 +73,9 @@ export function ExplorePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="explore">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
+        <div style={{ padding: '40px 0' }}>
           {/* Hero */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 32, alignItems: 'end' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: isMobile ? 20 : 32, alignItems: 'end' }}>
             <div>
               <span className="eyebrow-mono">Explore · {totalCount} jokes loaded</span>
               <h2
@@ -132,45 +135,48 @@ export function ExplorePage() {
           {/* ── Three-axis chip rails ── */}
           <div
             style={{
-              marginTop: 36,
-              padding: '24px 28px',
+              marginTop: isMobile ? 24 : 36,
+              padding: isMobile ? '16px 16px' : '24px 28px',
               background: '#fff',
               border: '1px solid #E9E8E7',
               borderRadius: 20,
               boxShadow: '0 4px 20px rgba(15,14,18,0.04)',
             }}
           >
-            <FilterRow label="Format" sub="How it lands" eyebrowColor="#1A1A1A">
+            <FilterRow label="Format" sub="How it lands" eyebrowColor="#1A1A1A" isMobile={isMobile}>
               {FORMATS.map((f) => (
                 <ChipFilter
                   key={f.id}
                   active={fmts.has(f.id)}
                   onClick={() => toggleSet(setFmts, f.id)}
                   color="#1A1A1A"
+                  isMobile={isMobile}
                 >
                   {f.label}
                 </ChipFilter>
               ))}
             </FilterRow>
-            <FilterRow label="Theme" sub="What it's about" eyebrowColor="#6A1CF6" topBorder>
+            <FilterRow label="Theme" sub="What it's about" eyebrowColor="#6A1CF6" topBorder isMobile={isMobile}>
               {THEMES.map((t) => (
                 <ChipFilter
                   key={t.id}
                   active={themes.has(t.id)}
                   onClick={() => toggleSet(setThemes, t.id)}
                   color="#6A1CF6"
+                  isMobile={isMobile}
                 >
                   {t.label}
                 </ChipFilter>
               ))}
             </FilterRow>
-            <FilterRow label="Category" sub="How it feels" eyebrowColor="#3A4A00" topBorder>
+            <FilterRow label="Category" sub="How it feels" eyebrowColor="#3A4A00" topBorder isMobile={isMobile}>
               {CATEGORIES.map((c) => (
                 <ChipFilter
                   key={c.id}
                   active={cats.has(c.id)}
                   onClick={() => toggleSet(setCats, c.id)}
                   color="#CAFD00"
+                  isMobile={isMobile}
                 >
                   {c.label}
                 </ChipFilter>
@@ -250,12 +256,12 @@ export function ExplorePage() {
 
           {/* ── Results: format-aware masonry ── */}
           {isLoading ? (
-            <ResultsSkeleton />
+            <ResultsSkeleton cols={masonryCols} />
           ) : isError ? (
             <ErrorState />
           ) : jokes.length > 0 ? (
             <>
-            <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }}>
+            <div style={{ marginTop: 24, columnCount: masonryCols, columnGap: 18 }}>
               {jokes.map((joke) => (
                 <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                   {/* Link to the real detail so a click opens the correct joke and
@@ -298,17 +304,19 @@ interface FilterRowProps {
   sub: string
   eyebrowColor: string
   topBorder?: boolean
+  isMobile?: boolean
   children: React.ReactNode
 }
 
-function FilterRow({ label, sub, eyebrowColor, topBorder, children }: FilterRowProps) {
+function FilterRow({ label, sub, eyebrowColor, topBorder, isMobile, children }: FilterRowProps) {
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '110px 1fr',
-        alignItems: 'center',
-        gap: 18,
+        // Stack the label above the chips on mobile so the chip rail gets full width.
+        gridTemplateColumns: isMobile ? '1fr' : '110px 1fr',
+        alignItems: isMobile ? 'start' : 'center',
+        gap: isMobile ? 10 : 18,
         padding: '14px 0',
         borderTop: topBorder ? '1px solid #E9E8E7' : '0',
       }}
@@ -330,10 +338,11 @@ interface ChipFilterProps {
   active: boolean
   onClick: () => void
   color: string
+  isMobile?: boolean
   children: React.ReactNode
 }
 
-function ChipFilter({ active, onClick, color, children }: ChipFilterProps) {
+function ChipFilter({ active, onClick, color, isMobile, children }: ChipFilterProps) {
   const fg = active ? (color === '#CAFD00' ? '#3A4A00' : '#fff') : '#1A1A1A'
   return (
     <button
@@ -342,8 +351,8 @@ function ChipFilter({ active, onClick, color, children }: ChipFilterProps) {
       aria-pressed={active}
       style={{
         cursor: 'pointer',
-        height: 34,
-        padding: '0 14px',
+        height: isMobile ? 44 : 34,
+        padding: isMobile ? '0 16px' : '0 14px',
         fontSize: 13,
         whiteSpace: 'nowrap',
         background: active ? color : '#fff',
@@ -389,9 +398,9 @@ function Chip({ background, color, onClick, children }: ChipProps) {
   )
 }
 
-function ResultsSkeleton() {
+function ResultsSkeleton({ cols = 3 }: { cols?: number }) {
   return (
-    <div style={{ marginTop: 24, columnCount: 3, columnGap: 18 }} aria-busy="true">
+    <div style={{ marginTop: 24, columnCount: cols, columnGap: 18 }} aria-busy="true">
       {Array.from({ length: 9 }).map((_, i) => (
         <div
           key={i}
