@@ -58,6 +58,40 @@ button, a {
   transition: all 0.15s ease;
 }
 
+/* ── Responsive foundation (Phase 1) — see Docs/RESPONSIVE.md ─────────────── */
+
+/* box-sizing everywhere. Tailwind preflight already sets this; restated so the
+   foundation holds regardless of preflight ordering/overrides. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* No page may cause horizontal scroll. Clipping on <html> (the scroll
+   container) is the safe place: overflow on <body>/#root can break the shell's
+   `position: sticky` header, whereas clipping on the root element does not. */
+html {
+  overflow-x: hidden;
+}
+
+/* Media never forces horizontal overflow. */
+img, svg, video {
+  max-width: 100%;
+}
+
+/* Reusable responsive grid: auto-fit columns on wider screens, single column
+   on mobile. Opt in with className="resp-grid" (override gap inline if needed).
+   The `min(100%, …)` floor stops the track from overflowing narrow viewports. */
+.resp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+@media (max-width: 639.98px) {
+  .resp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Custom animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
