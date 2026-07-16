@@ -104,7 +104,7 @@ export function VerifyEmailPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F6F6] px-4">
-      <div className="w-full max-w-md bg-white rounded-[32px] shadow-lg border border-[#E9E8E7] p-8">
+      <div className="w-full max-w-md bg-white rounded-[32px] shadow-lg border border-[#E9E8E7] p-6 sm:p-8">
         <button onClick={() => navigate('/register')} className="text-sm text-muted-foreground hover:text-foreground mb-4">← Back</button>
         <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-display)' }}>Check your email</h1>
         <p className="mt-2 text-sm text-muted-foreground">

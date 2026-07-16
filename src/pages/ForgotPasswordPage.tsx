@@ -138,7 +138,7 @@ function RequestResetForm() {
         <Link
           to="/login"
           className="btn-flow-ghost"
-          style={{ display: 'inline-flex', marginTop: 24, height: 42, fontSize: 13, textDecoration: 'none' }}
+          style={{ display: 'inline-flex', marginTop: 24, height: 44, fontSize: 13, textDecoration: 'none' }}
         >
           <ArrowLeft size={14} /> Back to sign in
         </Link>
@@ -333,7 +333,7 @@ function ResetPasswordForm({ uid, token }: { uid: string; token: string }) {
           type="button"
           onClick={() => navigate('/login', { replace: true })}
           className="btn-flow-primary"
-          style={{ height: 42, marginTop: 24, fontSize: 13 }}
+          style={{ height: 44, marginTop: 24, fontSize: 13 }}
         >
           Sign in <ArrowRight size={14} />
         </button>
@@ -449,7 +449,7 @@ function FormStyles() {
       .btn-flow-primary:hover { background: #5D00E4; }
       .btn-flow-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .btn-flow-ghost {
-        height: 40px; padding: 0 16px; border: 1px solid #E9E8E7; border-radius: 9999px;
+        height: 44px; padding: 0 16px; border: 1px solid #E9E8E7; border-radius: 9999px;
         font-family: var(--font-sans); font-weight: 600; font-size: 13px;
         background: transparent; color: #1A1A1A; cursor: pointer;
         display: inline-flex; align-items: center; gap: 6px;

@@ -3,6 +3,7 @@ import type { AxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router'
 import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard, UserX, Download, KeyRound } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { PublicIdentityEditor } from '@/components/PublicIdentityEditor'
 import { BlockedUsersList } from '@/components/BlockedUsersList'
 import { Modal } from '@/components/ui/modal'
@@ -37,6 +38,7 @@ function firstApiError(err: unknown, fallback: string): string {
 export function SettingsPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isMobile } = useBreakpoint()
   const { user } = useAuth()
   const { data: prefs } = usePreferences()
   const updatePrefs = useUpdatePreferences()
@@ -143,10 +145,17 @@ export function SettingsPage() {
     navigate('/', { replace: true })
   }
 
+  // Tap-target height: ≥44px on mobile (RESPONSIVE.md rule 3), the 40px
+  // ghost/secondary height on larger screens.
+  const btnH = isMobile ? 44 : 40
+  const modalInputStyle: React.CSSProperties = { ...baseModalInputStyle, height: isMobile ? 44 : 40 }
+
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 880, margin: '0 auto' }}>
+        {/* Horizontal padding comes from the shell's fluid container; only vertical
+            padding here (RESPONSIVE.md rule 2). Cap stays narrower than the shell. */}
+        <div style={{ padding: '40px 0', maxWidth: 880, margin: '0 auto' }}>
           {/* Hero */}
           <div>
             <span className="eyebrow-mono">Settings</span>
@@ -176,13 +185,13 @@ export function SettingsPage() {
               <Field label="Display name" value={`${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || '—'} />
             </div>
             <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link to="/profile" className="btn-flow-primary" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
+              <Link to="/profile" className="btn-flow-primary" style={{ height: btnH, fontSize: 13, textDecoration: 'none' }}>
                 Edit profile
               </Link>
               <button
                 type="button"
                 className="btn-flow-ghost"
-                style={{ height: 40, fontSize: 13 }}
+                style={{ height: btnH, fontSize: 13 }}
                 onClick={() => {
                   resetPwForm()
                   setPwOpen(true)
@@ -210,7 +219,7 @@ export function SettingsPage() {
               <Link
                 to="/settings/billing"
                 className="btn-flow-primary"
-                style={{ height: 40, fontSize: 13, textDecoration: 'none' }}
+                style={{ height: btnH, fontSize: 13, textDecoration: 'none' }}
               >
                 Manage billing
               </Link>
@@ -292,7 +301,7 @@ export function SettingsPage() {
                 onClick={handleExport}
                 disabled={dataExport.isPending}
                 className="btn-flow-ghost"
-                style={{ height: 40, fontSize: 13 }}
+                style={{ height: btnH, fontSize: 13 }}
               >
                 <Download size={14} /> {dataExport.isPending ? 'Preparing…' : 'Export my data'}
               </button>
@@ -355,7 +364,7 @@ export function SettingsPage() {
                 onClick={handleLogout}
                 disabled={logout.isPending}
                 className="btn-flow-ghost"
-                style={{ height: 40, fontSize: 13 }}
+                style={{ height: btnH, fontSize: 13 }}
               >
                 <LogOut size={14} /> {logout.isPending ? 'Signing out…' : 'Sign out'}
               </button>
@@ -390,7 +399,7 @@ export function SettingsPage() {
                   setDeleteOpen(true)
                 }}
                 style={{
-                  height: 40,
+                  height: btnH,
                   padding: '0 16px',
                   background: 'transparent',
                   color: '#A02B16',
@@ -422,7 +431,7 @@ export function SettingsPage() {
             <button
               type="button"
               className="btn-flow-ghost"
-              style={{ height: 40, fontSize: 13 }}
+              style={{ height: btnH, fontSize: 13 }}
               onClick={() => {
                 setPwOpen(false)
                 resetPwForm()
@@ -434,7 +443,7 @@ export function SettingsPage() {
               type="submit"
               form="change-password-form"
               className="btn-flow-primary"
-              style={{ height: 40, fontSize: 13 }}
+              style={{ height: btnH, fontSize: 13 }}
               disabled={passwordChange.isPending}
             >
               <KeyRound size={14} /> {passwordChange.isPending ? 'Saving…' : 'Save password'}
@@ -491,7 +500,7 @@ export function SettingsPage() {
             <button
               type="button"
               className="btn-flow-ghost"
-              style={{ height: 40, fontSize: 13 }}
+              style={{ height: btnH, fontSize: 13 }}
               onClick={() => setDeleteOpen(false)}
             >
               Cancel
@@ -501,7 +510,7 @@ export function SettingsPage() {
               onClick={submitDeleteAccount}
               disabled={confirmText !== 'DELETE' || deleteAccount.isPending}
               style={{
-                height: 40,
+                height: btnH,
                 padding: '0 16px',
                 background: confirmText === 'DELETE' && !deleteAccount.isPending ? '#A02B16' : '#E5B8AE',
                 color: '#fff',
@@ -555,9 +564,8 @@ export function SettingsPage() {
   )
 }
 
-const modalInputStyle: React.CSSProperties = {
+const baseModalInputStyle: React.CSSProperties = {
   width: '100%',
-  height: 40,
   padding: '0 14px',
   borderRadius: 12,
   border: '1px solid #E9E8E7',

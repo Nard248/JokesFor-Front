@@ -4,6 +4,7 @@ import { ArrowRight, Loader2, Flame } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import { useLogin } from '@/features/auth'
 import { getGoogleAuthUrl, clearSignupDob } from '@/features/auth/google-oauth'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * LoginPage — split-canvas redesign per
@@ -26,6 +27,7 @@ interface ApiError {
 export function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { isMobile } = useBreakpoint()
   const returnTo = searchParams.get('returnTo') || '/flow-canvas'
 
   const [email, setEmail] = useState('')
@@ -73,12 +75,13 @@ export function LoginPage() {
       style={{
         minHeight: '100vh',
         display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)',
+        // Mobile: single column (the brand canvas is hidden — see below).
+        gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(0, 1.05fr)',
         background: '#FBFAF7',
       }}
     >
-      {/* ── Left: brand canvas ───────────────────────────────── */}
-      <BrandPanel />
+      {/* ── Left: brand canvas — hidden on mobile so the form is full-width ── */}
+      {!isMobile && <BrandPanel />}
 
       {/* ── Right: sign-in form ──────────────────────────────── */}
       <div
@@ -86,7 +89,9 @@ export function LoginPage() {
           padding: 'clamp(48px, 6vw, 72px) clamp(32px, 6vw, 88px)',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          // flex-start on mobile avoids the tall-content clipping that
+          // center causes when the form exceeds the viewport height.
+          justifyContent: isMobile ? 'flex-start' : 'center',
         }}
       >
         <span className="eyebrow-mono">Welcome back</span>
