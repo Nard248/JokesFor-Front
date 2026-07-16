@@ -3,6 +3,7 @@ import { Settings, Edit3, Bookmark, FolderOpen, Flame, Award } from 'lucide-reac
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useAuth } from '@/features/auth'
 import { useProfile, useActivity, useAchievements } from '@/features/profile'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * ProfilePage — redesigned for iteration 4.
@@ -14,6 +15,7 @@ import { useProfile, useActivity, useAchievements } from '@/features/profile'
  *   4. Achievements grid
  */
 export function ProfilePage() {
+  const { isMobile } = useBreakpoint()
   const { user } = useAuth()
   const { data: profile } = useProfile()
   const { data: activity } = useActivity(8)
@@ -29,7 +31,7 @@ export function ProfilePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 1200, margin: '0 auto' }}>
           {/* Identity card */}
           <article
             style={{
@@ -103,10 +105,10 @@ export function ProfilePage() {
                 <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {/* The real, working profile editor is the "Public identity"
                       section on the Settings page (PATCHes /users/me/profile/). */}
-                  <Link to="/settings" className="btn-flow-primary" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
+                  <Link to="/settings" className="btn-flow-primary" style={{ height: isMobile ? 44 : 40, fontSize: 13, textDecoration: 'none' }}>
                     <Edit3 size={14} /> Edit profile
                   </Link>
-                  <Link to="/settings" className="btn-flow-ghost" style={{ height: 40, fontSize: 13, textDecoration: 'none' }}>
+                  <Link to="/settings" className="btn-flow-ghost" style={{ height: isMobile ? 44 : 40, fontSize: 13, textDecoration: 'none' }}>
                     <Settings size={14} /> Settings
                   </Link>
                 </div>
@@ -124,9 +126,9 @@ export function ProfilePage() {
           {/* Activity + Achievements */}
           <div
             style={{
-              marginTop: 48,
+              marginTop: isMobile ? 32 : 48,
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+              gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.4fr) minmax(0, 1fr)',
               gap: 24,
             }}
           >

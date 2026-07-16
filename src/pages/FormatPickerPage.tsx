@@ -7,6 +7,7 @@ import { useFormats, FormatTile, FORMAT_EXAMPLE } from '@/features/create'
 import { FORMAT_SLUGS } from '@/features/create/types'
 import type { FormatRule } from '@/features/create'
 import { track } from '@/features/create/analytics'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /** Fallback format entries (minimal, for error state) */
 const FALLBACK_FORMAT_NAMES: Record<string, string> = {
@@ -30,7 +31,12 @@ const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.map((slug, i) => ({
 
 export function FormatPickerPage() {
   const navigate = useNavigate()
+  const { isMobile } = useBreakpoint()
   const { data, isLoading, isError } = useFormats()
+
+  // Single column on phones; auto-fitting tiles above. `minmax(0, …)` prevents
+  // a tile's intrinsic width from forcing horizontal overflow.
+  const gridColumns = isMobile ? '1fr' : 'repeat(auto-fit, minmax(260px, 1fr))'
 
   // Analytics: track page viewed once on mount
   useEffect(() => {
@@ -44,7 +50,7 @@ export function FormatPickerPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell>
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 900, margin: '0 auto' }}>
           {/* Back link */}
           <Link
             to="/create"
@@ -87,7 +93,7 @@ export function FormatPickerPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridTemplateColumns: gridColumns,
                 gap: 16,
               }}
             >
@@ -102,7 +108,7 @@ export function FormatPickerPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridTemplateColumns: gridColumns,
                 gap: 16,
               }}
             >

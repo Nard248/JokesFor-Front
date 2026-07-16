@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useCreatorInsights } from '@/features/creator-insights'
 import type {
   InsightsPeriod,
@@ -66,18 +67,25 @@ function secs(n: number | null | undefined): string {
   return s === 0 ? `${m}m` : `${m}m ${s}s`
 }
 
+// Fluid bar sparkline. Rendered in an intrinsic 280×40 coordinate space via
+// `viewBox`, but sized to 100% of its container with a fixed pixel height, so it
+// scales down cleanly on a phone instead of overflowing at its old fixed 280px.
+// `preserveAspectRatio="none"` lets the bars stretch horizontally to fill the
+// available width (vertical scale stays 1:1, so bar heights read correctly).
 function Sparkline({ data }: { data: number[] }) {
   const max = Math.max(...data, 1)
   const width = 280
   const height = 40
-  const barW = Math.floor(width / data.length) - 1
+  const barW = Math.max(1, Math.floor(width / data.length) - 1)
 
   return (
     <svg
-      width={width}
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
       height={height}
+      preserveAspectRatio="none"
       aria-hidden="true"
-      style={{ display: 'block', overflow: 'visible' }}
+      style={{ display: 'block' }}
     >
       {data.map((val, i) => {
         const barH = Math.max(2, Math.round((val / max) * height))
@@ -331,6 +339,7 @@ function LoadingSkeleton() {
 }
 
 function InsightsDashboard({ data }: { data: CreatorInsights }) {
+  const { isMobile } = useBreakpoint()
   const {
     overview,
     top_jokes,
@@ -358,9 +367,17 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      {/* KPI row */}
+      {/* KPI row — 2-up on phones, auto-fitting columns above. */}
       <section>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile
+              ? 'repeat(2, minmax(0, 1fr))'
+              : 'repeat(auto-fit, minmax(130px, 1fr))',
+            gap: 12,
+          }}
+        >
           <KpiCard label="Payoff Rate" value={pct(overview.payoff_rate)} hero />
           <KpiCard label="Reach" value={fmt(overview.reach)} />
           <KpiCard label="Views" value={fmt(overview.views)} />
@@ -393,7 +410,13 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
         <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 12px', fontFamily: 'var(--font-sans)' }}>
           How much your jokes actually get read.
         </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: 12,
+          }}
+        >
           <AttentionStat
             label="Avg read time"
             value={secs(overview.avg_read_seconds)}
@@ -481,7 +504,13 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           >
             Reactions &amp; Shares
           </h2>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 16,
+            }}
+          >
             {reactionRows.length > 0 && (
               <BreakdownPanel title="Reactions" rows={reactionRows} />
             )}
@@ -656,7 +685,13 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           >
             Growth Suggestions
           </h2>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 12,
+            }}
+          >
             {suggestions.map((s) => (
               <SuggestionCard key={s.kind} s={s} />
             ))}
@@ -669,6 +704,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
 
 export function CreatorInsightsPage() {
   const navigate = useNavigate()
+  const { isMobile } = useBreakpoint()
   const [period, setPeriod] = useState<InsightsPeriod>('month')
   const { data, isLoading, isError, error, refetch } = useCreatorInsights(period)
 
@@ -677,7 +713,7 @@ export function CreatorInsightsPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell>
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 860, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 860, margin: '0 auto' }}>
           {/* Header */}
           <div
             style={{
@@ -711,7 +747,8 @@ export function CreatorInsightsPage() {
                   aria-pressed={period === id}
                   onClick={() => setPeriod(id)}
                   style={{
-                    padding: '6px 16px',
+                    padding: isMobile ? '6px 18px' : '6px 16px',
+                    minHeight: isMobile ? 44 : undefined,
                     borderRadius: 9999,
                     border: period === id ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
                     background: period === id ? '#F7F0FF' : 'transparent',

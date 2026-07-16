@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 export interface EditorShellProps {
   formatLabel: string
@@ -20,6 +21,7 @@ export function EditorShell({
   children,
 }: EditorShellProps) {
   const [mobilePane, setMobilePane] = useState<MobilePane>('edit')
+  const { isMobile } = useBreakpoint()
 
   return (
     <div className="flex flex-col" style={{ minHeight: 0 }}>
@@ -45,7 +47,12 @@ export function EditorShell({
         >
           {formatLabel}
         </span>
-        <Button variant="pill-outline" size="sm" onClick={onChangeFormat}>
+        <Button
+          variant="pill-outline"
+          size="sm"
+          onClick={onChangeFormat}
+          style={{ height: isMobile ? 44 : undefined }}
+        >
           Change format
         </Button>
       </div>
@@ -71,6 +78,7 @@ export function EditorShell({
             border: 'none',
             borderRadius: 10,
             padding: '6px 18px',
+            minHeight: 44,
             fontSize: 14,
             fontWeight: mobilePane === 'edit' ? 700 : 400,
             background: mobilePane === 'edit' ? '#fff' : 'transparent',
@@ -89,6 +97,7 @@ export function EditorShell({
             border: 'none',
             borderRadius: 10,
             padding: '6px 18px',
+            minHeight: 44,
             fontSize: 14,
             fontWeight: mobilePane === 'preview' ? 700 : 400,
             background: mobilePane === 'preview' ? '#fff' : 'transparent',

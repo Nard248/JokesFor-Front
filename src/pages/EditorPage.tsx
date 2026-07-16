@@ -45,6 +45,7 @@ import {
 } from '@/features/create'
 import type { FormatSlug, ContentDraft, EditorDraft } from '@/features/create'
 import { track } from '@/features/create/analytics'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 // ── toEditorDraft: ContentDraft → EditorDraft ─────────────────────────────────
 
@@ -76,6 +77,7 @@ interface EditorInnerProps {
 function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { isMobile } = useBreakpoint()
 
   // ── Autosave engine ──────────────────────────────────────────────────────────
   const { draft, dispatch, saveState, lastSavedAt, hasPendingChanges, draftId: liveId, retry } =
@@ -197,6 +199,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
           disabled={liveId == null}
           onClick={() => setShowDelete(true)}
           aria-label="Delete draft"
+          style={{ height: isMobile ? 44 : undefined }}
         >
           <Trash2 size={14} />
           Delete
@@ -206,6 +209,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
           size="sm"
           disabled={!canSubmit || liveId == null}
           onClick={() => setShowSubmit(true)}
+          style={{ height: isMobile ? 44 : undefined }}
         >
           Submit for review
         </Button>
@@ -216,7 +220,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell>
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ padding: '40px 0', maxWidth: 1100, margin: '0 auto' }}>
           {/* Back navigation */}
           <Link
             to="/create"
@@ -330,7 +334,7 @@ function ExistingEditor({ draftId }: ExistingEditorProps) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
         <FlowAppShell>
-          <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ padding: '40px 0', maxWidth: 1100, margin: '0 auto' }}>
             <Skeleton style={{ height: 40, borderRadius: 10, marginBottom: 24, width: 80 }} />
             <Skeleton style={{ height: 52, borderRadius: 14, marginBottom: 16 }} />
             <Skeleton style={{ height: 200, borderRadius: 16, marginBottom: 16 }} />
@@ -345,7 +349,7 @@ function ExistingEditor({ draftId }: ExistingEditorProps) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
         <FlowAppShell>
-          <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ padding: '40px 0', maxWidth: 720, margin: '0 auto' }}>
             <div
               style={{
                 padding: 32,
