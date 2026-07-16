@@ -27,6 +27,7 @@ vi.mock('@/pages', () => ({
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,
+  LandingPage: () => <div data-testid="page-landing" />,
   HomePage: () => <div data-testid="page-home" />,
   SearchPage: () => <div data-testid="page-search" />,
   DailyJokePage: () => <div data-testid="page-daily" />,

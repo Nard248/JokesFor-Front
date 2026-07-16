@@ -9,8 +9,9 @@ import {
   TermsPage,
   CookiePolicyPage,
   ChildrenPrivacyPage,
+  // Marketing landing (anonymous `/`)
+  LandingPage,
   // Redesigned (current design system + FlowAppShell)
-  HomePage,
   SearchPage,
   DailyJokePage,
   LoginPage,
@@ -64,8 +65,9 @@ export const routes: RouteObject[] = [
   { path: '/cookies', element: <Navigate to="/cookie-policy" replace /> },
   { path: '/childrens-privacy', element: <ChildrenPrivacyPage /> },
 
-  // Public
-  { path: '/', element: <HomePage /> },
+  // Public — anonymous marketing landing. Authenticated users hitting `/` are
+  // redirected into the app (`/flow-canvas`) from inside LandingPage itself.
+  { path: '/', element: <LandingPage /> },
   { path: '/search', element: <SearchPage /> },
   { path: '/daily', element: <DailyJokePage /> },
   { path: '/library', element: <LibraryPage /> },
