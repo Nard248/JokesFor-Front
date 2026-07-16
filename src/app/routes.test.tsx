@@ -24,6 +24,7 @@ vi.mock('@/pages', () => ({
   TermsPage: () => <div data-testid="page-terms" />,
   CookiePolicyPage: () => <div data-testid="page-cookie-policy" />,
   ChildrenPrivacyPage: () => <div data-testid="page-childrens-privacy" />,
+  LandingPage: () => <div data-testid="page-landing" />,
   HomePage: () => <div data-testid="page-home" />,
   SearchPage: () => <div data-testid="page-search" />,
   DailyJokePage: () => <div data-testid="page-daily" />,

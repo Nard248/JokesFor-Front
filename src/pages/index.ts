@@ -22,6 +22,9 @@ export { FormatPickerPage } from './FormatPickerPage'
 export { EditorPage } from './EditorPage'
 export { SubmissionDetailPage } from './SubmissionDetailPage'
 
+// Marketing landing (anonymous `/`; authed users redirect into the app)
+export { LandingPage } from './LandingPage'
+
 // Redesigned pages (current design system, FlowAppShell)
 export { HomePage } from './HomePage'
 export { SearchPage } from './SearchPage'
