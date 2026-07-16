@@ -58,7 +58,7 @@ export function OtpInput({
   }
 
   return (
-    <div role="group" aria-label="Verification code" className="flex gap-2 justify-center" onPaste={handlePaste}>
+    <div role="group" aria-label="Verification code" className="flex gap-1.5 sm:gap-2 justify-center" onPaste={handlePaste}>
       {Array.from({ length }).map((_, i) => (
         <input
           key={i}
@@ -75,7 +75,9 @@ export function OtpInput({
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           className={cn(
-            'w-12 h-14 text-center text-2xl font-semibold rounded-2xl border bg-white outline-none transition-colors',
+            // Boxes shrink on phones so six of them never overflow a 375px card;
+            // full size from the `sm` breakpoint up. Height stays ≥44px tap target.
+            'w-10 h-12 text-xl sm:w-12 sm:h-14 sm:text-2xl text-center font-semibold rounded-2xl border bg-white outline-none transition-colors',
             'border-[#E9E8E7] focus:border-[#6A1CF6] focus:ring-2 focus:ring-[#6A1CF6]/20',
             invalid && 'border-destructive',
             disabled && 'opacity-50 cursor-not-allowed',

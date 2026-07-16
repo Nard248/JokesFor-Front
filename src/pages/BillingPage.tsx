@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CreditCard, Zap, CheckCircle2, XCircle, Infinity } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   useBillingPlans,
@@ -45,6 +46,8 @@ function formatDate(iso: string): string {
 // ────────────────────────────────────────────────────────────────────────────
 
 export function BillingPage() {
+  const { isMobile } = useBreakpoint()
+  const btnH = isMobile ? 44 : 40
   const plansQuery = useBillingPlans()
   const subscriptionQuery = useMySubscription()
   const entitlementsQuery = useEntitlements()
@@ -144,7 +147,9 @@ export function BillingPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
       <FlowAppShell active="library">
-        <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 960, margin: '0 auto' }}>
+        {/* Horizontal padding comes from the shell's fluid container; vertical only
+            here (RESPONSIVE.md rule 2). Cap stays narrower than the shell. */}
+        <div style={{ padding: '40px 0', maxWidth: 960, margin: '0 auto' }}>
           {/* Hero */}
           <div>
             <span className="eyebrow-mono">Billing &amp; Plans</span>
@@ -241,7 +246,7 @@ export function BillingPage() {
                 onClick={handleManageBilling}
                 disabled={portalMutation.isPending}
                 className="btn-flow-primary"
-                style={{ height: 40, fontSize: 13 }}
+                style={{ height: btnH, fontSize: 13 }}
                 data-testid="active-sub-manage-btn"
               >
                 {portalMutation.isPending ? 'Opening…' : 'Manage subscription'}
@@ -343,7 +348,7 @@ export function BillingPage() {
                 onClick={handleManageBilling}
                 disabled={portalMutation.isPending}
                 className="btn-flow-primary"
-                style={{ height: 40, fontSize: 13 }}
+                style={{ height: btnH, fontSize: 13 }}
                 data-testid="manage-billing-btn"
               >
                 {portalMutation.isPending ? 'Opening…' : 'Manage billing'}
@@ -497,7 +502,7 @@ function PlanCard({
           onClick={onManage}
           disabled={isManaging}
           className="btn-flow-primary"
-          style={{ width: '100%', height: 42, fontSize: 14, marginTop: 4 }}
+          style={{ width: '100%', height: 44, fontSize: 14, marginTop: 4 }}
           data-testid={`manage-plan-btn-${plan.slug}`}
         >
           {isManaging ? 'Opening…' : 'Manage subscription'}
@@ -508,7 +513,7 @@ function PlanCard({
           onClick={onSubscribe}
           disabled={isPending}
           className={isFree ? 'btn-flow-ghost' : 'btn-flow-primary'}
-          style={{ width: '100%', height: 42, fontSize: 14, marginTop: 4 }}
+          style={{ width: '100%', height: 44, fontSize: 14, marginTop: 4 }}
           data-testid={`subscribe-btn-${plan.slug}`}
         >
           {isPending ? 'Loading…' : isFree ? 'Downgrade to Free' : `Subscribe — ${priceLabel}`}

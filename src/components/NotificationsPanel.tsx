@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Bell, Check, Sparkles, UserPlus, ShieldAlert } from 'lucide-react'
 import { useNotifications, useMarkAllRead } from '@/features/notifications'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 import type { NotificationDTO } from '@/lib/api'
 
 type PanelItem = { icon: React.ReactNode; title: string; sub: string; tone: 'purple' | 'lime' | 'amber' }
@@ -25,6 +26,7 @@ function mapNotification(n: NotificationDTO): PanelItem {
  */
 export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { isMobile } = useBreakpoint()
   const { data: notifications = [] } = useNotifications()
   const markAllRead = useMarkAllRead()
 
@@ -48,6 +50,24 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
 
   const items: PanelItem[] = notifications.map(mapNotification)
 
+  // Mobile: a fixed-width dropdown anchored to the bell overflows a phone
+  // (the bell sits near the right edge). Pin it to the viewport instead —
+  // near-full-width, gutters both sides, so it never runs off-screen.
+  const positioned: React.CSSProperties = isMobile
+    ? {
+        position: 'fixed',
+        top: 'calc(64px + env(safe-area-inset-top, 0px))',
+        left: 12,
+        right: 12,
+        width: 'auto',
+      }
+    : {
+        position: 'absolute',
+        top: 'calc(100% + 8px)',
+        right: 0,
+        width: 320,
+      }
+
   return (
     <div
       ref={ref}
@@ -55,11 +75,8 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       aria-label="Notifications"
       className="dropdown-enter"
       style={{
-        position: 'absolute',
-        top: 'calc(100% + 8px)',
-        right: 0,
+        ...positioned,
         zIndex: 50,
-        width: 320,
         background: '#fff',
         border: '1px solid #E9E8E7',
         borderRadius: 18,
@@ -119,7 +136,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
 
       {/* Body */}
       {items.length > 0 ? (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 360, overflowY: 'auto' }}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: isMobile ? 'calc(100vh - 180px)' : 360, overflowY: 'auto' }}>
           {items.map((it, i) => (
             <li
               key={i}

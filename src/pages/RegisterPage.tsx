@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios'
 import { useRegister, useUpdateUser } from '@/features/auth'
 import { getGoogleAuthUrl, stashSignupDob } from '@/features/auth/google-oauth'
 import { isAtLeast13 } from '@/features/consent/age'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
  * RegisterPage — 2-step create-account, redesigned per
@@ -57,6 +58,7 @@ const UNDER_13_MSG = 'You must be at least 13 years old to use Jokes For.'
 export function RegisterPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { isMobile } = useBreakpoint()
   const registerMutation = useRegister()
   const updateUser = useUpdateUser()
 
@@ -189,9 +191,9 @@ export function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7', display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)' }}>
+    <div style={{ minHeight: '100vh', background: '#FBFAF7', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.1fr) minmax(0, 1fr)' }}>
       {/* ── Left: form pane ────────────────────────────────────── */}
-      <div style={{ padding: 'clamp(48px, 6vw, 72px) clamp(32px, 6vw, 88px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh' }}>
+      <div style={{ padding: 'clamp(48px, 6vw, 72px) clamp(32px, 6vw, 88px)', display: 'flex', flexDirection: 'column', justifyContent: isMobile ? 'flex-start' : 'center', minHeight: '100vh' }}>
         <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#1A1A1A' }}>
           <img src="/Logos/appicon_purple.svg" alt="" style={{ width: 36, height: 36, borderRadius: 9 }} />
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.01em' }}>
@@ -298,7 +300,7 @@ export function RegisterPage() {
               <div style={{ flex: 1, height: 1, background: '#E9E8E7' }} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
               <FormField label="First name">
                 <FlowInput value={firstName} onChange={setFirstName} placeholder="Alex" autoFocus />
               </FormField>
@@ -390,7 +392,7 @@ export function RegisterPage() {
             </FormField>
 
             <FormField label="Where will you tell these jokes most?">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10, marginTop: 6 }}>
                 {VENUE_OPTIONS.map((v) => {
                   const on = venue === v.id
                   return (
@@ -480,8 +482,9 @@ export function RegisterPage() {
         </p>
       </div>
 
-      {/* ── Right: Hooked-loop preview pane ──────────────────────── */}
-      <RegisterRightPane />
+      {/* ── Right: Hooked-loop preview pane — hidden on mobile (brand lives in
+          the form-pane logo up top), so the form gets the full width. ── */}
+      {!isMobile && <RegisterRightPane />}
 
       {/* Local styles — note: also defined globally by FlowAppShell when on
           /flow-canvas, /explore, /search. Inline here so /register works
