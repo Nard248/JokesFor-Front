@@ -6,6 +6,7 @@ import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
+import type { JokeMediaItem } from '@/lib/api'
 
 /**
  * DailyJokePage — reskinned in iteration 4 to match FlowCanvasPage's
@@ -64,7 +65,7 @@ export function DailyJokePage() {
 
           {/* Hero JOTD */}
           <div style={{ marginTop: 32 }}>
-            {loadingToday ? <JotdSkeleton /> : <JotdHero jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} date={today?.date} />}
+            {loadingToday ? <JotdSkeleton /> : <JotdHero jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} media={today?.joke?.media} date={today?.date} />}
           </div>
 
           {/* History */}
@@ -136,16 +137,18 @@ interface JotdHeroProps {
   setup?: string | null
   punchline?: string | null
   text?: string
+  media?: JokeMediaItem[] | null
   date?: string
 }
 
-function JotdHero({ jokeId, setup, punchline, text, date }: JotdHeroProps) {
+function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps) {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
   // Read-time on the daily hero. No-op until the joke id resolves.
   const dwellRef = useDwell<HTMLElement>(jokeId, 'daily')
 
+  const hasMedia = (media?.length ?? 0) > 0
   const isSetupPunch = !!(setup && punchline)
   const headlineText = isSetupPunch ? null : text ?? setup ?? ''
 
@@ -197,10 +200,47 @@ function JotdHero({ jokeId, setup, punchline, text, date }: JotdHeroProps) {
       />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', flexWrap: 'wrap', gap: 8 }}>
         <span className="tag-flow">{dateline}</span>
-        <span className="eyebrow-mono">{isSetupPunch ? 'Setup → Punchline' : 'One-liner'}</span>
+        <span className="eyebrow-mono">{hasMedia ? 'Image' : isSetupPunch ? 'Setup → Punchline' : 'One-liner'}</span>
       </header>
 
-      {isSetupPunch ? (
+      {hasMedia ? (
+        <div style={{ marginTop: 32, position: 'relative' }}>
+          <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+            Setup
+          </span>
+          <div
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+              color: '#1A1A1A',
+              lineHeight: 1.25,
+              marginTop: 8,
+              maxWidth: 640,
+            }}
+          >
+            {setup}
+          </div>
+          <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+            Punchline
+          </span>
+          <div
+            onClick={handleReveal}
+            className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+            style={{
+              cursor: revealed ? 'default' : 'pointer',
+              marginTop: 8,
+              maxWidth: 640,
+              aspectRatio: media![0].width && media![0].height ? `${media![0].width} / ${media![0].height}` : '4 / 3',
+              borderRadius: 14,
+              overflow: 'hidden',
+              background: '#F1EFEC',
+            }}
+          >
+            <img src={media![0].url ?? undefined} alt={setup ?? undefined} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        </div>
+      ) : isSetupPunch ? (
         <div style={{ marginTop: 32, position: 'relative' }}>
           <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
             Setup

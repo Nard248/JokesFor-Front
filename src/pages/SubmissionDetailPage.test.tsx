@@ -18,8 +18,14 @@ vi.mock('@/components/FlowAppShell', () => ({
 }))
 
 vi.mock('@/components/JokeRenderer', () => ({
-  JokeRenderer: ({ payload }: { payload: { text?: string; setup?: string } }) => (
-    <div data-testid="joke-renderer">{payload.text || payload.setup || 'joke'}</div>
+  JokeRenderer: ({
+    payload,
+  }: {
+    payload: { text?: string; setup?: string; media?: { url: string | null }[] | null }
+  }) => (
+    <div data-testid="joke-renderer" data-media-count={payload.media?.length ?? 0}>
+      {payload.text || payload.setup || 'joke'}
+    </div>
   ),
 }))
 
@@ -146,6 +152,33 @@ describe('SubmissionDetailPage', () => {
       render(<SubmissionDetailPage />, { wrapper: Wrapper })
 
       expect(screen.getByTestId('joke-renderer')).toBeDefined()
+    })
+
+    it('threads the submission media into the JokeRenderer payload (via toJokePayload)', () => {
+      const MEDIA_DRAFT = baseDraft({
+        id: 43,
+        format: 'image',
+        status: 'pending',
+        setup: 'A cat wearing sunglasses',
+        media: [
+          {
+            id: 'm1',
+            kind: 'image',
+            url: 'https://cdn.example.com/a.jpg',
+            poster_url: null,
+            width: 800,
+            height: 600,
+            duration_ms: null,
+            is_gif: false,
+          },
+        ],
+      })
+      mockUseDraft.mockReturnValue({ data: MEDIA_DRAFT, isLoading: false, isError: false })
+
+      const Wrapper = makeWrapper()
+      render(<SubmissionDetailPage />, { wrapper: Wrapper })
+
+      expect(screen.getByTestId('joke-renderer')).toHaveAttribute('data-media-count', '1')
     })
 
     it('shows "With our reviewers since" copy', () => {

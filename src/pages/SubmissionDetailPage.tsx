@@ -5,7 +5,7 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { JokeRenderer } from '@/components/JokeRenderer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useDraft, PublishedStats } from '@/features/create'
+import { useDraft, PublishedStats, toJokePayload } from '@/features/create'
 import type { SubmissionStatus } from '@/features/create'
 
 // ── Status banner config ─────────────────────────────────────────────────────
@@ -152,13 +152,7 @@ export function SubmissionDetailPage() {
                   Your submission
                 </p>
                 <JokeRenderer
-                  payload={{
-                    format: draft.format,
-                    text: draft.text,
-                    setup: draft.setup,
-                    punchline: draft.punchline,
-                    lines: draft.lines,
-                  }}
+                  payload={toJokePayload(draft)}
                   revealed
                   interactive={false}
                   big

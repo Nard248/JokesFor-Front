@@ -27,6 +27,17 @@ const TODAY = {
   date: '2026-07-13',
   issue_label: 'Vol. I · No. 042',
 }
+const TODAY_MEDIA = {
+  joke: {
+    id: 6,
+    text: '',
+    setup: 'A cat wearing sunglasses',
+    punchline: null,
+    media: [{ kind: 'image', url: 'https://cdn.example.com/daily-6.jpg', width: 800, height: 600 }],
+  },
+  date: '2026-07-13',
+  issue_label: 'Vol. I · No. 043',
+}
 const HISTORY = {
   results: [
     { joke: { id: 1, text: 'History joke one.' }, date: '2026-07-12' },
@@ -71,5 +82,13 @@ describe('DailyJokePage', () => {
     renderPage()
     expect(screen.getByText('History joke one.', { exact: false })).toBeDefined()
     expect(screen.queryByText(/No\.\s*\d/)).toBeNull()
+  })
+
+  it('renders the media hero (Image eyebrow + img) when the daily joke carries media', () => {
+    mockUseTodaysJoke.mockReturnValue({ data: TODAY_MEDIA, isLoading: false })
+    renderPage()
+    expect(screen.getByText('Image')).toBeDefined()
+    const img = screen.getByRole('img')
+    expect(img).toHaveAttribute('src', 'https://cdn.example.com/daily-6.jpg')
   })
 })

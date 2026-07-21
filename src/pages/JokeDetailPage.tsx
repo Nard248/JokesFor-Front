@@ -227,6 +227,9 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
 
         {/* Body */}
         {locked ? (
+          (joke.media?.length ?? 0) > 0 ? (
+            flowData ? <FlowJokeCard joke={flowData} big source={source} /> : null
+          ) : (
           <div data-testid="detail-locked">
             {joke.setup && (
               <>
@@ -278,6 +281,9 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
               <Lock size={16} /> Unlock with Supporter
             </button>
           </div>
+          )
+        ) : (joke.media?.length ?? 0) > 0 ? (
+          flowData ? <FlowJokeCard joke={flowData} big source={source} /> : null
         ) : joke.setup && joke.punchline ? (
           <>
             <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>

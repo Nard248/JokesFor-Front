@@ -17,6 +17,7 @@ import { recordShare, useDwell } from '@/features/telemetry'
 import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal } from '@/lib/telemetry'
 import { timeUntilDailyReset, dailyResetLocalLabel } from '@/lib/dailyReset'
+import type { JokeMediaItem } from '@/lib/api'
 
 /**
  * Flow Canvas — the "Today" hub, redesigned per Docs/JokesFor/parts/flow-screens.jsx
@@ -297,6 +298,7 @@ interface JotdBodyProps {
     text: string
     lines?: string[] | null
     format?: { slug: string }
+    media?: JokeMediaItem[] | null
   }
   revealed: boolean
   onReveal: () => void
@@ -390,6 +392,51 @@ function JotdBody({ joke, revealed, onReveal }: JotdBodyProps) {
             <Sparkles size={16} /> Reveal punchline
           </button>
         )}
+      </div>
+    )
+  }
+
+  // Image — blurred media box, reveal via the same onReveal as setup→punchline.
+  // Daily joke is paywall-exempt, so there's no locked state to branch on here.
+  const hasMedia = (joke.media?.length ?? 0) > 0
+  if (hasMedia && joke.setup) {
+    const first = joke.media![0]
+    return (
+      <div style={{ marginTop: 32, position: 'relative' }}>
+        <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+          Setup
+        </span>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            fontSize: 'clamp(1.25rem, 2.5vw, 1.875rem)',
+            color: '#1A1A1A',
+            lineHeight: 1.25,
+            marginTop: 8,
+            maxWidth: 640,
+          }}
+        >
+          {joke.setup}
+        </div>
+        <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+          Punchline
+        </span>
+        <div
+          onClick={onReveal}
+          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          style={{
+            cursor: revealed ? 'default' : 'pointer',
+            marginTop: 8,
+            maxWidth: 640,
+            aspectRatio: first.width && first.height ? `${first.width} / ${first.height}` : '4 / 3',
+            borderRadius: 14,
+            overflow: 'hidden',
+            background: '#F1EFEC',
+          }}
+        >
+          <img src={first.url ?? undefined} alt={joke.setup} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
       </div>
     )
   }
@@ -730,7 +777,13 @@ function ContinueBanner({ pack }: { pack?: { slug: string; title: string; joke_c
 // /daily-jokes/history/ feed. Hidden until there's real history to show.
 // ──────────────────────────────────────────────────────────────────────────
 
-function SevenDayArchive({ history, isMobile }: { history?: { joke: { text: string; format?: { name: string } }; date: string }[]; isMobile?: boolean }) {
+function SevenDayArchive({
+  history,
+  isMobile,
+}: {
+  history?: { joke: { text: string; format?: { name: string }; media?: JokeMediaItem[] }; date: string }[]
+  isMobile?: boolean
+}) {
   // No real history yet → render nothing rather than a fabricated week.
   if (!history || history.length === 0) return null
 
@@ -744,6 +797,7 @@ function SevenDayArchive({ history, isMobile }: { history?: { joke: { text: stri
       t: (h.joke?.text ?? '').slice(0, 60),
       v: h.joke?.format?.name ?? '',
       bg: tints[i % tints.length],
+      thumbUrl: h.joke?.media?.[0]?.url ?? undefined,
     }
   })
 
@@ -816,6 +870,13 @@ function SevenDayArchive({ history, isMobile }: { history?: { joke: { text: stri
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em', color: '#52525B' }}>
                 {d.d.toUpperCase()} · {d.date}
               </div>
+              {d.thumbUrl && (
+                <img
+                  src={d.thumbUrl}
+                  alt=""
+                  style={{ width: '100%', height: 40, objectFit: 'cover', borderRadius: 6, marginTop: 10 }}
+                />
+              )}
               <div
                 style={{
                   fontFamily: 'var(--font-serif)',

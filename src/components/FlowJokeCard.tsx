@@ -173,6 +173,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
           setup: joke.setup ?? '',
           punchline: joke.punch ?? '',
           lines: joke.lines ?? null,
+          media: joke.media ?? null,
         }}
         big={big}
         read={joke.read}
