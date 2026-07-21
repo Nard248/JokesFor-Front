@@ -6,8 +6,8 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { useImpression, useDwell, recordShare } from '@/features/telemetry'
 import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
-import type { Joke, ReactionSlug } from '@/lib/api'
-import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from './JokeRenderer'
+import type { Joke, JokeMediaItem, ReactionSlug } from '@/lib/api'
+import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, formatSlugToFlow, type FlowJokeFormat } from './JokeRenderer'
 
 // Re-export the format type so existing importers don't break.
 export type { FlowJokeFormat } from './JokeRenderer'
@@ -41,6 +41,7 @@ export interface FlowJokeData {
   punch?: string         // setup, anti
   text?: string          // oneliner, observ, story
   lines?: string[]       // knock-knock alternating bubbles
+  media?: JokeMediaItem[] // image (wave 2: video/audio)
 
   // Tagging / metadata (mock-friendly; map from real Joke when wired).
   themeLabel?: string
@@ -366,24 +367,17 @@ function taxonLabel(value: unknown): string | undefined {
   return undefined
 }
 
-export function jokeToFlowData(joke: Joke): FlowJokeData {
+export function jokeToFlowData(joke: Joke): FlowJokeData | null {
   const slug = taxonSlug(joke.format).toLowerCase()
-  const fmt: FlowJokeFormat =
-    slug === 'setup_punchline' || slug === 'setup-punchline' || slug === 'setup'
-      ? 'setup'
-      : slug === 'one_liner' || slug === 'one-liner' || slug === 'oneliner'
-      ? 'oneliner'
-      : slug === 'observational' || slug === 'observ'
-      ? 'observ'
-      : slug === 'anti_joke' || slug === 'anti-joke' || slug === 'anti'
-      ? 'anti'
-      : slug === 'knock_knock' || slug === 'knock-knock' || slug === 'knock'
-      ? 'knock'
-      : slug === 'story'
-      ? 'story'
-      : joke.setup && joke.punchline
-      ? 'setup'
-      : 'oneliner'
+  let fmt = formatSlugToFlow(slug)
+  if (fmt === null) {
+    // Slugless (mock fixtures / legacy rows without a format at all): fall
+    // back by shape, same as before the guard existed.
+    if (slug === '') {
+      fmt = joke.setup && joke.punchline ? 'setup' : joke.text ? 'oneliner' : null
+    }
+    if (fmt === null) return null // unknown format (future wave) → hide, don't garble
+  }
 
   // Prefer new vocabulary (themes/categories), fall back to legacy
   // (context_tags/tones). Each entry may be a slug string or a taxon object.
@@ -395,8 +389,9 @@ export function jokeToFlowData(joke: Joke): FlowJokeData {
     fmt,
     setup: joke.setup ?? undefined,
     punch: joke.punchline ?? undefined,
-    text: joke.text,
+    text: joke.text ?? undefined,
     lines: joke.lines ?? undefined,
+    media: joke.media ?? undefined,
     themeLabel,
     catLabel,
     // GRACEFUL DEGRADATION: only lock when the backend explicitly says so.

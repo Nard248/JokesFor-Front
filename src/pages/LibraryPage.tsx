@@ -4,6 +4,7 @@ import { Search, Plus, ArrowRight, Bookmark } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
 import { formatSlugToFlow } from '@/components/JokeRenderer'
+import type { JokeMediaItem } from '@/lib/api'
 import { useCollections } from '@/features/collections'
 import { useSavedJokes } from '@/features/saved-jokes'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
@@ -205,11 +206,14 @@ export function LibraryPage() {
 
             {filteredSaves.length > 0 ? (
               <div style={{ columnCount: masonryCols, columnGap: 18 }}>
-                {filteredSaves.slice(0, 12).map((s) => (
-                  <div key={s.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={savedJokeToFlowData(s)} source="other" />
-                  </div>
-                ))}
+                {filteredSaves.slice(0, 12).map((s) => {
+                  const flow = savedJokeToFlowData(s)
+                  return flow && (
+                    <div key={s.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                      <FlowJokeCard joke={flow} source="other" />
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <SavesEmpty searching={!!query.trim()} />
@@ -412,13 +416,23 @@ function SavesEmpty({ searching }: { searching: boolean }) {
 
 export function savedJokeToFlowData(saved: {
   id: number
-  joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } }
-}): FlowJokeData {
+  joke: {
+    id: number
+    text: string
+    setup: string | null
+    punchline: string | null
+    format?: { slug: string }
+    media?: JokeMediaItem[]
+  }
+}): FlowJokeData | null {
+  const fmt = formatSlugToFlow(saved.joke?.format?.slug)
+  if (fmt === null) return null // unknown format → skip render, don't garble
   return {
     id: saved.id,
-    fmt: formatSlugToFlow(saved.joke?.format?.slug),
+    fmt,
     setup: saved.joke?.setup ?? undefined,
     punch: saved.joke?.punchline ?? undefined,
     text: saved.joke?.text ?? undefined,
+    media: saved.joke?.media ?? undefined,
   }
 }

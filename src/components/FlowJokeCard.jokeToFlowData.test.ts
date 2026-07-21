@@ -29,12 +29,13 @@ describe('jokeToFlowData — tolerant DTO mapping', () => {
     } as unknown as Joke
 
     const flow = jokeToFlowData(raw)
-    expect(flow.id).toBe(11)
-    expect(flow.fmt).toBe('oneliner')
-    expect(flow.text).toBe('A one-liner')
+    expect(flow).not.toBeNull()
+    expect(flow!.id).toBe(11)
+    expect(flow!.fmt).toBe('oneliner')
+    expect(flow!.text).toBe('A one-liner')
     // slug strings get prettified into display labels
-    expect(flow.catLabel).toBe('Nerd')
-    expect(flow.themeLabel).toBe('Work')
+    expect(flow!.catLabel).toBe('Nerd')
+    expect(flow!.themeLabel).toBe('Work')
   })
 
   it('maps a detail joke (format + tags as nested objects)', () => {
@@ -55,12 +56,13 @@ describe('jokeToFlowData — tolerant DTO mapping', () => {
     } as unknown as Joke
 
     const flow = jokeToFlowData(raw)
-    expect(flow.id).toBe(7)
-    expect(flow.fmt).toBe('setup')
-    expect(flow.setup).toContain('scarecrow')
-    expect(flow.punch).toContain('outstanding')
-    expect(flow.catLabel).toBe('Dad')
-    expect(flow.themeLabel).toBe('Animals')
+    expect(flow).not.toBeNull()
+    expect(flow!.id).toBe(7)
+    expect(flow!.fmt).toBe('setup')
+    expect(flow!.setup).toContain('scarecrow')
+    expect(flow!.punch).toContain('outstanding')
+    expect(flow!.catLabel).toBe('Dad')
+    expect(flow!.themeLabel).toBe('Animals')
   })
 
   it('prefers new-vocabulary categories/themes over legacy tones/context_tags', () => {
@@ -83,12 +85,13 @@ describe('jokeToFlowData — tolerant DTO mapping', () => {
     } as unknown as Joke
 
     const flow = jokeToFlowData(raw)
-    expect(flow.fmt).toBe('observ')
-    expect(flow.catLabel).toBe('Wholesome')
-    expect(flow.themeLabel).toBe('Food')
+    expect(flow).not.toBeNull()
+    expect(flow!.fmt).toBe('observ')
+    expect(flow!.catLabel).toBe('Wholesome')
+    expect(flow!.themeLabel).toBe('Food')
   })
 
-  it('falls back to oneliner when the format is unknown/empty', () => {
+  it('falls back by shape (setup/oneliner) when the slug is empty', () => {
     const raw = {
       id: 1,
       text: 'no format',
@@ -105,6 +108,26 @@ describe('jokeToFlowData — tolerant DTO mapping', () => {
       created_at: '2026-01-01T00:00:00Z',
     } as unknown as Joke
 
-    expect(jokeToFlowData(raw).fmt).toBe('oneliner')
+    expect(jokeToFlowData(raw)?.fmt).toBe('oneliner')
+  })
+
+  it('returns null (skip render) for an unrecognized format slug', () => {
+    const raw = {
+      id: 2,
+      text: 'mystery',
+      setup: null,
+      punchline: null,
+      format: 'hologram',
+      age_rating: '',
+      tones: [],
+      context_tags: [],
+      culture_tags: [],
+      language: { id: 1, name: 'English', code: 'en' },
+      source: 'community',
+      share_image_url: null,
+      created_at: '2026-01-01T00:00:00Z',
+    } as unknown as Joke
+
+    expect(jokeToFlowData(raw)).toBeNull()
   })
 })

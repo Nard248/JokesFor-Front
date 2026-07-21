@@ -262,15 +262,18 @@ export function ExplorePage() {
           ) : jokes.length > 0 ? (
             <>
             <div style={{ marginTop: 24, columnCount: masonryCols, columnGap: 18 }}>
-              {jokes.map((joke) => (
-                <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                  {/* Link to the real detail so a click opens the correct joke and
-                      logs a real view (?source=explore). */}
-                  <Link to={`/jokes/${joke.id}?source=explore`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <FlowJokeCard joke={jokeToFlowData(joke)} source="explore" />
-                  </Link>
-                </div>
-              ))}
+              {jokes.map((joke) => {
+                const flow = jokeToFlowData(joke)
+                return flow && (
+                  <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                    {/* Link to the real detail so a click opens the correct joke and
+                        logs a real view (?source=explore). */}
+                    <Link to={`/jokes/${joke.id}?source=explore`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <FlowJokeCard joke={flow} source="explore" />
+                    </Link>
+                  </div>
+                )
+              })}
             </div>
             {hasMore && (
               <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>

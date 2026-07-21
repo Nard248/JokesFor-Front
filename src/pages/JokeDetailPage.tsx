@@ -143,6 +143,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   // Read-time: dwell on the joke content with scroll depth (strongest signal).
   const dwellRef = useDwell<HTMLElement>(joke.id, source)
   const locked = joke.is_locked === true
+  const flowData = jokeToFlowData(joke)
 
   const themes = joke.themes ?? joke.context_tags ?? []
   const categories = joke.categories ?? joke.tones ?? []
@@ -311,8 +312,8 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
               {joke.punchline}
             </div>
           </>
-        ) : joke.lines && joke.lines.length > 0 ? (
-          <FlowJokeCard joke={jokeToFlowData(joke)} big />
+        ) : joke.lines && joke.lines.length > 0 && flowData ? (
+          <FlowJokeCard joke={flowData} big />
         ) : (
           <div
             style={{
@@ -579,11 +580,14 @@ function MoreLikeThis({ joke }: { joke: Joke }) {
         If you liked that, <em className="wink">you'll like these.</em>
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-        {more.map((j) => (
-          <Link key={j.id} to={`/jokes/${j.id}?source=other`} style={{ textDecoration: 'none' }}>
-            <FlowJokeCard joke={jokeToFlowData(j)} source="other" />
-          </Link>
-        ))}
+        {more.map((j) => {
+          const flow = jokeToFlowData(j)
+          return flow && (
+            <Link key={j.id} to={`/jokes/${j.id}?source=other`} style={{ textDecoration: 'none' }}>
+              <FlowJokeCard joke={flow} source="other" />
+            </Link>
+          )
+        })}
       </div>
     </section>
   )

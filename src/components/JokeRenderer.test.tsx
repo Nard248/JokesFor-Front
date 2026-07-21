@@ -50,6 +50,7 @@ describe('FLOW_FORMAT_TO_BACKEND_SLUG — real DB slugs', () => {
       anti: 'anti',
       knock: 'knock',
       story: 'story',
+      image: 'image',
     })
   })
 })
@@ -75,9 +76,9 @@ describe('formatSlugToFlow — saved/favorite joke skin resolution', () => {
     expect(formatSlugToFlow('knock_knock')).toBe('knock')
   })
 
-  it('falls back to oneliner for unknown/empty slugs', () => {
-    expect(formatSlugToFlow('')).toBe('oneliner')
-    expect(formatSlugToFlow(undefined)).toBe('oneliner')
-    expect(formatSlugToFlow('who-knows')).toBe('oneliner')
+  it('returns null for unknown/empty slugs instead of garbling into oneliner (unknown-format guard)', () => {
+    expect(formatSlugToFlow('')).toBeNull()
+    expect(formatSlugToFlow(undefined)).toBeNull()
+    expect(formatSlugToFlow('who-knows')).toBeNull()
   })
 })

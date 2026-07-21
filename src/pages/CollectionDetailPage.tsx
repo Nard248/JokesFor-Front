@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { formatSlugToFlow } from '@/components/JokeRenderer'
+import type { JokeMediaItem } from '@/lib/api'
 import { useCollections, useCollectionJokes } from '@/features/collections'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
@@ -30,7 +32,10 @@ export function CollectionDetailPage() {
 
   const title = collection?.name ?? 'Collection'
 
-  const flowJokes = useMemo(() => saves.map(savedJokeToFlowData), [saves])
+  const flowJokes = useMemo(
+    () => saves.map(savedJokeToFlowData).filter((j): j is FlowJokeData => j !== null),
+    [saves],
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
@@ -130,29 +135,23 @@ function StateCard({ children }: { children: React.ReactNode }) {
  */
 function savedJokeToFlowData(saved: {
   id: number
-  joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } }
-}): FlowJokeData {
-  const slug = saved.joke?.format?.slug ?? 'oneliner'
-  const fmt: FlowJokeFormat =
-    slug === 'setup_punchline' || slug === 'setup-punchline'
-      ? 'setup'
-      : slug === 'one_liner' || slug === 'one-liner'
-      ? 'oneliner'
-      : slug === 'observational'
-      ? 'observ'
-      : slug === 'anti_joke' || slug === 'anti-joke'
-      ? 'anti'
-      : slug === 'knock_knock' || slug === 'knock-knock'
-      ? 'knock'
-      : slug === 'story'
-      ? 'story'
-      : 'oneliner'
-
+  joke: {
+    id: number
+    text: string
+    setup: string | null
+    punchline: string | null
+    format?: { slug: string }
+    media?: JokeMediaItem[]
+  }
+}): FlowJokeData | null {
+  const fmt = formatSlugToFlow(saved.joke?.format?.slug)
+  if (fmt === null) return null // unknown format → skip render, don't garble
   return {
     id: saved.id,
     fmt,
     setup: saved.joke?.setup ?? undefined,
     punch: saved.joke?.punchline ?? undefined,
     text: saved.joke?.text ?? undefined,
+    media: saved.joke?.media ?? undefined,
   }
 }

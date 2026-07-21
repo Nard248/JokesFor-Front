@@ -4,10 +4,20 @@ import { Heart, ArrowRight, Calendar, TrendingUp } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
 import { formatSlugToFlow } from '@/components/JokeRenderer'
+import type { JokeMediaItem } from '@/lib/api'
 import { useFavorites, useFavoriteStats } from '@/features/favorites'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
-type RawFavorite = { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }
+type RawFavorite = {
+  joke: {
+    id: number
+    text: string
+    setup: string | null
+    punchline: string | null
+    format?: { slug: string }
+    media?: JokeMediaItem[]
+  }
+}
 
 /**
  * FavoritesPage — redesigned for iteration 4.
@@ -54,7 +64,10 @@ export function FavoritesPage() {
   const hasMore = favorites.length < total
 
   const flowFavorites = useMemo(
-    () => favorites.map((f, idx) => favoriteToFlowData(f, idx)),
+    () =>
+      favorites
+        .map((f, idx) => favoriteToFlowData(f, idx))
+        .filter((j): j is FlowJokeData => j !== null),
     [favorites],
   )
 
@@ -362,13 +375,16 @@ function FavoritesSkeleton({ cols = 3 }: { cols?: number }) {
 // FavoriteJoke from mock-data.ts has the joke text/setup/punchline + tones/etc.
 // ──────────────────────────────────────────────────────────────────────────
 
-export function favoriteToFlowData(fav: RawFavorite, idx: number): FlowJokeData {
+export function favoriteToFlowData(fav: RawFavorite, idx: number): FlowJokeData | null {
+  const fmt = formatSlugToFlow(fav.joke?.format?.slug)
+  if (fmt === null) return null // unknown format → skip render, don't garble
   return {
     id: fav.joke?.id ?? idx,
-    fmt: formatSlugToFlow(fav.joke?.format?.slug),
+    fmt,
     setup: fav.joke?.setup ?? undefined,
     punch: fav.joke?.punchline ?? undefined,
     text: fav.joke?.text ?? undefined,
+    media: fav.joke?.media ?? undefined,
   }
 }
 

@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Flame, TrendingUp, ArrowRight } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData, type FlowJokeFormat } from '@/components/FlowJokeCard'
+import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
+import { formatSlugToFlow } from '@/components/JokeRenderer'
+import type { JokeMediaItem } from '@/lib/api'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import {
   useTrendingJokes,
@@ -95,11 +97,14 @@ export function TrendingPage() {
             />
             {trendingJokes && trendingJokes.length > 0 ? (
               <div style={{ marginTop: 18, columnCount: masonryCols, columnGap: 18 }}>
-                {trendingJokes.slice(0, 9).map((tj, i) => (
-                  <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={trendingToFlowData(tj, i)} source="feed" />
-                  </div>
-                ))}
+                {trendingJokes.slice(0, 9).map((tj, i) => {
+                  const flow = trendingToFlowData(tj, i)
+                  return flow && (
+                    <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                      <FlowJokeCard joke={flow} source="feed" />
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <SectionEmpty />
@@ -401,29 +406,22 @@ function trendingToFlowData(
       punchline: string | null
       format?: { slug: string; name: string }
       tones?: { name: string }[]
+      media?: JokeMediaItem[]
     }
     likes: number
     shares: number
   },
   fallbackId: number,
-): FlowJokeData {
+): FlowJokeData | null {
   const slug = (tj.joke?.format?.slug ?? '').toLowerCase()
-  const fmt: FlowJokeFormat =
-    slug.includes('setup')
-      ? 'setup'
-      : slug.includes('one') || slug.includes('liner')
-      ? 'oneliner'
-      : slug.includes('observ') || slug.includes('quote')
-      ? 'observ'
-      : slug.includes('anti')
-      ? 'anti'
-      : slug.includes('knock')
-      ? 'knock'
-      : slug.includes('story')
-      ? 'story'
-      : tj.joke?.setup && tj.joke?.punchline
-      ? 'setup'
-      : 'oneliner'
+  let fmt = formatSlugToFlow(slug)
+  if (fmt === null) {
+    if (slug === '') {
+      // slugless: fall back by shape as before
+      fmt = tj.joke?.setup && tj.joke?.punchline ? 'setup' : tj.joke?.text ? 'oneliner' : null
+    }
+    if (fmt === null) return null // unknown format → hide, don't garble
+  }
 
   return {
     id: tj.joke?.id ?? fallbackId,
@@ -431,6 +429,7 @@ function trendingToFlowData(
     setup: tj.joke?.setup ?? undefined,
     punch: tj.joke?.punchline ?? undefined,
     text: tj.joke?.text,
+    media: tj.joke?.media ?? undefined,
     catLabel: tj.joke?.tones?.[0]?.name,
     saves: String(tj.shares ?? '—'),
     laughs: String(tj.likes ?? '—'),

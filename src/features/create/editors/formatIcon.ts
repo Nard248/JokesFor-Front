@@ -1,4 +1,4 @@
-import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye } from 'lucide-react'
+import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye, Image as ImageIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { FormatSlug } from '../types'
 
@@ -9,6 +9,10 @@ export const FORMAT_ICON: Record<FormatSlug, LucideIcon> = {
   story:    BookOpen,
   anti:     Asterisk,
   observ:   Eye,
+  // Placeholder wired for the FlowJokeFormat exhaustiveness check — the create
+  // flow doesn't offer 'image' yet (FORMAT_SLUGS/pickers still exclude it), so
+  // this is unreachable UI today; the media-jokes create-pipeline task swaps it.
+  image:    ImageIcon,
 }
 
 export function formatIcon(slug: FormatSlug): LucideIcon {
@@ -23,4 +27,6 @@ export const FORMAT_EXAMPLE: Record<FormatSlug, string> = {
   story:    "A programmer goes to the store and his wife says 'get a gallon of milk, and if they have eggs, get a dozen.' He comes back with 13 gallons of milk.",
   anti:     "Why did the chicken cross the road?\nTo get to the other side.",
   observ:   "Have you noticed that every time you clean something, you just move the dirt somewhere else?",
+  // Placeholder — see FORMAT_ICON.image above.
+  image:    "A caption for the photo.",
 }

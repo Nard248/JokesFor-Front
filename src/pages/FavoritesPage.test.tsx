@@ -93,7 +93,8 @@ describe('favoriteToFlowData — real DB format slugs', () => {
       { joke: { id: 5, text: '', setup: 'Q?', punchline: 'A!', format: { slug: 'setup' } } },
       0,
     )
-    expect(flow.fmt).toBe('setup')
-    expect(flow.id).toBe(5)
+    expect(flow).not.toBeNull()
+    expect(flow!.fmt).toBe('setup')
+    expect(flow!.id).toBe(5)
   })
 })

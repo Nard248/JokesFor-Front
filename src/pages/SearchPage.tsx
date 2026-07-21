@@ -333,15 +333,18 @@ export function SearchPage() {
           ) : matches.length > 0 ? (
             <>
             <div style={{ marginTop: 14, columnCount: masonryCols, columnGap: 18 }}>
-              {matches.map((joke) => (
-                <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                  {/* Link to the real detail so a click opens the correct joke and
-                      logs a real view (?source=search). */}
-                  <Link to={`/jokes/${joke.id}?source=search`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <FlowJokeCard joke={jokeToFlowData(joke)} source="search" />
-                  </Link>
-                </div>
-              ))}
+              {matches.map((joke) => {
+                const flow = jokeToFlowData(joke)
+                return flow && (
+                  <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                    {/* Link to the real detail so a click opens the correct joke and
+                        logs a real view (?source=search). */}
+                    <Link to={`/jokes/${joke.id}?source=search`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <FlowJokeCard joke={flow} source="search" />
+                    </Link>
+                  </div>
+                )
+              })}
             </div>
             {hasMore && (
               <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>

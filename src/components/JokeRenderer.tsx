@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Sparkles, Lock } from 'lucide-react'
 
-export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story'
+export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image'
 
 /** The canonical render payload — identical shape the editor preview and the card both build. */
 export interface JokePayload {
@@ -21,11 +21,12 @@ export const SKIN: Record<FlowJokeFormat, SkinSpec> = {
   anti:     { bg: '#1A1A1A',  fg: '#FFFFFF', border: 'none',              divider: 'rgba(255,255,255,0.14)' },
   knock:    { bg: '#FFFFFF',  fg: '#1A1A1A', border: '1px solid #E9E8E7', divider: '#F1EFEC' },
   story:    { bg: '#FFC965',  fg: '#5F4200', border: 'none',              divider: 'rgba(95,66,0,0.2)' },
+  image:    { bg: '#FFFFFF',  fg: '#1A1A1A', border: '1px solid #E9E8E7', divider: '#F1EFEC' },
 }
 
 export const FORMAT_LABEL: Record<FlowJokeFormat, string> = {
   setup: 'Setup → Punchline', oneliner: 'One-liner', observ: 'Observational',
-  anti: 'Anti-joke', knock: 'Knock-knock', story: 'Story',
+  anti: 'Anti-joke', knock: 'Knock-knock', story: 'Story', image: 'Image',
 }
 
 /**
@@ -42,16 +43,21 @@ export const FLOW_FORMAT_TO_BACKEND_SLUG: Record<FlowJokeFormat, string> = {
   anti: 'anti',
   knock: 'knock',
   story: 'story',
+  image: 'image',
 }
 
 /**
  * Resolve a backend format slug (from `format.slug` on a saved/favorite joke)
  * to the UI FlowJokeFormat that picks the render skin. Tolerant of BOTH the
- * real DB slugs (`setup`/`oneliner`/`observ`/`anti`/`knock`/`story`/`short-story`)
+ * real DB slugs (`setup`/`oneliner`/`observ`/`anti`/`knock`/`story`/`short-story`/`image`)
  * and the older long-form guesses (`setup_punchline`/`one_liner`/…) so a saved
  * joke never silently renders in the wrong skin (e.g. a setup as a one-liner).
+ *
+ * Returns `null` for an empty slug (caller falls back by shape) or an
+ * unrecognized slug (a future format wave not yet supported here) — the
+ * caller must skip rendering rather than garble it into the wrong skin.
  */
-export function formatSlugToFlow(rawSlug: string | null | undefined): FlowJokeFormat {
+export function formatSlugToFlow(rawSlug: string | null | undefined): FlowJokeFormat | null {
   switch ((rawSlug ?? '').toLowerCase()) {
     case 'setup':
     case 'setup_punchline':
@@ -76,8 +82,12 @@ export function formatSlugToFlow(rawSlug: string | null | undefined): FlowJokeFo
     case 'short-story':
     case 'short_story':
       return 'story'
+    case 'image':
+      return 'image'
+    case '':
+      return null   // slugless: caller falls back by shape
     default:
-      return 'oneliner'
+      return null   // unknown format (future wave) → skip render, don't garble
   }
 }
 
@@ -89,7 +99,8 @@ export function tagToneFor(fmt: FlowJokeFormat): string {
     case 'anti': return 'dark'
     case 'observ':
     case 'knock':
-    case 'story': return 'amber'
+    case 'story':
+    case 'image': return 'amber'
     case 'setup':
     default: return ''
   }

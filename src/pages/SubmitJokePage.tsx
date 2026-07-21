@@ -472,6 +472,9 @@ const FORMAT_LABELS: Record<FlowJokeFormat, string> = {
   story: 'Story',
   anti: 'Anti-joke',
   observ: 'Observational',
+  // Not offered in FORMAT_OPTIONS above (this legacy submission form doesn't
+  // support media yet) — entry exists only to satisfy Record<FlowJokeFormat, …>.
+  image: 'Image',
 }
 
 const TONE_OPTIONS = [

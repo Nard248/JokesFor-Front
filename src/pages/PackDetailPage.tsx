@@ -290,6 +290,9 @@ function PackEntry({
   isRead: boolean
   onOpen: () => void
 }) {
+  const flow = jokeToFlowData(joke)
+  if (!flow) return null // unknown format → skip render, don't garble
+
   return (
     <button
       type="button"
@@ -326,7 +329,7 @@ function PackEntry({
           {String(order).padStart(2, '0')}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <FlowJokeCard joke={jokeToFlowData(joke)} source="pack" />
+          <FlowJokeCard joke={flow} source="pack" />
         </div>
       </div>
     </button>

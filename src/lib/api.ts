@@ -163,6 +163,17 @@ export interface JokeTaxon {
   slug: string
 }
 
+export interface JokeMediaItem {
+  kind: 'image' | 'video' | 'audio'
+  /** Absent/undefined when the joke is LOCKED — the backend withholds URLs server-side. */
+  url?: string | null
+  poster_url?: string | null
+  width?: number | null
+  height?: number | null
+  duration_ms?: number | null
+  is_gif?: boolean
+}
+
 export interface Joke {
   id: number
   text: string
@@ -196,6 +207,8 @@ export interface Joke {
   language: { id: number; name: string; code: string }
   source: string
   share_image_url: string | null
+  /** Rich-media attachments (image/video/audio jokes). Absent for text-only formats. */
+  media?: JokeMediaItem[]
   created_at: string
 }
 

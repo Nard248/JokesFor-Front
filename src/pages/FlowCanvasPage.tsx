@@ -258,9 +258,10 @@ export function FlowCanvasPage() {
           </div>
           <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
             {forYouJokes && forYouJokes.results.length > 0 ? (
-              forYouJokes.results.slice(0, 3).map((j) => (
-                <FlowJokeCard key={j.id} joke={jokeToFlowData(j)} source="feed" />
-              ))
+              forYouJokes.results.slice(0, 3).map((j) => {
+                const flow = jokeToFlowData(j)
+                return flow && <FlowJokeCard key={j.id} joke={flow} source="feed" />
+              })
             ) : (
               <p style={{ fontSize: 15, color: '#52525B', gridColumn: '1 / -1', padding: '8px 0' }}>
                 We're still learning your taste — read and save a few jokes and picks will show up here.

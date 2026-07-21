@@ -81,17 +81,24 @@ describe('savedJokeToFlowData — real DB format slugs', () => {
       id: 100,
       joke: { id: 5, text: '', setup: 'Setup?', punchline: 'Punch!', format: { slug: 'setup' } },
     })
-    expect(flow.fmt).toBe('setup')
-    expect(flow.setup).toBe('Setup?')
-    expect(flow.punch).toBe('Punch!')
+    expect(flow).not.toBeNull()
+    expect(flow!.fmt).toBe('setup')
+    expect(flow!.setup).toBe('Setup?')
+    expect(flow!.punch).toBe('Punch!')
   })
 
   it('resolves the other real slugs (observ / knock)', () => {
     expect(
-      savedJokeToFlowData({ id: 1, joke: { id: 1, text: 'x', setup: null, punchline: null, format: { slug: 'observ' } } }).fmt,
+      savedJokeToFlowData({ id: 1, joke: { id: 1, text: 'x', setup: null, punchline: null, format: { slug: 'observ' } } })?.fmt,
     ).toBe('observ')
     expect(
-      savedJokeToFlowData({ id: 2, joke: { id: 2, text: 'x', setup: null, punchline: null, format: { slug: 'knock' } } }).fmt,
+      savedJokeToFlowData({ id: 2, joke: { id: 2, text: 'x', setup: null, punchline: null, format: { slug: 'knock' } } })?.fmt,
     ).toBe('knock')
+  })
+
+  it('returns null (skip render) for an unrecognized format slug', () => {
+    expect(
+      savedJokeToFlowData({ id: 3, joke: { id: 3, text: 'x', setup: null, punchline: null, format: { slug: 'hologram' } } }),
+    ).toBeNull()
   })
 })
