@@ -150,6 +150,7 @@ export function JokeRenderer({
   const skin = SKIN[fmt] ?? SKIN.setup
   const [localRevealed, setLocalRevealed] = useState(fmt !== 'setup' && fmt !== 'image')
   const [knockStep, setKnockStep] = useState(0)
+  const [carouselIndex, setCarouselIndex] = useState(0)
 
   // Paywall: a locked payoff short-circuits every format's interactive path, so
   // the reveal handlers (and onReveal telemetry) can never fire for it.
@@ -263,6 +264,12 @@ export function JokeRenderer({
     const ratio = first?.width && first?.height ? `${first.width} / ${first.height}` : '4 / 3'
     const canReveal = interactive && !revealed
     const titleSize = big ? 24 : 16
+    const onCarouselScroll = (e: React.UIEvent<HTMLDivElement>) => {
+      const el = e.currentTarget
+      if (el.clientWidth > 0) {
+        setCarouselIndex(Math.round(el.scrollLeft / el.clientWidth))
+      }
+    }
     return (
       <div className={className} onClick={() => canReveal && revealSetup()} style={{ cursor: canReveal ? 'pointer' : 'default' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: titleSize, color: skin.fg, lineHeight: 1.3, marginTop: 14 }}>
@@ -271,6 +278,8 @@ export function JokeRenderer({
         <div
           data-testid="media-punchline"
           className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          onScroll={media.length > 1 ? onCarouselScroll : undefined}
+          tabIndex={0}
           style={{
             marginTop: 12,
             aspectRatio: ratio,
@@ -299,7 +308,7 @@ export function JokeRenderer({
         </div>
         {media.length > 1 && revealed && (
           <div className="eyebrow-mono" style={{ marginTop: 8, color: '#52525B' }}>
-            <span>1/{media.length}</span> · swipe
+            <span>{carouselIndex + 1}/{media.length}</span> · swipe
           </div>
         )}
         {canReveal && <div className="eyebrow-mono" style={{ marginTop: 14, color: '#6A1CF6' }}>Tap to reveal →</div>}

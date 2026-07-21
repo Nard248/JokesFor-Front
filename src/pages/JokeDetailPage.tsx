@@ -143,7 +143,11 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   // Read-time: dwell on the joke content with scroll depth (strongest signal).
-  const dwellRef = useDwell<HTMLElement>(joke.id, source)
+  // Media jokes render a FlowJokeCard that runs its own dwell/impression on the
+  // same joke+source (dwell is deliberately not deduped), so the hero-level
+  // dwell must not run for those — pass undefined to no-op it.
+  const heroDwellId = (joke.media?.length ?? 0) > 0 ? undefined : joke.id
+  const dwellRef = useDwell<HTMLElement>(heroDwellId, source)
   const locked = joke.is_locked === true
   const flowData = jokeToFlowData(joke)
 

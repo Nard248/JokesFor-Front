@@ -41,6 +41,23 @@ describe('image joke rendering', () => {
     render(<JokeRenderer payload={payload} revealed />)
     expect(screen.getAllByRole('img')).toHaveLength(2)
     expect(screen.getByText('1/2')).toBeInTheDocument()
+    // Keyboard-focusable scroll container.
+    expect((screen.getByTestId('media-punchline') as HTMLElement).tabIndex).toBe(0)
+  })
+
+  it('updates the counter as the carousel is scrolled', () => {
+    const payload = imagePayload({
+      media: [
+        { kind: 'image', url: 'http://x/a.webp', width: 800, height: 600 },
+        { kind: 'image', url: 'http://x/b.webp', width: 800, height: 600 },
+      ],
+    })
+    render(<JokeRenderer payload={payload} revealed />)
+    const box = screen.getByTestId('media-punchline')
+    Object.defineProperty(box, 'clientWidth', { value: 400, configurable: true })
+    Object.defineProperty(box, 'scrollLeft', { value: 400, configurable: true })
+    fireEvent.scroll(box)
+    expect(screen.getByText('2/2')).toBeInTheDocument()
   })
 
   it('locked image joke renders NO img elements and shows the CTA', () => {

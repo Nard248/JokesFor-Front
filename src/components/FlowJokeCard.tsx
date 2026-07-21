@@ -17,13 +17,14 @@ export type { FlowJokeFormat } from './JokeRenderer'
 /**
  * FlowJokeCard — format-aware joke card for the redesign.
  *
- * Six format rhythms (per Docs/JokesFor/parts/flow.jsx):
+ * Seven format rhythms (per Docs/JokesFor/parts/flow.jsx):
  *  - setup     : white card; setup → blurred punch; tap to reveal (signature)
  *  - oneliner  : LIME card; single big display headline
  *  - observ    : white card; serif italic with giant decorative quote
  *  - anti      : BLACK card; "* That's it. That's the joke." footnote
  *  - knock     : white card; chat bubbles; tap to advance one line
  *  - story     : AMBER card; serif body with "📖 N min read" tag
+ *  - image     : white card; setup → blurred media carousel; tap to reveal
  *
  * Each format keeps a consistent header (FormatBadge + Theme · Category) and
  * footer (laughs/saves stats + Save/Share buttons), but the body is rhythm-
