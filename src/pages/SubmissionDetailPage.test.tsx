@@ -57,6 +57,7 @@ function baseDraft(overrides: Partial<ContentDraft>): ContentDraft {
     rejectionReason: '',
     likes: null,
     stats: null,
+    media: [],
     ...overrides,
   }
 }

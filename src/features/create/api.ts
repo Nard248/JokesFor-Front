@@ -9,6 +9,7 @@ import type {
   Taxon,
   AgeRating,
   Language,
+  MediaAssetDTO,
 } from './types'
 
 // ── Real API endpoints ──
@@ -31,6 +32,17 @@ export const contentApi = {
     api.post<{ id: number; status: string }>(`/jokes/my-drafts/${id}/submit/`),
   deleteDraft: (id: number) =>
     api.delete(`/jokes/my-drafts/${id}/`),
+  uploadMedia: (file: File, onProgress?: (pct: number) => void) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('kind', 'image')
+    return api.post<MediaAssetDTO>('/media/uploads/', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+      },
+    })
+  },
 }
 
 // ── DTO mappers ──
@@ -59,6 +71,12 @@ export function fromDTO(d: ContentDraftDTO): ContentDraft {
     rejectionReason: d.rejection_reason ?? '',
     likes: d.likes ?? null,
     stats: d.stats ?? null,
+    // The PATCH response omits `media` (backend contract quirk) — an absent key
+    // here must resolve to [] rather than being confused with "no attachments
+    // uploaded yet". Callers must not use a PATCH response to hydrate media;
+    // the autosave engine discards the PATCH result and relies on the detail
+    // GET (via query invalidation) to refresh media instead.
+    media: d.media ?? [],
   }
 }
 
@@ -85,6 +103,8 @@ export function toPatchBody(p: Partial<ContentDraft>): PatchDraftBody {
   if (p.ageRating !== undefined) body.age_rating = p.ageRating
   if (p.language !== undefined) body.language = p.language
   if (p.source !== undefined) body.source = p.source
+  // media (MediaAssetDTO[]) → media_asset_ids (ids only)
+  if (p.media !== undefined) body.media_asset_ids = p.media.map((m) => m.id)
 
   return body
 }

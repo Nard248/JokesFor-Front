@@ -137,6 +137,7 @@ describe('editorReducer hydrate', () => {
       ageRating: 'family',
       language: 'fr',
       source: 'original',
+      media: [],
     }
     const next = editorReducer(initial, { type: 'hydrate', draft: replacement })
     expect(next).toEqual(replacement)
@@ -253,7 +254,7 @@ describe('editorReducer changeFormat', () => {
 // ── toJokePayload ─────────────────────────────────────────────────────────────
 
 describe('toJokePayload', () => {
-  it('extracts exactly the 5 render fields for a text-type format', () => {
+  it('extracts exactly the render fields for a text-type format', () => {
     const d: EditorDraft = {
       format: 'oneliner',
       text: 'Funny',
@@ -266,6 +267,7 @@ describe('toJokePayload', () => {
       ageRating: 'family',
       language: 'en',
       source: 'original',
+      media: [],
     }
     const payload = toJokePayload(d)
     expect(payload).toEqual({
@@ -274,6 +276,7 @@ describe('toJokePayload', () => {
       setup: 'ignored setup',
       punchline: 'ignored punchline',
       lines: null,
+      media: null,
     })
     // Should NOT have extra fields
     expect((payload as unknown as Record<string, unknown>).themes).toBeUndefined()
@@ -289,10 +292,10 @@ describe('toJokePayload', () => {
     expect(payload.lines).toEqual(['Knock knock', "Who's there?", 'Boo', 'Boo who? Don\'t cry!'])
   })
 
-  it('has exactly 5 keys', () => {
+  it('has exactly 6 keys', () => {
     const d = emptyEditorDraft('setup')
     const payload = toJokePayload(d)
-    expect(Object.keys(payload)).toHaveLength(5)
-    expect(Object.keys(payload).sort()).toEqual(['format', 'lines', 'punchline', 'setup', 'text'])
+    expect(Object.keys(payload)).toHaveLength(6)
+    expect(Object.keys(payload).sort()).toEqual(['format', 'lines', 'media', 'punchline', 'setup', 'text'])
   })
 })

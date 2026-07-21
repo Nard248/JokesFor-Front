@@ -37,6 +37,8 @@ function isMeaningful(draft: EditorDraft): boolean {
   if (p.setup.trim()) return true
   if (p.punchline.trim()) return true
   if (p.lines && p.lines.some((l) => l.trim())) return true
+  // An upload before any typing (image format) should still create the draft.
+  if (draft.media.length > 0) return true
   return false
 }
 
@@ -116,6 +118,7 @@ export function useAutosave(args: {
         ageRating: current.ageRating,
         language: current.language,
         source: current.source,
+        media: current.media,
       })
       ok = true
       // Keep the TanStack Query cache fresh

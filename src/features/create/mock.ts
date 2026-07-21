@@ -7,6 +7,7 @@ import type {
   AgeRating,
   Taxon,
   Language,
+  MediaAssetDTO,
 } from './types'
 
 // ── Delay helper (mirrors mock-api.ts) ──
@@ -69,6 +70,15 @@ const FORMAT_CATALOG: FormatRule[] = [
     required_fields: ['text'],
     forbidden_fields: ['setup', 'punchline', 'lines'],
     constraints: {},
+  },
+  {
+    id: 9,
+    slug: 'image',
+    name: 'Image',
+    description: 'A caption with an image punchline.',
+    required_fields: ['setup', 'media'],
+    forbidden_fields: ['punchline', 'lines'],
+    constraints: { min_media: 1, max_media: 6 },
   },
 ]
 
@@ -142,6 +152,7 @@ function makeEmptyDTO(id: number, format: string): ContentDraftDTO {
     likes: null,
     rejection_reason: '',
     stats: null,
+    media: [],
   }
 }
 
@@ -214,6 +225,11 @@ const seedDrafts: ContentDraftDTO[] = [
     stats: null,
   },
 ]
+
+// Uploaded mock media assets, keyed by id — lets patchDraft resolve
+// `media_asset_ids` back to the full asset shape (mirrors a real backend
+// keeping only previously-uploaded, matching assets).
+const mockMediaStore = new Map<string, MediaAssetDTO>()
 
 // Mutable store (clone seeds so tests can mutate without polluting each other)
 let drafts: ContentDraftDTO[] = [...seedDrafts.map((d) => ({ ...d }))]
@@ -295,6 +311,11 @@ export const mockContentApi = {
       ...(body.age_rating !== undefined && { age_rating: body.age_rating }),
       ...(body.language !== undefined && { language: body.language }),
       ...(body.source !== undefined && { source: body.source }),
+      ...(body.media_asset_ids !== undefined && {
+        media: body.media_asset_ids
+          .map((id) => mockMediaStore.get(id))
+          .filter((m): m is MediaAssetDTO => m !== undefined),
+      }),
       last_edited_at: nowISO(),
     }
     drafts[idx] = updated
@@ -309,6 +330,17 @@ export const mockContentApi = {
     return { ...drafts[idx] }
   },
 
+  uploadMedia: async (file: File): Promise<MediaAssetDTO> => {
+    await delay(300)
+    const asset: MediaAssetDTO = {
+      id: `mock-${Date.now()}-${file.name}`, kind: 'image',
+      url: URL.createObjectURL(file), poster_url: null,
+      width: 800, height: 600, duration_ms: null, is_gif: false,
+    }
+    mockMediaStore.set(asset.id, asset)
+    return asset
+  },
+
   deleteDraft: async (id: number): Promise<void> => {
     await delay()
     const idx = drafts.findIndex((d) => d.id === id)
@@ -321,4 +353,5 @@ export const mockContentApi = {
 export function resetMockStore(): void {
   drafts = [...seedDrafts.map((d) => ({ ...d }))]
   nextId = 100
+  mockMediaStore.clear()
 }

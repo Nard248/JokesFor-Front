@@ -16,10 +16,10 @@ beforeEach(() => {
   resetMockStore()
 })
 
-test('useFormats eventually returns 6 formats', async () => {
+test('useFormats eventually returns 7 formats', async () => {
   const { result } = renderHook(() => useFormats(), { wrapper: makeWrapper() })
   await waitFor(() => expect(result.current.isSuccess).toBe(true))
-  expect(result.current.data).toHaveLength(6)
+  expect(result.current.data).toHaveLength(7)
 })
 
 test('useDrafts eventually returns an array of ContentDraft', async () => {

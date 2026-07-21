@@ -9,7 +9,7 @@ export { useCreatorStore, useUnseenSubmissionChange } from './store'
 export { createKeys, useFormats, useAgeRatings, useTones, useContextTags, useCultureTags, useLanguages, useDrafts, useDraft } from './queries'
 
 // Mutation hooks
-export { useCreateDraft, usePatchDraft, useSubmitDraft, useDeleteDraft } from './mutations'
+export { useCreateDraft, usePatchDraft, useSubmitDraft, useDeleteDraft, useUploadMedia } from './mutations'
 
 // Validation utilities
 export { validate, isBlank } from './validation'
@@ -46,6 +46,7 @@ export { ObservationalEditor } from './editors/ObservationalEditor'
 export { StoryEditor } from './editors/StoryEditor'
 export { SetupPunchlineEditor } from './editors/SetupPunchlineEditor'
 export { KnockEditor } from './editors/KnockEditor'
+export { ImageEditor } from './editors/ImageEditor'
 
 // Phase 4: Editor registry + format utilities
 export { EDITOR_BY_FORMAT, formatIcon, FORMAT_ICON, FORMAT_EXAMPLE } from './editors/index'

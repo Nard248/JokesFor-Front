@@ -1,4 +1,4 @@
-import type { FormatSlug } from './types'
+import type { FormatSlug, MediaAssetDTO } from './types'
 import type { JokePayload } from '@/components/JokeRenderer'
 
 /** The user-editable view-model (ContentDraft minus server-owned fields). */
@@ -14,6 +14,7 @@ export interface EditorDraft {
   ageRating: string | null
   language: string
   source: string
+  media: MediaAssetDTO[]
 }
 
 export type EditorAction =
@@ -23,21 +24,27 @@ export type EditorAction =
   | { type: 'setTags'; field: 'themes' | 'categories' | 'cultures'; value: string[] }
   | { type: 'setMeta'; field: 'ageRating' | 'language' | 'source'; value: string | null }
   | { type: 'changeFormat'; format: FormatSlug }
+  | { type: 'setMedia'; media: MediaAssetDTO[] }
 
 /**
  * Format groups for changeFormat compatibility rules (product spec §7.7):
  *   text-group:    oneliner, observ, story — share `text`
  *   sp-group:      setup, anti            — share `setup` + `punchline`
  *   knock-group:   knock                  — uses `lines`
+ *   media-group:   image                  — uses `media` (caption maps to `setup`)
  *
  * Within the same group: keep shared fields.
- * Across groups: clear the fields that don't belong to the new group.
+ * Across groups: clear the fields that don't belong to the new group. The
+ * media-group is a special case: it shares `setup` with the sp-group (the
+ * ImageEditor's caption field is the same `setup` field), so a media↔sp
+ * crossing preserves `setup` while still clearing `media`/`lines` as usual.
  */
-type FormatGroup = 'text' | 'sp' | 'knock'
+type FormatGroup = 'text' | 'sp' | 'knock' | 'media'
 
 function groupOf(fmt: FormatSlug): FormatGroup {
   if (fmt === 'knock') return 'knock'
   if (fmt === 'setup' || fmt === 'anti') return 'sp'
+  if (fmt === 'image') return 'media'
   return 'text' // oneliner | observ | story
 }
 
@@ -62,11 +69,15 @@ export function emptyEditorDraft(format: FormatSlug): EditorDraft {
     ageRating: null,
     language: 'en',
     source: 'original',
+    media: [],
   }
 }
 
 /**
- * Extracts the 5 render-relevant fields from an EditorDraft into a JokePayload.
+ * Extracts the render-relevant fields from an EditorDraft into a JokePayload.
+ * `media` is mapped from MediaAssetDTO (upload-pipeline shape) to JokeMediaItem
+ * (render shape) — null when there are no attachments, matching the "absent
+ * for text-only formats" contract JokeRenderer/PreviewPane expect.
  */
 export function toJokePayload(d: EditorDraft): JokePayload {
   return {
@@ -75,6 +86,9 @@ export function toJokePayload(d: EditorDraft): JokePayload {
     setup: d.setup,
     punchline: d.punchline,
     lines: d.lines,
+    media: d.media.length
+      ? d.media.map((m) => ({ kind: 'image' as const, url: m.url, width: m.width, height: m.height }))
+      : null,
   }
 }
 
@@ -98,6 +112,9 @@ export function editorReducer(state: EditorDraft, action: EditorAction): EditorD
     case 'setMeta':
       return { ...state, [action.field]: action.value }
 
+    case 'setMedia':
+      return { ...state, media: action.media }
+
     case 'changeFormat': {
       const newFmt = action.format
       const oldGroup = groupOf(state.format)
@@ -117,6 +134,7 @@ export function editorReducer(state: EditorDraft, action: EditorAction): EditorD
         setup: '',
         punchline: '',
         lines: null,
+        media: [],
       }
 
       if (newGroup === 'knock') {
@@ -130,9 +148,17 @@ export function editorReducer(state: EditorDraft, action: EditorAction): EditorD
         newState.lines = null
       } else if (newGroup === 'sp') {
         // Moving TO sp-group: keep setup/punchline if coming from sp (covered above).
-        // Otherwise (from text or knock): start fresh.
+        // Otherwise (from text or knock/media): start fresh.
+        newState.lines = null
+      } else if (newGroup === 'media') {
+        // Moving TO media-group: media/lines start fresh (media already reset above).
         newState.lines = null
       }
+
+      // The ImageEditor's caption field IS `setup` — sp↔media crossings share
+      // it, same as the sp-group shares setup/punchline with itself.
+      if (newGroup === 'media' && oldGroup === 'sp') newState.setup = state.setup
+      if (newGroup === 'sp' && oldGroup === 'media') newState.setup = state.setup
 
       return newState
     }

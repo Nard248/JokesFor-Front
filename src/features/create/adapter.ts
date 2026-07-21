@@ -17,7 +17,7 @@ import {
   mockCultureTags,
   mockLanguages,
 } from './mock'
-import type { ContentDraft, ContentDraftDTO, FormatRule, AgeRating, Taxon, Language, FormatSlug } from './types'
+import type { ContentDraft, ContentDraftDTO, FormatRule, AgeRating, Taxon, Language, FormatSlug, MediaAssetDTO } from './types'
 
 const USE_REAL = import.meta.env.VITE_USE_REAL_CREATE === 'true'
 
@@ -117,5 +117,12 @@ export const contentAdapter = {
       return contentApi.deleteDraft(id).then(() => undefined)
     }
     return mockContentApi.deleteDraft(id)
+  },
+
+  uploadMedia: (file: File, onProgress?: (pct: number) => void): Promise<MediaAssetDTO> => {
+    if (USE_REAL) {
+      return contentApi.uploadMedia(file, onProgress).then((r) => r.data)
+    }
+    return mockContentApi.uploadMedia(file)
   },
 }

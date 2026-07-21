@@ -17,6 +17,7 @@ const FALLBACK_FORMAT_NAMES: Record<string, string> = {
   story: 'Story',
   anti: 'Anti-joke',
   observ: 'Observational',
+  image: 'Image',
 }
 
 const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.map((slug, i) => ({

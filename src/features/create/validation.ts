@@ -39,6 +39,11 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
       if (!value || (Array.isArray(value) && (value as unknown[]).length === 0)) {
         errors[field] = `${field} is required`
       }
+    } else if (field === 'media') {
+      if (!payload.media || payload.media.length === 0) {
+        errors[field] = 'add at least one image'
+      }
+      continue
     } else {
       if (isBlank(value)) {
         errors[field] = `${field} is required`
@@ -87,6 +92,11 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
     if (wordCount < min_text_words) {
       errors['text'] = `Text must be at least ${min_text_words} words`
     }
+  }
+
+  // image-style: cap the number of attachments
+  if (rule.constraints.max_media != null && payload.media && payload.media.length > rule.constraints.max_media) {
+    errors.media = `at most ${rule.constraints.max_media} images`
   }
 
   return errors

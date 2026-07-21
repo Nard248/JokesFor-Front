@@ -1,8 +1,8 @@
 import { mockContentApi, mockFormats } from './mock'
 
-test('mockFormats returns 6 formats', async () => {
+test('mockFormats returns 7 formats', async () => {
   const formats = await mockFormats()
-  expect(formats).toHaveLength(6)
+  expect(formats).toHaveLength(7)
 })
 
 test('mockFormats knock has min_lines=4 max_lines=8', async () => {

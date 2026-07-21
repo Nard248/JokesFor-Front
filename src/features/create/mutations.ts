@@ -68,3 +68,10 @@ export function useDeleteDraft() {
     },
   })
 }
+
+export function useUploadMedia() {
+  return useMutation({
+    mutationFn: ({ file, onProgress }: { file: File; onProgress?: (pct: number) => void }) =>
+      contentAdapter.uploadMedia(file, onProgress),
+  })
+}

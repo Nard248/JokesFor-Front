@@ -95,7 +95,7 @@ describe('FormatPickerPage', () => {
     expect(skeletons.length).toBeGreaterThanOrEqual(6)
   })
 
-  it('falls back to 6 tiles on error using known slugs', () => {
+  it('falls back to 7 tiles on error using known slugs', () => {
     mockUseFormats.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -105,9 +105,9 @@ describe('FormatPickerPage', () => {
     const Wrapper = makeWrapper()
     render(<FormatPickerPage />, { wrapper: Wrapper })
 
-    // Fallback still renders 6 tiles (from FORMAT_SLUGS)
+    // Fallback still renders 7 tiles (from FORMAT_SLUGS)
     const tiles = screen.getAllByRole('button').filter((b) => b.getAttribute('tabindex') === '0')
-    expect(tiles.length).toBe(6)
+    expect(tiles.length).toBe(7)
   })
 
   it('clicking a tile navigates to /create/new/:slug', async () => {

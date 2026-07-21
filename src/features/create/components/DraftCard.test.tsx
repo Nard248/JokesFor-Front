@@ -21,6 +21,7 @@ const baseDraft: ContentDraft = {
   rejectionReason: '',
   likes: null,
   stats: null,
+  media: [],
 }
 
 describe('DraftCard', () => {

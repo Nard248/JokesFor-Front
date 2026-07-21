@@ -18,6 +18,7 @@ const FORMAT_OPTIONS: { value: FormatSlug; label: string }[] = [
   { value: 'story', label: 'Story' },
   { value: 'anti', label: 'Anti-joke' },
   { value: 'observ', label: 'Observational' },
+  { value: 'image', label: 'Image' },
 ]
 
 export function ChangeFormatModal({ open, current, onClose, onConfirm }: ChangeFormatModalProps) {

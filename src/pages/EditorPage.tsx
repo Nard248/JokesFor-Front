@@ -62,6 +62,7 @@ function toEditorDraft(d: ContentDraft): EditorDraft {
     ageRating: d.ageRating,
     language: d.language,
     source: d.source,
+    media: d.media,
   }
 }
 

@@ -69,6 +69,7 @@ test('usePatchDraft optimistically updates the detail cache before settling', as
     rejectionReason: '',
     likes: null,
     stats: null,
+    media: [],
   }
   qc.setQueryData(createKeys.drafts.detail(1), seedDraft)
 

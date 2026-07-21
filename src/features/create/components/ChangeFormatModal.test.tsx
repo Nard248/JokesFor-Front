@@ -18,7 +18,7 @@ describe('ChangeFormatModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('shows all 6 format options', () => {
+  it('shows all 7 format options', () => {
     render(
       <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} />
     )
@@ -28,6 +28,7 @@ describe('ChangeFormatModal', () => {
     expect(screen.getByText('Story')).toBeInTheDocument()
     expect(screen.getByText('Anti-joke')).toBeInTheDocument()
     expect(screen.getByText('Observational')).toBeInTheDocument()
+    expect(screen.getByText('Image')).toBeInTheDocument()
   })
 
   it('calls onConfirm with the selected slug when Change format clicked', () => {

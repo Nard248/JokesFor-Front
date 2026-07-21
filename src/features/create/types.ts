@@ -6,7 +6,7 @@ export type { FlowJokeFormat, JokePayload }
 /** FormatSlug === FlowJokeFormat from @/components/JokeRenderer */
 export type FormatSlug = FlowJokeFormat // 'setup'|'oneliner'|'observ'|'anti'|'knock'|'story'
 
-export const FORMAT_SLUGS = ['oneliner', 'setup', 'knock', 'story', 'anti', 'observ'] as const
+export const FORMAT_SLUGS = ['oneliner', 'setup', 'knock', 'story', 'anti', 'observ', 'image'] as const
 
 export type SubmissionStatus = 'draft' | 'pending' | 'published' | 'rejected'
 
@@ -39,7 +39,22 @@ export interface FormatRule {
     max_lines?: number
     max_line_chars?: number
     min_text_words?: number
+    min_media?: number
+    max_media?: number
+    media_kind?: string
   }
+}
+
+/** A single uploaded media attachment (image today; video/audio in a later wave). */
+export interface MediaAssetDTO {
+  id: string
+  kind: string
+  url: string | null
+  poster_url: string | null
+  width: number | null
+  height: number | null
+  duration_ms: number | null
+  is_gif: boolean
 }
 
 export interface PublishedStats {
@@ -48,8 +63,14 @@ export interface PublishedStats {
   reports: number
 }
 
-/** View-model the editor + pages use. JokePayload = {format,text,setup,punchline,lines}. */
-export interface ContentDraft extends JokePayload {
+/**
+ * View-model the editor + pages use. JokePayload = {format,text,setup,punchline,lines}.
+ * `media` is redeclared here (Omit + override) because ContentDraft's media is the
+ * upload-pipeline DTO shape (MediaAssetDTO[], always an array), not JokePayload's
+ * render-shape `JokeMediaItem[] | null` — the two are mapped into each other by
+ * toJokePayload, never passed through structurally.
+ */
+export interface ContentDraft extends Omit<JokePayload, 'media'> {
   id: number
   status: SubmissionStatus
   themes: string[]      // slugs (API: context_tags / themes)
@@ -62,6 +83,7 @@ export interface ContentDraft extends JokePayload {
   rejectionReason: string
   likes: number | null
   stats?: PublishedStats | null
+  media: MediaAssetDTO[]
 }
 
 /** DTO shapes from the backend (snake_case). */
@@ -86,6 +108,7 @@ export interface ContentDraftDTO {
   likes: number | null
   rejection_reason?: string
   stats?: PublishedStats | null
+  media?: MediaAssetDTO[]
 }
 
 export interface CreateDraftBody {
@@ -106,4 +129,5 @@ export interface PatchDraftBody {
   age_rating?: string | null
   language?: string
   source?: string
+  media_asset_ids?: string[]
 }
