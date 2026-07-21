@@ -11,6 +11,7 @@ describe('PreviewPane', () => {
       setup: '',
       punchline: '',
       lines: null,
+      media: null,
     }
     render(<PreviewPane payload={payload} />)
     expect(screen.getByText(/how readers will see it/i)).toBeInTheDocument()
@@ -23,6 +24,7 @@ describe('PreviewPane', () => {
       setup: '',
       punchline: '',
       lines: null,
+      media: null,
     }
     render(<PreviewPane payload={payload} />)
     expect(screen.getByText('My unique test joke text here.')).toBeInTheDocument()
@@ -35,6 +37,7 @@ describe('PreviewPane', () => {
       setup: 'Why did the chicken?',
       punchline: 'Because it could.',
       lines: null,
+      media: null,
     }
     render(<PreviewPane payload={payload} />)
     expect(screen.getByText('Why did the chicken?')).toBeInTheDocument()

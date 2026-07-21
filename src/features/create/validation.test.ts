@@ -76,21 +76,21 @@ test('isBlank returns true for null/undefined', () => {
 // ── required_fields ──
 
 test('oneliner: missing text → error on "text"', () => {
-  const payload: JokePayload = { format: 'oneliner', text: '', setup: '', punchline: '', lines: null }
+  const payload: JokePayload = { format: 'oneliner', text: '', setup: '', punchline: '', lines: null, media: null }
   const errors = validate(payload, onelineRule)
   expect(errors).toHaveProperty('text')
   expect(Object.keys(errors)).toHaveLength(1)
 })
 
 test('setup: missing setup and punchline → errors on both fields', () => {
-  const payload: JokePayload = { format: 'setup', text: '', setup: '', punchline: '', lines: null }
+  const payload: JokePayload = { format: 'setup', text: '', setup: '', punchline: '', lines: null, media: null }
   const errors = validate(payload, setupRule)
   expect(errors).toHaveProperty('setup')
   expect(errors).toHaveProperty('punchline')
 })
 
 test('anti: missing setup and punchline → errors on both fields', () => {
-  const payload: JokePayload = { format: 'anti', text: '', setup: '', punchline: '', lines: null }
+  const payload: JokePayload = { format: 'anti', text: '', setup: '', punchline: '', lines: null, media: null }
   const errors = validate(payload, antiRule)
   expect(errors).toHaveProperty('setup')
   expect(errors).toHaveProperty('punchline')
@@ -105,6 +105,7 @@ test('oneliner: forbidden field "setup" present → error', () => {
     setup: 'Should not be here',
     punchline: '',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, onelineRule)
   expect(errors).toHaveProperty('setup')
@@ -117,6 +118,7 @@ test('knock: forbidden field "text" present → error', () => {
     setup: '',
     punchline: '',
     lines: ['Knock knock', "Who's there?", 'Cow', 'Moo'],
+    media: null,
   }
   const errors = validate(payload, knockRule)
   expect(errors).toHaveProperty('text')
@@ -131,6 +133,7 @@ test('knock: too few lines (< 4) → error on "lines"', () => {
     setup: '',
     punchline: '',
     lines: ['Knock knock', "Who's there?"],
+    media: null,
   }
   const errors = validate(payload, knockRule)
   expect(errors).toHaveProperty('lines')
@@ -138,7 +141,7 @@ test('knock: too few lines (< 4) → error on "lines"', () => {
 
 test('knock: too many lines (> 8) → error on "lines"', () => {
   const lines = Array.from({ length: 9 }, (_, i) => `line ${i + 1}`)
-  const payload: JokePayload = { format: 'knock', text: '', setup: '', punchline: '', lines }
+  const payload: JokePayload = { format: 'knock', text: '', setup: '', punchline: '', lines, media: null }
   const errors = validate(payload, knockRule)
   expect(errors).toHaveProperty('lines')
 })
@@ -151,6 +154,7 @@ test('knock: a line exceeding max_line_chars → error on "lines"', () => {
     setup: '',
     punchline: '',
     lines: ['Knock knock', "Who's there?", 'Cow', longLine],
+    media: null,
   }
   const errors = validate(payload, knockRule)
   expect(errors).toHaveProperty('lines')
@@ -163,6 +167,7 @@ test('knock: valid 4 lines each ≤ 200 chars → no error', () => {
     setup: '',
     punchline: '',
     lines: ['Knock knock', "Who's there?", 'Cow', 'Moo — I interrupted you!'],
+    media: null,
   }
   const errors = validate(payload, knockRule)
   expect(errors).not.toHaveProperty('lines')
@@ -178,6 +183,7 @@ test('story: text with fewer than 30 words → error on "text"', () => {
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, storyRule)
   expect(errors).toHaveProperty('text')
@@ -185,7 +191,7 @@ test('story: text with fewer than 30 words → error on "text"', () => {
 
 test('story: text with 30+ words → no error', () => {
   const words = Array.from({ length: 30 }, (_, i) => `word${i + 1}`).join(' ')
-  const payload: JokePayload = { format: 'story', text: words, setup: '', punchline: '', lines: null }
+  const payload: JokePayload = { format: 'story', text: words, setup: '', punchline: '', lines: null, media: null }
   const errors = validate(payload, storyRule)
   expect(Object.keys(errors)).toHaveLength(0)
 })
@@ -199,6 +205,7 @@ test('oneliner: valid payload → no errors', () => {
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   expect(validate(payload, onelineRule)).toEqual({})
 })
@@ -210,6 +217,7 @@ test('setup: valid payload → no errors', () => {
     setup: "Why don't scientists trust atoms?",
     punchline: 'Because they make up everything!',
     lines: null,
+    media: null,
   }
   expect(validate(payload, setupRule)).toEqual({})
 })
@@ -233,6 +241,7 @@ test('observ: valid payload with text → no errors', () => {
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   expect(validate(payload, observRule)).toEqual({})
 })
@@ -244,6 +253,7 @@ test('observ: blank text → error on "text"', () => {
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, observRule)
   expect(errors).toHaveProperty('text')
@@ -258,6 +268,7 @@ test('setup: payload with text populated (forbidden) → error on "text"', () =>
     setup: "Why don't scientists trust atoms?",
     punchline: 'Because they make up everything!',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, setupRule)
   expect(errors).toHaveProperty('text')
@@ -272,6 +283,7 @@ test('knock: null lines → "required" message wins over constraint message', ()
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, knockRule)
   expect(errors).toHaveProperty('lines')
@@ -287,6 +299,7 @@ test('story: empty text → "required" message wins over min_text_words constrai
     setup: '',
     punchline: '',
     lines: null,
+    media: null,
   }
   const errors = validate(payload, storyRule)
   expect(errors).toHaveProperty('text')

@@ -28,6 +28,12 @@ vi.mock('@/lib/telemetry', () => ({
   __esModule: true,
 }))
 
+// ── Auth: this suite exercises the AUTHENTICATED unlock path (billing) ───────
+// The anon path ('Sign up free' → /register) is covered in FlowJokeCard.anon.test.tsx.
+vi.mock('@/features/auth', () => ({
+  useAuth: () => ({ isAuthenticated: true, user: { pk: 1 } }),
+}))
+
 // ── Chrome + peripheral sections stubbed to keep the test focused ─────────────
 vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

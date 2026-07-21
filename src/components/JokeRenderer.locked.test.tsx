@@ -8,6 +8,7 @@ const setupPayload: JokePayload = {
   setup: 'Why did the scarecrow win an award?',
   punchline: 'He was outstanding in his field.',
   lines: null,
+  media: null,
 }
 
 describe('JokeRenderer — locked payoff (paywall)', () => {
@@ -35,7 +36,7 @@ describe('JokeRenderer — locked payoff (paywall)', () => {
   it('locks a text-only format (one-liner) with the CTA and no cleartext', () => {
     render(
       <JokeRenderer
-        payload={{ format: 'oneliner', text: '', setup: 'A teaser', punchline: '', lines: null }}
+        payload={{ format: 'oneliner', text: '', setup: 'A teaser', punchline: '', lines: null, media: null }}
         locked
         onUnlock={vi.fn()}
       />,

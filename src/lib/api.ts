@@ -294,6 +294,18 @@ export const dailyReadsApi = {
   get: () => api.get<DailyReadsStatus>('/jokes/daily-reads/'),
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Reveal — anon paywall consumption.
+//
+// POST /jokes/{id}/reveal/: an anonymous reader hitting this endpoint spends
+// one soft daily-reveal credit. Authenticated readers get 204 (no cap here —
+// their cap, if any, is enforced via dailyReadsApi instead); anonymous readers
+// get 200 with the updated DailyReadsStatus-shaped counters.
+// ─────────────────────────────────────────────────────────────────────────
+export const revealApi = {
+  post: (jokeId: number) => api.post<DailyReadsStatus>(`/jokes/${jokeId}/reveal/`),
+}
+
 // Collections API
 export interface Collection {
   id: number

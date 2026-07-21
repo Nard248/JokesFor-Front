@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { JokeRenderer, formatSlugToFlow, FLOW_FORMAT_TO_BACKEND_SLUG, type JokePayload } from './JokeRenderer'
 
-const base: JokePayload = { format: 'oneliner', text: '', setup: '', punchline: '', lines: null }
+const base: JokePayload = { format: 'oneliner', text: '', setup: '', punchline: '', lines: null, media: null }
 
 test('oneliner renders its text', () => {
   render(<JokeRenderer payload={{ ...base, format: 'oneliner', text: 'I put down a book on anti-gravity.' }} />)

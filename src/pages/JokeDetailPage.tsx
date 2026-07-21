@@ -16,6 +16,7 @@ import { useRollMysteryBox } from '@/features/mystery-box'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import { dailyResetLocalLabel } from '@/lib/dailyReset'
+import { useAuth } from '@/features/auth'
 import type { ReactionSlug } from '@/lib/api'
 
 /** Map the URL ?source= (JokeSource) onto the telemetry source vocabulary. */
@@ -140,6 +141,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const saveJoke = useSaveJoke()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   // Read-time: dwell on the joke content with scroll depth (strongest signal).
   const dwellRef = useDwell<HTMLElement>(joke.id, source)
   const locked = joke.is_locked === true
@@ -274,11 +276,11 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
             <button
               type="button"
               data-testid="detail-unlock-cta"
-              onClick={() => navigate('/settings/billing')}
+              onClick={() => navigate(isAuthenticated ? '/settings/billing' : '/register')}
               className="btn-flow-reward"
               style={{ marginTop: 16 }}
             >
-              <Lock size={16} /> Unlock with Supporter
+              <Lock size={16} /> {isAuthenticated ? 'Unlock with Supporter' : 'Sign up free'}
             </button>
           </div>
           )

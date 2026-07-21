@@ -11,8 +11,8 @@ export interface JokePayload {
   setup: string
   punchline: string
   lines: string[] | null
-  /** Rich-media attachments for `format: 'image'` (wave 2: video/audio). Absent for text-only formats. */
-  media?: JokeMediaItem[] | null
+  /** Rich-media attachments for `format: 'image'` (wave 2: video/audio). Null for text-only formats. */
+  media: JokeMediaItem[] | null
 }
 
 export interface SkinSpec { bg: string; fg: string; border: string; divider: string }

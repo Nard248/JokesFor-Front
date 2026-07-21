@@ -294,6 +294,7 @@ function FormatsShowcase() {
                     setup: j.setup ?? '',
                     punchline: j.punchline ?? '',
                     lines: j.lines ?? null,
+                    media: null,
                   }}
                   interactive={false}
                   revealed

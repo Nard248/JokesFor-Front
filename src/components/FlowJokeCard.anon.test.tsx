@@ -10,11 +10,18 @@ vi.mock('react-router', async (orig) => ({
   useNavigate: () => navigateSpy,
 }))
 
-// ── Auth: this suite exercises the AUTHENTICATED reveal/unlock path. The anon
-// path (revealApi consumption + 'Sign up free' → /register) is covered in
-// FlowJokeCard.anon.test.tsx. ─────────────────────────────────────────────────
+// ── Auth state (controlled per test) ──────────────────────────────────────────
+const isAuthenticatedMock = vi.fn<() => boolean>(() => false)
 vi.mock('@/features/auth', () => ({
-  useAuth: () => ({ isAuthenticated: true, user: { pk: 1 } }),
+  useAuth: () => ({ isAuthenticated: isAuthenticatedMock(), user: null }),
+}))
+
+// ── Reveal endpoint (anon paywall consumption) ────────────────────────────────
+const revealApiPostSpy = vi.fn((_jokeId: number) =>
+  Promise.resolve({ data: { limit: 10, used: 1, remaining: 9, over: false, reset_at: '2026-07-22T00:00:00Z' } }),
+)
+vi.mock('@/lib/api', () => ({
+  revealApi: { post: (jokeId: number) => revealApiPostSpy(jokeId) },
 }))
 
 // ── Daily-reads enforcement (controlled per test) ─────────────────────────────
@@ -62,6 +69,13 @@ const setupJoke: FlowJokeData = {
   punch: 'He was outstanding in his field.',
 }
 
+const imageJoke: FlowJokeData = {
+  id: 99,
+  fmt: 'image',
+  setup: 'A cat wearing sunglasses',
+  media: [{ kind: 'image', url: 'https://cdn.example.com/cat.jpg', width: 800, height: 600 }],
+}
+
 function renderCard(joke: FlowJokeData) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -74,33 +88,38 @@ function renderCard(joke: FlowJokeData) {
 beforeEach(() => {
   vi.clearAllMocks()
   canRevealMock.mockReturnValue(true)
+  isAuthenticatedMock.mockReturnValue(false)
 })
 
-describe('FlowJokeCard — paywall', () => {
-  it('server-locked joke (is_locked) renders the CTA and never tracks a reveal', () => {
-    renderCard({ ...setupJoke, isLocked: true })
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-    expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('unlock-supporter-cta'))
-    expect(navigateSpy).toHaveBeenCalledWith('/settings/billing')
-    expect(trackRevealSpy).not.toHaveBeenCalled()
-    expect(registerRevealMock).not.toHaveBeenCalled()
-  })
-
-  it('unlocked card reveals on tap and records the reveal', () => {
+describe('FlowJokeCard — anonymous paywall', () => {
+  it('anon + unlocked setup joke: tapping the punchline calls revealApi.post and does NOT track a reveal', () => {
     renderCard(setupJoke)
-    expect(screen.getByText(/tap to reveal punchline/i)).toBeInTheDocument()
     fireEvent.click(screen.getByText('Why did the scarecrow win an award?'))
     expect(registerRevealMock).toHaveBeenCalledWith(42)
-    expect(trackRevealSpy).toHaveBeenCalledWith(42, 'feed')
-    expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
+    expect(revealApiPostSpy).toHaveBeenCalledWith(42)
+    expect(trackRevealSpy).not.toHaveBeenCalled()
   })
 
-  it('over-cap (canReveal=false) soft-locks a fresh reveal-gated joke with the CTA', () => {
-    canRevealMock.mockReturnValue(false) // user is over their free cap
-    renderCard(setupJoke)
+  it('anon + locked joke: CTA reads "Sign up free" and clicking it navigates to /register', () => {
+    renderCard({ ...setupJoke, isLocked: true })
+    const cta = screen.getByTestId('unlock-supporter-cta')
+    expect(cta).toHaveTextContent('Sign up free')
+    fireEvent.click(cta)
+    expect(navigateSpy).toHaveBeenCalledWith('/register')
+  })
+
+  it('authed + locked joke: CTA reads "Unlock with Supporter" and navigates to /settings/billing (regression)', () => {
+    isAuthenticatedMock.mockReturnValue(true)
+    renderCard({ ...setupJoke, isLocked: true })
+    const cta = screen.getByTestId('unlock-supporter-cta')
+    expect(cta).toHaveTextContent('Unlock with Supporter')
+    fireEvent.click(cta)
+    expect(navigateSpy).toHaveBeenCalledWith('/settings/billing')
+  })
+
+  it('image-format joke is reveal-gated: over cap + fresh image joke renders the locked CTA', () => {
+    canRevealMock.mockReturnValue(false)
+    renderCard(imageJoke)
     expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-    expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
-    expect(trackRevealSpy).not.toHaveBeenCalled()
   })
 })
