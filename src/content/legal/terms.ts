@@ -34,6 +34,7 @@ const terms: LegalDoc = {
       heading: 'Acceptable Use',
       body: [
         'You may submit text jokes and, where the feature is available, image-based jokes you own or have the right to publish. All uploads are screened automatically and reviewed by our moderation team before publication, and metadata (such as EXIF location data) is removed from images at upload. Do not upload content that is unlawful, infringing, sexually explicit, violent, or that depicts identifiable private individuals without their consent. We may remove any upload at our discretion and suspend accounts that repeatedly violate these rules. Audio and video submissions are not yet supported.',
+        'In addition, you may not:',
         '- Post content that is illegal, hateful, threatening, harassing, or discriminatory.',
         '- Submit jokes that contain personal attacks, doxxing, or content targeting individuals.',
         '- Use the platform for spam, phishing, or commercial solicitation.',
