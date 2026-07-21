@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Sparkles, Lock } from 'lucide-react'
+import type { JokeMediaItem } from '@/lib/api'
 
 export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image'
 
@@ -10,6 +11,8 @@ export interface JokePayload {
   setup: string
   punchline: string
   lines: string[] | null
+  /** Rich-media attachments for `format: 'image'` (wave 2: video/audio). Absent for text-only formats. */
+  media?: JokeMediaItem[] | null
 }
 
 export interface SkinSpec { bg: string; fg: string; border: string; divider: string }
@@ -128,6 +131,8 @@ interface JokeRendererProps {
   locked?: boolean
   /** Invoked when the user taps the locked CTA (parent routes to billing). */
   onUnlock?: () => void
+  /** Overrides the locked CTA's label (e.g. 'Sign up free' for anonymous readers). */
+  ctaLabel?: string
 }
 
 /** Redacted filler shown under the blur when the payoff has been stripped. */
@@ -139,17 +144,17 @@ const LOCKED_FILL = '████ ███████ ██ ████ █�
  */
 export function JokeRenderer({
   payload, big = false, revealed: revealedProp, interactive = true, read, className, onReveal,
-  locked = false, onUnlock,
+  locked = false, onUnlock, ctaLabel,
 }: JokeRendererProps) {
   const { format: fmt } = payload
   const skin = SKIN[fmt] ?? SKIN.setup
-  const [localRevealed, setLocalRevealed] = useState(fmt !== 'setup')
+  const [localRevealed, setLocalRevealed] = useState(fmt !== 'setup' && fmt !== 'image')
   const [knockStep, setKnockStep] = useState(0)
 
   // Paywall: a locked payoff short-circuits every format's interactive path, so
   // the reveal handlers (and onReveal telemetry) can never fire for it.
   if (locked) {
-    return <LockedBody payload={payload} skin={skin} big={big} className={className} onUnlock={onUnlock} />
+    return <LockedBody payload={payload} skin={skin} big={big} className={className} onUnlock={onUnlock} ctaLabel={ctaLabel} />
   }
 
   const revealed = revealedProp ?? localRevealed
@@ -252,6 +257,56 @@ export function JokeRenderer({
     )
   }
 
+  if (fmt === 'image') {
+    const media = payload.media ?? []
+    const first = media[0]
+    const ratio = first?.width && first?.height ? `${first.width} / ${first.height}` : '4 / 3'
+    const canReveal = interactive && !revealed
+    const titleSize = big ? 24 : 16
+    return (
+      <div className={className} onClick={() => canReveal && revealSetup()} style={{ cursor: canReveal ? 'pointer' : 'default' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: titleSize, color: skin.fg, lineHeight: 1.3, marginTop: 14 }}>
+          {payload.setup}
+        </div>
+        <div
+          data-testid="media-punchline"
+          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          style={{
+            marginTop: 12,
+            aspectRatio: ratio,
+            maxHeight: big ? 520 : 420,
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: '#F1EFEC',
+            display: 'flex',
+            scrollSnapType: media.length > 1 ? 'x mandatory' : undefined,
+            overflowX: media.length > 1 ? 'auto' : 'hidden',
+          }}
+        >
+          {media.map((m, i) => (
+            <img
+              key={i}
+              src={m.url ?? undefined}
+              alt={payload.setup ? `${payload.setup} — panel ${i + 1}` : `joke image ${i + 1}`}
+              loading="lazy"
+              draggable={false}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                flex: '0 0 100%', scrollSnapAlign: 'start',
+              }}
+            />
+          ))}
+        </div>
+        {media.length > 1 && revealed && (
+          <div className="eyebrow-mono" style={{ marginTop: 8, color: '#52525B' }}>
+            <span>1/{media.length}</span> · swipe
+          </div>
+        )}
+        {canReveal && <div className="eyebrow-mono" style={{ marginTop: 14, color: '#6A1CF6' }}>Tap to reveal →</div>}
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -261,17 +316,23 @@ export function JokeRenderer({
  * the reveal affordance for the "Unlock with Supporter" CTA. No reveal fires.
  */
 function LockedBody({
-  payload, skin, big, className, onUnlock,
+  payload, skin, big, className, onUnlock, ctaLabel,
 }: {
   payload: JokePayload
   skin: SkinSpec
   big?: boolean
   className?: string
   onUnlock?: () => void
+  ctaLabel?: string
 }) {
   const hasTeaser = !!payload.setup
   const titleSize = big ? 24 : 16
   const punchSize = big ? 44 : 22
+  // Defense-in-depth: only dimensions are read here, never `item.url` — a
+  // locked payload's media items may still carry a url (server bug, stale
+  // cache, etc.) and this branch must never let that reach an <img>.
+  const first = payload.media?.[0]
+  const hasMedia = !!payload.media?.length
   return (
     <div className={className} style={{ marginTop: 14 }}>
       {hasTeaser && (
@@ -279,22 +340,37 @@ function LockedBody({
           {payload.setup}
         </div>
       )}
-      <div
-        className="punch-blur"
-        aria-hidden
-        style={{
-          marginTop: hasTeaser ? 12 : 0,
-          fontFamily: 'var(--font-display)',
-          fontWeight: 900,
-          fontSize: punchSize,
-          letterSpacing: '-0.02em',
-          color: skin.fg,
-          lineHeight: 1.05,
-        }}
-      >
-        {LOCKED_FILL}
-      </div>
-      <UnlockCta skin={skin} onUnlock={onUnlock} />
+      {hasMedia ? (
+        <div
+          className="punch-blur"
+          aria-hidden
+          data-testid="locked-media-placeholder"
+          style={{
+            marginTop: hasTeaser ? 12 : 0,
+            aspectRatio: first?.width && first?.height ? `${first.width} / ${first.height}` : '4 / 3',
+            maxHeight: big ? 520 : 420,
+            borderRadius: 12,
+            background: 'repeating-linear-gradient(45deg, #E9E8E7, #E9E8E7 12px, #F1EFEC 12px, #F1EFEC 24px)',
+          }}
+        />
+      ) : (
+        <div
+          className="punch-blur"
+          aria-hidden
+          style={{
+            marginTop: hasTeaser ? 12 : 0,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: punchSize,
+            letterSpacing: '-0.02em',
+            color: skin.fg,
+            lineHeight: 1.05,
+          }}
+        >
+          {LOCKED_FILL}
+        </div>
+      )}
+      <UnlockCta skin={skin} onUnlock={onUnlock} label={ctaLabel} />
     </div>
   )
 }
@@ -305,7 +381,7 @@ function LockedBody({
  * (/settings/billing). Stops propagation so a card wrapped in a detail <Link>
  * doesn't also navigate to the joke.
  */
-function UnlockCta({ skin, onUnlock }: { skin: SkinSpec; onUnlock?: () => void }) {
+function UnlockCta({ skin, onUnlock, label }: { skin: SkinSpec; onUnlock?: () => void; label?: string }) {
   return (
     <button
       type="button"
@@ -332,7 +408,7 @@ function UnlockCta({ skin, onUnlock }: { skin: SkinSpec; onUnlock?: () => void }
         gap: 8,
       }}
     >
-      <Lock size={14} /> Unlock with Supporter
+      <Lock size={14} /> {label ?? 'Unlock with Supporter'}
     </button>
   )
 }
