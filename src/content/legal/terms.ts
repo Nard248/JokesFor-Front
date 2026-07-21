@@ -2,7 +2,7 @@ import { DRAFT_NOTICE, type LegalDoc } from './types'
 
 const terms: LegalDoc = {
   title: 'Terms of Service',
-  lastUpdated: '2026-06-16',
+  lastUpdated: '2026-07-21',
   draftNotice: DRAFT_NOTICE,
   sections: [
     {
@@ -33,12 +33,7 @@ const terms: LegalDoc = {
     {
       heading: 'Acceptable Use',
       body: [
-        'Jokes For is a text-only platform for sharing and discovering jokes. You may not:',
-        '- Post content that is illegal, hateful, threatening, harassing, or discriminatory.',
-        '- Submit jokes that contain personal attacks, doxxing, or content targeting individuals.',
-        '- Upload images, videos, audio, or other non-text content.',
-        '- Use the platform for spam, phishing, or commercial solicitation.',
-        '- Attempt to circumvent access controls, scrape the platform, or interfere with its operation.',
+        'You may submit text jokes and, where the feature is available, image-based jokes you own or have the right to publish. All uploads are screened automatically and reviewed by our moderation team before publication, and metadata (such as EXIF location data) is removed from images at upload. Do not upload content that is unlawful, infringing, sexually explicit, violent, or that depicts identifiable private individuals without their consent. We may remove any upload at our discretion and suspend accounts that repeatedly violate these rules. Audio and video submissions are not yet supported.',
       ],
     },
     {
