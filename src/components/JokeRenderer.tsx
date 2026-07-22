@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Sparkles, Lock } from 'lucide-react'
 import type { JokeMediaItem } from '@/lib/api'
 
-export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image'
+export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image' | 'video' | 'audio'
 
 /** The canonical render payload — identical shape the editor preview and the card both build. */
 export interface JokePayload {
@@ -11,7 +11,7 @@ export interface JokePayload {
   setup: string
   punchline: string
   lines: string[] | null
-  /** Rich-media attachments for `format: 'image'` (wave 2: video/audio). Null for text-only formats. */
+  /** Rich-media attachments for `format: 'image' | 'video' | 'audio'`. Null for text-only formats. */
   media: JokeMediaItem[] | null
 }
 
@@ -25,11 +25,14 @@ export const SKIN: Record<FlowJokeFormat, SkinSpec> = {
   knock:    { bg: '#FFFFFF',  fg: '#1A1A1A', border: '1px solid #E9E8E7', divider: '#F1EFEC' },
   story:    { bg: '#FFC965',  fg: '#5F4200', border: 'none',              divider: 'rgba(95,66,0,0.2)' },
   image:    { bg: '#FFFFFF',  fg: '#1A1A1A', border: '1px solid #E9E8E7', divider: '#F1EFEC' },
+  video:    { bg: '#FFFFFF',  fg: '#1A1A1A', border: '1px solid #E9E8E7', divider: '#F1EFEC' },
+  audio:    { bg: '#F2E9FF',  fg: '#6A1CF6', border: 'none',              divider: 'rgba(106,28,246,0.18)' },
 }
 
 export const FORMAT_LABEL: Record<FlowJokeFormat, string> = {
   setup: 'Setup → Punchline', oneliner: 'One-liner', observ: 'Observational',
   anti: 'Anti-joke', knock: 'Knock-knock', story: 'Story', image: 'Image',
+  video: 'Video', audio: 'Audio',
 }
 
 /**
@@ -47,12 +50,14 @@ export const FLOW_FORMAT_TO_BACKEND_SLUG: Record<FlowJokeFormat, string> = {
   knock: 'knock',
   story: 'story',
   image: 'image',
+  video: 'video',
+  audio: 'audio',
 }
 
 /**
  * Resolve a backend format slug (from `format.slug` on a saved/favorite joke)
  * to the UI FlowJokeFormat that picks the render skin. Tolerant of BOTH the
- * real DB slugs (`setup`/`oneliner`/`observ`/`anti`/`knock`/`story`/`short-story`/`image`)
+ * real DB slugs (`setup`/`oneliner`/`observ`/`anti`/`knock`/`story`/`short-story`/`image`/`video`/`audio`)
  * and the older long-form guesses (`setup_punchline`/`one_liner`/…) so a saved
  * joke never silently renders in the wrong skin (e.g. a setup as a one-liner).
  *
@@ -87,6 +92,10 @@ export function formatSlugToFlow(rawSlug: string | null | undefined): FlowJokeFo
       return 'story'
     case 'image':
       return 'image'
+    case 'video':
+      return 'video'
+    case 'audio':
+      return 'audio'
     case '':
       return null   // slugless: caller falls back by shape
     default:
@@ -103,7 +112,9 @@ export function tagToneFor(fmt: FlowJokeFormat): string {
     case 'observ':
     case 'knock':
     case 'story':
-    case 'image': return 'amber'
+    case 'image':
+    case 'video':
+    case 'audio': return 'amber'
     case 'setup':
     default: return ''
   }

@@ -474,8 +474,10 @@ const FORMAT_LABELS: Record<FlowJokeFormat, string> = {
   observ: 'Observational',
   // Not offered in FORMAT_OPTIONS above — this component is unrouted (the live
   // create flow is FormatPickerPage + EditorPage/ImageEditor, which does support
-  // 'image'); entry exists only to satisfy Record<FlowJokeFormat, …>.
+  // 'image'/'video'/'audio'); entries exist only to satisfy Record<FlowJokeFormat, …>.
   image: 'Image',
+  video: 'Video',
+  audio: 'Audio',
 }
 
 const TONE_OPTIONS = [

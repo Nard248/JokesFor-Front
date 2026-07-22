@@ -31,7 +31,7 @@ export type EditorAction =
  *   text-group:    oneliner, observ, story — share `text`
  *   sp-group:      setup, anti            — share `setup` + `punchline`
  *   knock-group:   knock                  — uses `lines`
- *   media-group:   image                  — uses `media` (caption maps to `setup`)
+ *   media-group:   image, video, audio    — uses `media` (caption maps to `setup`)
  *
  * Within the same group: keep shared fields.
  * Across groups: clear the fields that don't belong to the new group. The
@@ -44,7 +44,7 @@ type FormatGroup = 'text' | 'sp' | 'knock' | 'media'
 function groupOf(fmt: FormatSlug): FormatGroup {
   if (fmt === 'knock') return 'knock'
   if (fmt === 'setup' || fmt === 'anti') return 'sp'
-  if (fmt === 'image') return 'media'
+  if (fmt === 'image' || fmt === 'video' || fmt === 'audio') return 'media'
   return 'text' // oneliner | observ | story
 }
 

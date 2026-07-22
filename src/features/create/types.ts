@@ -6,7 +6,7 @@ export type { FlowJokeFormat, JokePayload }
 /** FormatSlug === FlowJokeFormat from @/components/JokeRenderer */
 export type FormatSlug = FlowJokeFormat // 'setup'|'oneliner'|'observ'|'anti'|'knock'|'story'
 
-export const FORMAT_SLUGS = ['oneliner', 'setup', 'knock', 'story', 'anti', 'observ', 'image'] as const
+export const FORMAT_SLUGS = ['oneliner', 'setup', 'knock', 'story', 'anti', 'observ', 'image', 'video', 'audio'] as const
 
 export type SubmissionStatus = 'draft' | 'pending' | 'published' | 'rejected'
 

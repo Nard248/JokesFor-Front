@@ -31,4 +31,14 @@ export const EDITOR_BY_FORMAT: Record<
   image: React.lazy(() =>
     import('./ImageEditor').then((m) => ({ default: m.ImageEditor })),
   ),
+  // Temporary: reuse ImageEditor's upload pattern until VideoEditor exists.
+  // Task 3 replaces this with a real VideoEditor.
+  video: React.lazy(() =>
+    import('./ImageEditor').then((m) => ({ default: m.ImageEditor })),
+  ),
+  // Temporary: reuse ImageEditor's upload pattern until AudioEditor exists.
+  // Task 3 replaces this with a real AudioEditor.
+  audio: React.lazy(() =>
+    import('./ImageEditor').then((m) => ({ default: m.ImageEditor })),
+  ),
 }

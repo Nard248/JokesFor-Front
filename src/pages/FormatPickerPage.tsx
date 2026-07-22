@@ -18,6 +18,8 @@ const FALLBACK_FORMAT_NAMES: Record<string, string> = {
   anti: 'Anti-joke',
   observ: 'Observational',
   image: 'Image',
+  video: 'Video',
+  audio: 'Audio',
 }
 
 const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.map((slug, i) => ({

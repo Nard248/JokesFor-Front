@@ -1,4 +1,4 @@
-import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye, Image as ImageIcon } from 'lucide-react'
+import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye, Image as ImageIcon, Clapperboard, AudioLines } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { FormatSlug } from '../types'
 
@@ -10,6 +10,8 @@ export const FORMAT_ICON: Record<FormatSlug, LucideIcon> = {
   anti:     Asterisk,
   observ:   Eye,
   image:    ImageIcon,
+  video:    Clapperboard,
+  audio:    AudioLines,
 }
 
 export function formatIcon(slug: FormatSlug): LucideIcon {
@@ -25,4 +27,6 @@ export const FORMAT_EXAMPLE: Record<FormatSlug, string> = {
   anti:     "Why did the chicken cross the road?\nTo get to the other side.",
   observ:   "Have you noticed that every time you clean something, you just move the dirt somewhere else?",
   image:    "My dog, disappointed in my life choices.",
+  video:    "My cat's reaction when I said 'bath time.'",
+  audio:    "Voicemail my dad left me. He does not know how voicemail works.",
 }

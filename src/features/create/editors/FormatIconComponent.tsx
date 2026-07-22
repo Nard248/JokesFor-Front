@@ -1,4 +1,4 @@
-import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye, Image as ImageIcon } from 'lucide-react'
+import { Quote, MessageCircleQuestion, DoorOpen, BookOpen, Asterisk, Eye, Image as ImageIcon, Clapperboard, AudioLines } from 'lucide-react'
 import type { LucideProps } from 'lucide-react'
 import type { FormatSlug } from '../types'
 
@@ -16,6 +16,8 @@ export function FormatIcon({ slug, ...props }: { slug: FormatSlug } & LucideProp
     case 'anti':     return <Asterisk {...props} />
     case 'observ':   return <Eye {...props} />
     case 'image':    return <ImageIcon {...props} />
+    case 'video':    return <Clapperboard {...props} />
+    case 'audio':    return <AudioLines {...props} />
     default:         return null
   }
 }

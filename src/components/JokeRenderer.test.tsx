@@ -51,6 +51,8 @@ describe('FLOW_FORMAT_TO_BACKEND_SLUG — real DB slugs', () => {
       knock: 'knock',
       story: 'story',
       image: 'image',
+      video: 'video',
+      audio: 'audio',
     })
   })
 })
