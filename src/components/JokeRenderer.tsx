@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Sparkles, Lock } from 'lucide-react'
+import { Sparkles, Lock, Music } from 'lucide-react'
 import type { JokeMediaItem } from '@/lib/api'
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 
 export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image' | 'video' | 'audio'
 
@@ -149,6 +150,41 @@ interface JokeRendererProps {
 /** Redacted filler shown under the blur when the payoff has been stripped. */
 const LOCKED_FILL = '████ ███████ ██ ████ ████████ ███'
 
+/** Fixed height (px) for the audio placeholder/player card — no aspect-ratio, there are no visual dims. */
+const AUDIO_CARD_HEIGHT = 88
+
+/** Format `duration_ms` as `m:ss` (e.g. 37_000 → '0:37'). Null for missing/invalid input. */
+function formatDuration(ms: number | null | undefined): string | null {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return null
+  const totalSeconds = Math.round(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/** Small pill overlay showing a media item's duration, bottom-right of the aspect box. */
+function DurationChip({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        right: 8,
+        bottom: 8,
+        padding: '2px 8px',
+        borderRadius: 9999,
+        background: 'rgba(0,0,0,0.65)',
+        color: '#fff',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
 /**
  * Pure, format-aware joke body renderer. Single source of rendering truth shared by
  * FlowJokeCard (reader) and the creator editor PreviewPane (always-revealed preview).
@@ -159,9 +195,16 @@ export function JokeRenderer({
 }: JokeRendererProps) {
   const { format: fmt } = payload
   const skin = SKIN[fmt] ?? SKIN.setup
-  const [localRevealed, setLocalRevealed] = useState(fmt !== 'setup' && fmt !== 'image')
+  // setup/image/video/audio are all reveal-gated (blur-and-tap) formats — they
+  // must start unrevealed. Every other format has nothing to hide.
+  const [localRevealed, setLocalRevealed] = useState(
+    fmt !== 'setup' && fmt !== 'image' && fmt !== 'video' && fmt !== 'audio',
+  )
   const [knockStep, setKnockStep] = useState(0)
   const [carouselIndex, setCarouselIndex] = useState(0)
+  // Called unconditionally (hooks rule) even though only the video branch's
+  // is_gif path consumes it — mirrors the other top-level state hooks above.
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   // Paywall: a locked payoff short-circuits every format's interactive path, so
   // the reveal handlers (and onReveal telemetry) can never fire for it.
@@ -327,6 +370,110 @@ export function JokeRenderer({
     )
   }
 
+  if (fmt === 'video') {
+    const media = payload.media ?? []
+    const first = media[0]
+    const isGif = !!first?.is_gif
+    // Under reduced-motion, a GIF-video falls back to the same poster+controls
+    // treatment as a regular video (no autoplay).
+    const autoplayGif = isGif && !prefersReducedMotion
+    const ratio = first?.width && first?.height ? `${first.width} / ${first.height}` : '16 / 9'
+    const canReveal = interactive && !revealed
+    const titleSize = big ? 24 : 16
+    // GIF loops don't carry a meaningful "time remaining" — the chip is for
+    // the plain-video reveal only.
+    const durationLabel = !isGif ? formatDuration(first?.duration_ms) : null
+    return (
+      <div className={className} onClick={() => canReveal && revealSetup()} style={{ cursor: canReveal ? 'pointer' : 'default' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: titleSize, color: skin.fg, lineHeight: 1.3, marginTop: 14 }}>
+          {payload.setup}
+        </div>
+        <div
+          data-testid="media-punchline"
+          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          style={{
+            marginTop: 12,
+            position: 'relative',
+            aspectRatio: ratio,
+            maxHeight: big ? 520 : 420,
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: '#F1EFEC',
+          }}
+        >
+          {revealed ? (
+            <video
+              data-testid="video-player"
+              controls={!autoplayGif}
+              autoPlay={autoplayGif}
+              muted={autoplayGif}
+              loop={autoplayGif}
+              playsInline
+              preload="metadata"
+              poster={first?.poster_url ?? undefined}
+              src={first?.url ?? undefined}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <img
+              src={first?.poster_url ?? undefined}
+              alt={payload.setup ? `${payload.setup} — video preview` : 'video preview'}
+              draggable={false}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+          {revealed && durationLabel && <DurationChip label={durationLabel} />}
+        </div>
+        {canReveal && <div className="eyebrow-mono" style={{ marginTop: 14, color: '#6A1CF6' }}>Tap to reveal →</div>}
+      </div>
+    )
+  }
+
+  if (fmt === 'audio') {
+    const media = payload.media ?? []
+    const first = media[0]
+    const canReveal = interactive && !revealed
+    const titleSize = big ? 24 : 16
+    const durationLabel = formatDuration(first?.duration_ms)
+    return (
+      <div className={className} onClick={() => canReveal && revealSetup()} style={{ cursor: canReveal ? 'pointer' : 'default' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: titleSize, color: skin.fg, lineHeight: 1.3, marginTop: 14 }}>
+          {payload.setup}
+        </div>
+        <div
+          data-testid="media-punchline"
+          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+          style={{
+            marginTop: 12,
+            position: 'relative',
+            height: AUDIO_CARD_HEIGHT,
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: '#F2E9FF',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px',
+          }}
+        >
+          {revealed ? (
+            <audio
+              data-testid="audio-player"
+              controls
+              src={first?.url ?? undefined}
+              style={{ width: '100%' }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+              <Music size={28} color="#6A1CF6" aria-hidden />
+            </div>
+          )}
+          {revealed && durationLabel && <DurationChip label={durationLabel} />}
+        </div>
+        {canReveal && <div className="eyebrow-mono" style={{ marginTop: 14, color: '#6A1CF6' }}>Tap to reveal →</div>}
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -367,10 +514,17 @@ function LockedBody({
           data-testid="locked-media-placeholder"
           style={{
             marginTop: hasTeaser ? 12 : 0,
-            aspectRatio: first?.width && first?.height ? `${first.width} / ${first.height}` : '4 / 3',
-            maxHeight: big ? 520 : 420,
             borderRadius: 12,
             background: 'repeating-linear-gradient(45deg, #E9E8E7, #E9E8E7 12px, #F1EFEC 12px, #F1EFEC 24px)',
+            // Audio carries no width/height (nothing to reserve an aspect box
+            // for) — locked audio always gets the same fixed-height card as
+            // its unrevealed/revealed states.
+            ...(first?.kind === 'audio'
+              ? { height: AUDIO_CARD_HEIGHT }
+              : {
+                  aspectRatio: first?.width && first?.height ? `${first.width} / ${first.height}` : '4 / 3',
+                  maxHeight: big ? 520 : 420,
+                }),
           }}
         />
       ) : (
