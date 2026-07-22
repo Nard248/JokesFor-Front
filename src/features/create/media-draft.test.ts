@@ -30,6 +30,42 @@ describe('media in editor state', () => {
     draft = editorReducer(draft, { type: 'setMedia', media: [asset] })
     expect(toJokePayload(draft).media).toHaveLength(1)
   })
+
+  it('toJokePayload passes through the asset\'s real kind instead of hardcoding "image"', () => {
+    const videoAsset: MediaAssetDTO = {
+      id: 'v-1', kind: 'video', url: 'blob:mock-video', poster_url: 'blob:mock-poster',
+      width: 1280, height: 720, duration_ms: 5000, is_gif: false,
+    }
+    let draft = emptyEditorDraft('video')
+    draft = editorReducer(draft, { type: 'setMedia', media: [videoAsset] })
+    const item = toJokePayload(draft).media![0]
+    expect(item.kind).toBe('video')
+    expect(item.poster_url).toBe('blob:mock-poster')
+    expect(item.duration_ms).toBe(5000)
+    expect(item.is_gif).toBe(false)
+  })
+
+  it('toJokePayload passes through is_gif:true and audio kind correctly', () => {
+    const gifAsset: MediaAssetDTO = {
+      id: 'v-2', kind: 'video', url: 'blob:mock-gif', poster_url: 'blob:mock-gif-poster',
+      width: 480, height: 480, duration_ms: 3000, is_gif: true,
+    }
+    const audioAsset: MediaAssetDTO = {
+      id: 'a-1', kind: 'audio', url: 'blob:mock-audio', poster_url: null,
+      width: null, height: null, duration_ms: 5000, is_gif: false,
+    }
+
+    let videoDraft = emptyEditorDraft('video')
+    videoDraft = editorReducer(videoDraft, { type: 'setMedia', media: [gifAsset] })
+    expect(toJokePayload(videoDraft).media![0].is_gif).toBe(true)
+
+    let audioDraft = emptyEditorDraft('audio')
+    audioDraft = editorReducer(audioDraft, { type: 'setMedia', media: [audioAsset] })
+    const audioItem = toJokePayload(audioDraft).media![0]
+    expect(audioItem.kind).toBe('audio')
+    expect(audioItem.poster_url).toBeNull()
+    expect(audioItem.duration_ms).toBe(5000)
+  })
 })
 
 describe('media in API mapping', () => {

@@ -49,3 +49,19 @@ test('deleteDraft resolves without throwing for an existing seed draft', async (
   resetMockStore()
   await expect(contentAdapter.deleteDraft(1)).resolves.toBeUndefined()
 })
+
+test('uploadMedia resolves a kind-aware MediaAssetDTO for video', async () => {
+  const file = new File(['x'], 'clip.mp4', { type: 'video/mp4' })
+  const asset = await contentAdapter.uploadMedia(file, 'video')
+  expect(asset.kind).toBe('video')
+  expect(asset.duration_ms).toBe(5000)
+  expect(asset.poster_url).toBeTruthy()
+})
+
+test('uploadMedia resolves a kind-aware MediaAssetDTO for audio', async () => {
+  const file = new File(['x'], 'voicemail.mp3', { type: 'audio/mpeg' })
+  const asset = await contentAdapter.uploadMedia(file, 'audio')
+  expect(asset.kind).toBe('audio')
+  expect(asset.duration_ms).toBe(5000)
+  expect(asset.poster_url).toBeNull()
+})

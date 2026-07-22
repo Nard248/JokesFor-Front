@@ -17,7 +17,7 @@ export function ImageEditor({ draft, dispatch, errors }: EditorProps) {
     setUploadError(null)
     setProgress(0)
     try {
-      const asset = await upload.mutateAsync({ file, onProgress: setProgress })
+      const asset = await upload.mutateAsync({ file, kind: 'image', onProgress: setProgress })
       dispatch({ type: 'setMedia', media: [...draft.media, asset] })
     } catch {
       setUploadError('Upload failed — check the file (JPEG/PNG/WebP, max 10MB) and try again.')

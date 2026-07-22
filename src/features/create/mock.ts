@@ -8,11 +8,33 @@ import type {
   Taxon,
   Language,
   MediaAssetDTO,
+  MediaKind,
 } from './types'
 
 // ── Delay helper (mirrors mock-api.ts) ──
 function delay(ms = 200): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms + Math.random() * 200))
+}
+
+// ── Mock upload URLs ──
+// Real browsers always have URL.createObjectURL; jsdom (unit tests) does not
+// implement it at all. Rather than require a global test polyfill, each call
+// site falls back to a stable placeholder so the mock stays exercisable
+// directly (not just behind a vi.mock) in any environment.
+const PLACEHOLDER_IMAGE_URL = 'https://placehold.co/800x600?text=Image'
+const PLACEHOLDER_VIDEO_URL = 'https://placehold.co/1280x720?text=Video'
+const PLACEHOLDER_POSTER_URL = 'https://placehold.co/1280x720?text=Poster'
+const PLACEHOLDER_AUDIO_URL = 'https://placehold.co/mock-audio.mp3'
+
+function objectURLOrPlaceholder(file: File, placeholder: string): string {
+  if (typeof URL.createObjectURL === 'function') {
+    try {
+      return URL.createObjectURL(file)
+    } catch {
+      // fall through to placeholder
+    }
+  }
+  return placeholder
 }
 
 // ── Format catalog ──
@@ -79,6 +101,24 @@ const FORMAT_CATALOG: FormatRule[] = [
     required_fields: ['setup', 'media'],
     forbidden_fields: ['punchline', 'lines'],
     constraints: { min_media: 1, max_media: 6 },
+  },
+  {
+    id: 10,
+    slug: 'video',
+    name: 'Video',
+    description: 'A caption with a video punchline.',
+    required_fields: ['setup', 'media'],
+    forbidden_fields: ['punchline', 'lines'],
+    constraints: { min_media: 1, max_media: 1, max_duration_ms: 60000 },
+  },
+  {
+    id: 11,
+    slug: 'audio',
+    name: 'Audio',
+    description: 'A caption with an audio punchline.',
+    required_fields: ['setup', 'media'],
+    forbidden_fields: ['punchline', 'lines'],
+    constraints: { min_media: 1, max_media: 1, max_duration_ms: 60000 },
   },
 ]
 
@@ -330,13 +370,31 @@ export const mockContentApi = {
     return { ...drafts[idx] }
   },
 
-  uploadMedia: async (file: File): Promise<MediaAssetDTO> => {
+  uploadMedia: async (file: File, kind: MediaKind = 'image'): Promise<MediaAssetDTO> => {
     await delay(300)
-    const asset: MediaAssetDTO = {
-      id: `mock-${Date.now()}-${file.name}`, kind: 'image',
-      url: URL.createObjectURL(file), poster_url: null,
-      width: 800, height: 600, duration_ms: null, is_gif: false,
-    }
+    const id = `mock-${Date.now()}-${file.name}`
+    const asset: MediaAssetDTO =
+      kind === 'video'
+        ? {
+            id, kind: 'video',
+            url: objectURLOrPlaceholder(file, PLACEHOLDER_VIDEO_URL),
+            poster_url: objectURLOrPlaceholder(file, PLACEHOLDER_POSTER_URL),
+            width: 1280, height: 720, duration_ms: 5000,
+            is_gif: /\.gif$/i.test(file.name),
+          }
+        : kind === 'audio'
+        ? {
+            id, kind: 'audio',
+            url: objectURLOrPlaceholder(file, PLACEHOLDER_AUDIO_URL),
+            poster_url: null,
+            width: null, height: null, duration_ms: 5000, is_gif: false,
+          }
+        : {
+            id, kind: 'image',
+            url: objectURLOrPlaceholder(file, PLACEHOLDER_IMAGE_URL),
+            poster_url: null,
+            width: 800, height: 600, duration_ms: null, is_gif: false,
+          }
     mockMediaStore.set(asset.id, asset)
     return asset
   },

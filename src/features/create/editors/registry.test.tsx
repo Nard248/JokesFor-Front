@@ -23,4 +23,19 @@ describe('EDITOR_BY_FORMAT registry', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((EDITOR_BY_FORMAT['anti'] as any).$$typeof).toBe(lazyType)
   })
+
+  it('video and audio have their own real lazy editors (not the image placeholder)', () => {
+    const lazyType = Symbol.for('react.lazy')
+    expect(EDITOR_BY_FORMAT['video']).toBeDefined()
+    expect(EDITOR_BY_FORMAT['audio']).toBeDefined()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((EDITOR_BY_FORMAT['video'] as any).$$typeof).toBe(lazyType)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((EDITOR_BY_FORMAT['audio'] as any).$$typeof).toBe(lazyType)
+    // Each format's lazy loader resolves to its own distinct module —
+    // asserting inequality catches an accidental revert to sharing ImageEditor.
+    expect(EDITOR_BY_FORMAT['video']).not.toBe(EDITOR_BY_FORMAT['image'])
+    expect(EDITOR_BY_FORMAT['audio']).not.toBe(EDITOR_BY_FORMAT['image'])
+    expect(EDITOR_BY_FORMAT['video']).not.toBe(EDITOR_BY_FORMAT['audio'])
+  })
 })

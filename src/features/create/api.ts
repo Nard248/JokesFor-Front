@@ -10,6 +10,7 @@ import type {
   AgeRating,
   Language,
   MediaAssetDTO,
+  MediaKind,
 } from './types'
 
 // ── Real API endpoints ──
@@ -32,10 +33,10 @@ export const contentApi = {
     api.post<{ id: number; status: string }>(`/jokes/my-drafts/${id}/submit/`),
   deleteDraft: (id: number) =>
     api.delete(`/jokes/my-drafts/${id}/`),
-  uploadMedia: (file: File, onProgress?: (pct: number) => void) => {
+  uploadMedia: (file: File, kind: MediaKind, onProgress?: (pct: number) => void) => {
     const form = new FormData()
     form.append('file', file)
-    form.append('kind', 'image')
+    form.append('kind', kind)
     return api.post<MediaAssetDTO>('/media/uploads/', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {

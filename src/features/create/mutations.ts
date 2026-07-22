@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { contentAdapter } from './adapter'
 import { createKeys } from './queries'
-import type { ContentDraft, FormatSlug } from './types'
+import type { ContentDraft, FormatSlug, MediaKind } from './types'
 
 export function useCreateDraft() {
   const queryClient = useQueryClient()
@@ -71,7 +71,7 @@ export function useDeleteDraft() {
 
 export function useUploadMedia() {
   return useMutation({
-    mutationFn: ({ file, onProgress }: { file: File; onProgress?: (pct: number) => void }) =>
-      contentAdapter.uploadMedia(file, onProgress),
+    mutationFn: ({ file, kind, onProgress }: { file: File; kind: MediaKind; onProgress?: (pct: number) => void }) =>
+      contentAdapter.uploadMedia(file, kind, onProgress),
   })
 }

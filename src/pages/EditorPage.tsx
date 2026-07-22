@@ -287,6 +287,7 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
             current={draft.format}
             onClose={() => setShowChangeFormat(false)}
             onConfirm={handleConfirmFormat}
+            formats={formats}
           />
           <DeleteDraftModal
             open={showDelete}

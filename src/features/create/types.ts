@@ -42,10 +42,14 @@ export interface FormatRule {
     min_media?: number
     max_media?: number
     media_kind?: string
+    max_duration_ms?: number
   }
 }
 
-/** A single uploaded media attachment (image today; video/audio in a later wave). */
+/** The upload `kind` param — mirrors the backend's accepted values. */
+export type MediaKind = 'image' | 'video' | 'audio'
+
+/** A single uploaded media attachment (image, video, or audio). */
 export interface MediaAssetDTO {
   id: string
   kind: string

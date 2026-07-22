@@ -78,6 +78,13 @@ export function emptyEditorDraft(format: FormatSlug): EditorDraft {
  * `media` is mapped from MediaAssetDTO (upload-pipeline shape) to JokeMediaItem
  * (render shape) — null when there are no attachments, matching the "absent
  * for text-only formats" contract JokeRenderer/PreviewPane expect.
+ *
+ * Each item's `kind` passes through the asset's real kind (image/video/audio)
+ * rather than being hardcoded — PreviewPane renders the live draft through
+ * JokeRenderer, and a video/audio draft hardcoded to kind:'image' would render
+ * the wrong branch (a broken <img> instead of <video>/<audio>). poster_url,
+ * duration_ms, and is_gif pass through too — the video/audio renderer branches
+ * need them for the poster frame, duration chip, and GIF-autoplay decision.
  */
 export function toJokePayload(d: EditorDraft): JokePayload {
   return {
@@ -87,7 +94,15 @@ export function toJokePayload(d: EditorDraft): JokePayload {
     punchline: d.punchline,
     lines: d.lines,
     media: d.media.length
-      ? d.media.map((m) => ({ kind: 'image' as const, url: m.url, width: m.width, height: m.height }))
+      ? d.media.map((m) => ({
+          kind: m.kind as 'image' | 'video' | 'audio',
+          url: m.url,
+          poster_url: m.poster_url,
+          width: m.width,
+          height: m.height,
+          duration_ms: m.duration_ms,
+          is_gif: m.is_gif,
+        }))
       : null,
   }
 }

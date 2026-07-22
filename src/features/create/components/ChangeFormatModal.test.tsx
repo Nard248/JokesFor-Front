@@ -1,6 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { ChangeFormatModal } from './ChangeFormatModal'
+import type { FormatRule } from '@/features/create/types'
+
+function rule(slug: FormatRule['slug']): FormatRule {
+  return {
+    id: 1, slug, name: slug, description: '',
+    required_fields: [], forbidden_fields: [], constraints: {},
+  }
+}
 
 describe('ChangeFormatModal', () => {
   it('renders when open=true', () => {
@@ -57,5 +65,51 @@ describe('ChangeFormatModal', () => {
     )
     // Warning copy should mention content may be cleared
     expect(screen.getByText(/content may be cleared/i)).toBeInTheDocument()
+  })
+
+  describe('backend catalog gating', () => {
+    it('shows the full static list (including Video/Audio) when no catalog is provided', () => {
+      render(
+        <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} />
+      )
+      expect(screen.getByText('Video')).toBeInTheDocument()
+      expect(screen.getByText('Audio')).toBeInTheDocument()
+    })
+
+    it('falls back to the full static list when the catalog is empty (loading/error)', () => {
+      render(
+        <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} formats={[]} />
+      )
+      expect(screen.getByText('Video')).toBeInTheDocument()
+      expect(screen.getByText('Audio')).toBeInTheDocument()
+    })
+
+    it('filters out formats the backend catalog does not serve yet', () => {
+      const formats = [
+        rule('oneliner'), rule('setup'), rule('knock'),
+        rule('story'), rule('anti'), rule('observ'), rule('image'),
+        // no video/audio rows — mirrors the current prod backend during the
+        // FE-first deploy window
+      ]
+      render(
+        <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} formats={formats} />
+      )
+      expect(screen.getByText('One-liner')).toBeInTheDocument()
+      expect(screen.getByText('Image')).toBeInTheDocument()
+      expect(screen.queryByText('Video')).not.toBeInTheDocument()
+      expect(screen.queryByText('Audio')).not.toBeInTheDocument()
+    })
+
+    it('shows video/audio once the catalog includes them', () => {
+      const formats = [
+        rule('oneliner'), rule('setup'), rule('knock'), rule('story'),
+        rule('anti'), rule('observ'), rule('image'), rule('video'), rule('audio'),
+      ]
+      render(
+        <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} formats={formats} />
+      )
+      expect(screen.getByText('Video')).toBeInTheDocument()
+      expect(screen.getByText('Audio')).toBeInTheDocument()
+    })
   })
 })

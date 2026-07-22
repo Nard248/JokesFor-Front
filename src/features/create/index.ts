@@ -47,6 +47,8 @@ export { StoryEditor } from './editors/StoryEditor'
 export { SetupPunchlineEditor } from './editors/SetupPunchlineEditor'
 export { KnockEditor } from './editors/KnockEditor'
 export { ImageEditor } from './editors/ImageEditor'
+export { VideoEditor } from './editors/VideoEditor'
+export { AudioEditor } from './editors/AudioEditor'
 
 // Phase 4: Editor registry + format utilities
 export { EDITOR_BY_FORMAT, formatIcon, FORMAT_ICON, FORMAT_EXAMPLE } from './editors/index'

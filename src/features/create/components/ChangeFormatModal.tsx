@@ -2,13 +2,22 @@ import { useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { RadioGroup } from '@/components/ui/radio-group'
-import type { FormatSlug } from '@/features/create/types'
+import type { FormatRule, FormatSlug } from '@/features/create/types'
 
 export interface ChangeFormatModalProps {
   open: boolean
   current: FormatSlug
   onClose: () => void
   onConfirm: (slug: FormatSlug) => void
+  /**
+   * Backend format catalog (typically `useFormats().data`). When present and
+   * non-empty, options are filtered down to slugs the catalog actually serves —
+   * during the FE-first deploy window the current prod backend has no `video`/
+   * `audio` Format row yet, and picking one would PATCH format:'video' into a
+   * 400 that breaks autosave. Loading/error states resolve to an empty/undefined
+   * array here, which falls back to the full static list.
+   */
+  formats?: FormatRule[]
 }
 
 const FORMAT_OPTIONS: { value: FormatSlug; label: string }[] = [
@@ -23,8 +32,18 @@ const FORMAT_OPTIONS: { value: FormatSlug; label: string }[] = [
   { value: 'audio', label: 'Audio' },
 ]
 
-export function ChangeFormatModal({ open, current, onClose, onConfirm }: ChangeFormatModalProps) {
+function visibleOptions(formats: FormatRule[] | undefined): typeof FORMAT_OPTIONS {
+  if (!formats || formats.length === 0) return FORMAT_OPTIONS
+  const known = new Set(formats.map((f) => f.slug))
+  const filtered = FORMAT_OPTIONS.filter((o) => known.has(o.value))
+  // Never show zero options — a catalog missing every known slug is more
+  // likely a bad response shape than an intentional empty catalog.
+  return filtered.length > 0 ? filtered : FORMAT_OPTIONS
+}
+
+export function ChangeFormatModal({ open, current, onClose, onConfirm, formats }: ChangeFormatModalProps) {
   const [selected, setSelected] = useState<FormatSlug>(current)
+  const options = visibleOptions(formats)
 
   function handleConfirm() {
     onConfirm(selected)
@@ -66,7 +85,7 @@ export function ChangeFormatModal({ open, current, onClose, onConfirm }: ChangeF
           value={selected}
           onChange={(v) => setSelected(v as FormatSlug)}
           label="Select format"
-          options={FORMAT_OPTIONS}
+          options={options}
         />
       </div>
     </Modal>
