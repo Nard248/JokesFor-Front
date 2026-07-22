@@ -6,6 +6,17 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+
+// Watch-telemetry coupling: mock the telemetry client so the watchMeta tests
+// below can observe trackWatch (same lazy-factory pattern as useDwell.test.tsx).
+// useWatchTracking imports trackWatch + flush; JokeRenderer itself only imports
+// the erased TelemetrySource type, so nothing else in this file is affected.
+const trackWatch = vi.fn()
+vi.mock('@/lib/telemetry', () => ({
+  trackWatch: (...args: unknown[]) => trackWatch(...args),
+  flush: vi.fn(),
+}))
+
 import { JokeRenderer, type JokePayload } from './JokeRenderer'
 
 function setReducedMotion(reduced: boolean) {
@@ -152,5 +163,37 @@ describe('audio joke rendering', () => {
     expect(placeholder.style.height).toBe('88px')
     expect(screen.queryByTestId('audio-player')).not.toBeInTheDocument()
     expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+  })
+})
+
+describe('watch telemetry wiring (watchMeta)', () => {
+  // Pins the reveal→mount→effect-attach coupling: useWatchTracking only gets a
+  // real jokeId at the render where the player mounts (revealed flips true), so
+  // this asserts the whole chain — reveal, <video> mount, listener attach,
+  // playback events → trackWatch with watchMeta's identity.
+  it('reveal + playback on a video with watchMeta reports trackWatch with the jokeId/source', () => {
+    trackWatch.mockClear()
+    render(<JokeRenderer payload={videoPayload()} watchMeta={{ jokeId: 1, source: 'feed' }} />)
+    fireEvent.click(screen.getByTestId('media-punchline')) // reveal → player mounts
+
+    const video = screen.getByTestId('video-player') as HTMLVideoElement
+    Object.defineProperty(video, 'currentTime', { value: 5, configurable: true })
+    Object.defineProperty(video, 'duration', { value: 60, configurable: true })
+    fireEvent.timeUpdate(video)
+    fireEvent.pause(video)
+
+    expect(trackWatch).toHaveBeenCalledTimes(1)
+    expect(trackWatch).toHaveBeenCalledWith(1, 'feed', 5_000, 8)
+  })
+
+  it('without watchMeta (PreviewPane/detail paths) playback never reports watch telemetry', () => {
+    trackWatch.mockClear()
+    render(<JokeRenderer payload={videoPayload()} revealed />)
+    const video = screen.getByTestId('video-player') as HTMLVideoElement
+    Object.defineProperty(video, 'currentTime', { value: 5, configurable: true })
+    Object.defineProperty(video, 'duration', { value: 60, configurable: true })
+    fireEvent.timeUpdate(video)
+    fireEvent.pause(video)
+    expect(trackWatch).not.toHaveBeenCalled()
   })
 })

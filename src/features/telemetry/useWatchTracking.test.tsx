@@ -3,8 +3,10 @@ import { useRef } from 'react'
 import { render, fireEvent } from '@testing-library/react'
 
 const trackWatch = vi.fn()
+const flushTelemetry = vi.fn()
 vi.mock('@/lib/telemetry', () => ({
   trackWatch: (...args: unknown[]) => trackWatch(...args),
+  flush: (...args: unknown[]) => flushTelemetry(...args),
 }))
 
 import { useWatchTracking } from './useWatchTracking'
@@ -27,6 +29,7 @@ function Video({ jokeId, source = 'feed' as const }: { jokeId?: number; source?:
 
 beforeEach(() => {
   trackWatch.mockClear()
+  flushTelemetry.mockClear()
 })
 
 afterEach(() => {
@@ -134,6 +137,50 @@ describe('useWatchTracking', () => {
     setMediaState(video, 5, 60)
     fireEvent.timeUpdate(video)
     fireEvent.pause(video)
+    expect(trackWatch).not.toHaveBeenCalled()
+  })
+
+  it('sends on pagehide (tab close / hard nav) and force-flushes; a later unmount does not double-send', () => {
+    const { getByTestId, unmount } = render(<Video jokeId={5} />)
+    const video = getByTestId('video') as HTMLVideoElement
+    setMediaState(video, 4, 60)
+    fireEvent.timeUpdate(video)
+
+    window.dispatchEvent(new Event('pagehide'))
+    expect(trackWatch).toHaveBeenCalledTimes(1)
+    expect(trackWatch).toHaveBeenCalledWith(5, 'feed', 4_000, 7)
+    // The module-level pagehide flush listener (registered on the first
+    // enqueue of the session) has already run by the time this hook's handler
+    // enqueues — the hook must flush explicitly so the sample rides a
+    // sendBeacon out before unload.
+    expect(flushTelemetry).toHaveBeenCalled()
+
+    // Same accumulated value must not be re-sent by React's unmount cleanup
+    // (e.g. bfcache-less unload where both paths run).
+    unmount()
+    expect(trackWatch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT send on pagehide when the unsent delta is < 500ms', () => {
+    const { getByTestId } = render(<Video jokeId={5} />)
+    const video = getByTestId('video') as HTMLVideoElement
+    setMediaState(video, 0.3, 60)
+    fireEvent.timeUpdate(video)
+
+    window.dispatchEvent(new Event('pagehide'))
+    expect(trackWatch).not.toHaveBeenCalled()
+  })
+
+  it('removes the pagehide listener on unmount', () => {
+    const { getByTestId, unmount } = render(<Video jokeId={5} />)
+    const video = getByTestId('video') as HTMLVideoElement
+    setMediaState(video, 4, 60)
+    fireEvent.timeUpdate(video)
+    unmount() // sends the 4000ms sample via cleanup
+    trackWatch.mockClear()
+
+    setMediaState(video, 20, 60)
+    window.dispatchEvent(new Event('pagehide'))
     expect(trackWatch).not.toHaveBeenCalled()
   })
 

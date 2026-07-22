@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { trackWatch, type TelemetrySource } from '@/lib/telemetry'
+import { trackWatch, flush as flushTelemetry, type TelemetrySource } from '@/lib/telemetry'
 
 /**
  * Wave-2 watch-time telemetry. Attaches native listeners to a `<video>`/
@@ -10,9 +10,12 @@ import { trackWatch, type TelemetrySource } from '@/lib/telemetry'
  *     increasing high-water mark (re-watching an earlier part doesn't lower
  *     it), not a running total of visible spans like dwell's.
  *   - `pause` / `ended` send the accumulated watch time via `trackWatch`.
- *   - unmount sends only if there's >=500ms of unsent (new) progress, so a
- *     player that mounts/unmounts without meaningfully playing doesn't spam
- *     a garbage sample — this mirrors the backend's WATCH_MIN_MS floor.
+ *   - unmount and `pagehide` send only if there's >=500ms of unsent (new)
+ *     progress, so a player that mounts/unmounts without meaningfully playing
+ *     doesn't spam a garbage sample — mirrors the backend's WATCH_MIN_MS
+ *     floor. `pagehide` matters because React cleanup does NOT run on
+ *     tab-close/hard-nav (same reason `useDwell` binds it): without it,
+ *     "watch then close the tab" — the common pattern — would never send.
  *   - The same accumulated value is never sent twice (tracked via
  *     `lastSentMs`): a `pause` fired with no new `timeupdate` since the last
  *     send is a no-op.
@@ -73,10 +76,28 @@ export function useWatchTracking<T extends HTMLMediaElement = HTMLMediaElement>(
     }
     const onPauseOrEnded = () => trySend(0)
 
+    // Tab-close / hard navigation: React cleanup never runs, so ship the
+    // sample from `pagehide` (delta-gated like unmount). ORDERING CAVEAT: the
+    // telemetry client's own `pagehide → flush()` listener was registered on
+    // the first enqueue of the page-session (bindPageHideListeners), i.e.
+    // almost certainly BEFORE this one — and listeners on the same target run
+    // in registration order regardless of the capture flag when the event is
+    // dispatched AT the target (window). So by the time this handler enqueues
+    // the watch event, the module's flush has already run and the sample
+    // would die in the queue at unload. Hence the explicit `flushTelemetry()`
+    // right after enqueueing — it rides out on a sendBeacon, which survives
+    // unload. (`lastSentMs` inside trySend also guarantees a later unmount
+    // cleanup can't double-send the same accumulated value.)
+    const onPageHide = () => {
+      trySend(500)
+      flushTelemetry()
+    }
+
     try {
       el.addEventListener('timeupdate', onTimeUpdate)
       el.addEventListener('pause', onPauseOrEnded)
       el.addEventListener('ended', onPauseOrEnded)
+      window.addEventListener('pagehide', onPageHide)
     } catch {
       /* never throw */
     }
@@ -86,6 +107,7 @@ export function useWatchTracking<T extends HTMLMediaElement = HTMLMediaElement>(
         el.removeEventListener('timeupdate', onTimeUpdate)
         el.removeEventListener('pause', onPauseOrEnded)
         el.removeEventListener('ended', onPauseOrEnded)
+        window.removeEventListener('pagehide', onPageHide)
       } catch {
         /* noop */
       }
