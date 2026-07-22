@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles } from 'lucide-react'
+import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles, Music } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
 import { useSaveJoke } from '@/features/saved-jokes'
@@ -224,21 +224,52 @@ function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps
           <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
             Punchline
           </span>
-          <div
-            onClick={handleReveal}
-            className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
-            style={{
-              cursor: revealed ? 'default' : 'pointer',
-              marginTop: 8,
-              maxWidth: 640,
-              aspectRatio: media![0].width && media![0].height ? `${media![0].width} / ${media![0].height}` : '4 / 3',
-              borderRadius: 14,
-              overflow: 'hidden',
-              background: '#F1EFEC',
-            }}
-          >
-            <img src={media![0].url ?? undefined} alt={setup ?? undefined} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
+          {/* Kind-aware: video shows its poster stub (never the raw mp4 url);
+              audio has no visual frame at all, so it gets the same static
+              Music-icon placeholder as JokeRenderer's audio card. The daily
+              hero stays image-based either way — no players here, reveal
+              behaves as before. */}
+          {media![0].kind === 'audio' ? (
+            <div
+              onClick={handleReveal}
+              className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+              data-testid="daily-audio-placeholder"
+              style={{
+                cursor: revealed ? 'default' : 'pointer',
+                marginTop: 8,
+                maxWidth: 640,
+                height: 88,
+                borderRadius: 14,
+                overflow: 'hidden',
+                background: '#F2E9FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Music size={28} color="#6A1CF6" aria-hidden />
+            </div>
+          ) : (
+            <div
+              onClick={handleReveal}
+              className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+              style={{
+                cursor: revealed ? 'default' : 'pointer',
+                marginTop: 8,
+                maxWidth: 640,
+                aspectRatio: media![0].width && media![0].height ? `${media![0].width} / ${media![0].height}` : '4 / 3',
+                borderRadius: 14,
+                overflow: 'hidden',
+                background: '#F1EFEC',
+              }}
+            >
+              <img
+                src={(media![0].kind === 'video' ? media![0].poster_url : media![0].url) ?? undefined}
+                alt={setup ?? undefined}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          )}
         </div>
       ) : isSetupPunch ? (
         <div style={{ marginTop: 32, position: 'relative' }}>

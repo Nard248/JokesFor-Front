@@ -18,11 +18,14 @@ const FALLBACK_FORMAT_NAMES: Record<string, string> = {
   anti: 'Anti-joke',
   observ: 'Observational',
   image: 'Image',
-  video: 'Video',
-  audio: 'Audio',
+  // Fallback pinned to formats live in prod; the real catalog serves video/audio
+  // once the wave-2 backend deploys — fallback only matters on catalog error,
+  // where hiding beats a 400 draft-create.
 }
 
-const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.map((slug, i) => ({
+const FALLBACK_FORMATS: FormatRule[] = FORMAT_SLUGS.filter(
+  (slug) => slug !== 'video' && slug !== 'audio',
+).map((slug, i) => ({
   id: i + 1,
   slug,
   name: FALLBACK_FORMAT_NAMES[slug] ?? slug,

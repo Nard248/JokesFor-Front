@@ -41,7 +41,7 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
       }
     } else if (field === 'media') {
       if (!payload.media || payload.media.length === 0) {
-        errors[field] = 'add at least one image'
+        errors[field] = 'add at least one attachment'
       }
       continue
     } else {
@@ -94,9 +94,9 @@ export function validate(payload: JokePayload, rule: FormatRule): Record<string,
     }
   }
 
-  // image-style: cap the number of attachments
+  // media-style (image/video/audio): cap the number of attachments
   if (rule.constraints.max_media != null && payload.media && payload.media.length > rule.constraints.max_media) {
-    errors.media = `at most ${rule.constraints.max_media} images`
+    errors.media = `at most ${rule.constraints.max_media} attachments`
   }
 
   return errors

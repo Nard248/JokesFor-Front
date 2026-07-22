@@ -95,7 +95,7 @@ describe('FormatPickerPage', () => {
     expect(skeletons.length).toBeGreaterThanOrEqual(6)
   })
 
-  it('falls back to 9 tiles on error using known slugs', () => {
+  it('falls back to 7 tiles on error — pinned to the formats live in prod (no video/audio)', () => {
     mockUseFormats.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -105,9 +105,14 @@ describe('FormatPickerPage', () => {
     const Wrapper = makeWrapper()
     render(<FormatPickerPage />, { wrapper: Wrapper })
 
-    // Fallback still renders 9 tiles (from FORMAT_SLUGS)
+    // Fallback is pinned to the 7 prod-deployed formats (6 text + image) — the
+    // real catalog serves video/audio too once wave-2 deploys, but showing
+    // them from the static fallback would let a draft-create 400 on a format
+    // the backend doesn't have yet.
     const tiles = screen.getAllByRole('button').filter((b) => b.getAttribute('tabindex') === '0')
-    expect(tiles.length).toBe(9)
+    expect(tiles.length).toBe(7)
+    expect(screen.queryByText('Video')).not.toBeInTheDocument()
+    expect(screen.queryByText('Audio')).not.toBeInTheDocument()
   })
 
   it('clicking a tile navigates to /create/new/:slug', async () => {

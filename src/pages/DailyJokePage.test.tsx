@@ -38,6 +38,34 @@ const TODAY_MEDIA = {
   date: '2026-07-13',
   issue_label: 'Vol. I · No. 043',
 }
+const TODAY_VIDEO = {
+  joke: {
+    id: 7,
+    text: '',
+    setup: 'A dog skateboarding',
+    punchline: null,
+    media: [{
+      kind: 'video',
+      url: 'https://cdn.example.com/daily-7.mp4',
+      poster_url: 'https://cdn.example.com/daily-7-poster.jpg',
+      width: 1280,
+      height: 720,
+    }],
+  },
+  date: '2026-07-13',
+  issue_label: 'Vol. I · No. 044',
+}
+const TODAY_AUDIO = {
+  joke: {
+    id: 8,
+    text: '',
+    setup: 'A very punny podcast clip',
+    punchline: null,
+    media: [{ kind: 'audio', url: 'https://cdn.example.com/daily-8.mp3' }],
+  },
+  date: '2026-07-13',
+  issue_label: 'Vol. I · No. 045',
+}
 const HISTORY = {
   results: [
     { joke: { id: 1, text: 'History joke one.' }, date: '2026-07-12' },
@@ -90,5 +118,20 @@ describe('DailyJokePage', () => {
     expect(screen.getByText('Image')).toBeDefined()
     const img = screen.getByRole('img')
     expect(img).toHaveAttribute('src', 'https://cdn.example.com/daily-6.jpg')
+  })
+
+  it('video-media daily joke renders an img with the POSTER url, never the raw mp4 url', () => {
+    mockUseTodaysJoke.mockReturnValue({ data: TODAY_VIDEO, isLoading: false })
+    renderPage()
+    const img = screen.getByRole('img')
+    expect(img).toHaveAttribute('src', 'https://cdn.example.com/daily-7-poster.jpg')
+    expect(img.getAttribute('src')).not.toMatch(/\.mp4$/)
+  })
+
+  it('audio-media daily joke renders no img and shows the static audio placeholder', () => {
+    mockUseTodaysJoke.mockReturnValue({ data: TODAY_AUDIO, isLoading: false })
+    renderPage()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByTestId('daily-audio-placeholder')).toBeInTheDocument()
   })
 })

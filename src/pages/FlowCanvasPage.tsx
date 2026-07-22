@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight } from 'lucide-react'
+import { Bookmark, BookmarkCheck, Share2, History, Dice5, Sparkles, ArrowRight, Music } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -422,21 +422,52 @@ function JotdBody({ joke, revealed, onReveal }: JotdBodyProps) {
         <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
           Punchline
         </span>
-        <div
-          onClick={onReveal}
-          className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
-          style={{
-            cursor: revealed ? 'default' : 'pointer',
-            marginTop: 8,
-            maxWidth: 640,
-            aspectRatio: first.width && first.height ? `${first.width} / ${first.height}` : '4 / 3',
-            borderRadius: 14,
-            overflow: 'hidden',
-            background: '#F1EFEC',
-          }}
-        >
-          <img src={first.url ?? undefined} alt={joke.setup} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
+        {/* Kind-aware: video shows its poster stub (never the raw mp4 url);
+            audio has no visual frame at all, so it gets the same static
+            Music-icon placeholder as JokeRenderer's audio card. The daily
+            hero stays image-based either way — no players here, reveal
+            behaves as before. */}
+        {first.kind === 'audio' ? (
+          <div
+            onClick={onReveal}
+            className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+            data-testid="daily-audio-placeholder"
+            style={{
+              cursor: revealed ? 'default' : 'pointer',
+              marginTop: 8,
+              maxWidth: 640,
+              height: 88,
+              borderRadius: 14,
+              overflow: 'hidden',
+              background: '#F2E9FF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Music size={28} color="#6A1CF6" aria-hidden />
+          </div>
+        ) : (
+          <div
+            onClick={onReveal}
+            className={`punch-blur ${revealed ? 'is-revealed' : ''}`}
+            style={{
+              cursor: revealed ? 'default' : 'pointer',
+              marginTop: 8,
+              maxWidth: 640,
+              aspectRatio: first.width && first.height ? `${first.width} / ${first.height}` : '4 / 3',
+              borderRadius: 14,
+              overflow: 'hidden',
+              background: '#F1EFEC',
+            }}
+          >
+            <img
+              src={(first.kind === 'video' ? first.poster_url : first.url) ?? undefined}
+              alt={joke.setup}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        )}
       </div>
     )
   }
@@ -790,6 +821,12 @@ function SevenDayArchive({
   const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)', 'transparent', '#F2E9FF', 'transparent']
   const days = history.slice(0, 7).map((h, i) => {
     const d = new Date(h.date)
+    const media0 = h.joke?.media?.[0]
+    // Kind-aware thumbnail: a poster (video) wins if present; otherwise only
+    // an actual image url is usable. Audio (and a poster-less video) has no
+    // still to show — thumbUrl stays undefined and the tile falls back to the
+    // joke text below (no raw mp4/mp3 url ever reaches an <img src>).
+    const thumbUrl = media0?.poster_url ?? (media0?.kind === 'image' ? media0.url : undefined) ?? undefined
     return {
       key: h.date,
       d: d.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -797,7 +834,7 @@ function SevenDayArchive({
       t: (h.joke?.text ?? '').slice(0, 60),
       v: h.joke?.format?.name ?? '',
       bg: tints[i % tints.length],
-      thumbUrl: h.joke?.media?.[0]?.url ?? undefined,
+      thumbUrl,
     }
   })
 

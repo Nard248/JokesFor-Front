@@ -68,20 +68,22 @@ describe('ChangeFormatModal', () => {
   })
 
   describe('backend catalog gating', () => {
-    it('shows the full static list (including Video/Audio) when no catalog is provided', () => {
+    it('falls back to the 7 prod-pinned formats (no Video/Audio) when no catalog is provided', () => {
       render(
         <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} />
       )
-      expect(screen.getByText('Video')).toBeInTheDocument()
-      expect(screen.getByText('Audio')).toBeInTheDocument()
+      expect(screen.getByText('Image')).toBeInTheDocument()
+      expect(screen.queryByText('Video')).not.toBeInTheDocument()
+      expect(screen.queryByText('Audio')).not.toBeInTheDocument()
     })
 
-    it('falls back to the full static list when the catalog is empty (loading/error)', () => {
+    it('falls back to the 7 prod-pinned formats (no Video/Audio) when the catalog is empty (loading/error)', () => {
       render(
         <ChangeFormatModal open current="oneliner" onClose={vi.fn()} onConfirm={vi.fn()} formats={[]} />
       )
-      expect(screen.getByText('Video')).toBeInTheDocument()
-      expect(screen.getByText('Audio')).toBeInTheDocument()
+      expect(screen.getByText('Image')).toBeInTheDocument()
+      expect(screen.queryByText('Video')).not.toBeInTheDocument()
+      expect(screen.queryByText('Audio')).not.toBeInTheDocument()
     })
 
     it('filters out formats the backend catalog does not serve yet', () => {

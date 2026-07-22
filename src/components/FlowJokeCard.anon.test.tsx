@@ -76,6 +76,20 @@ const imageJoke: FlowJokeData = {
   media: [{ kind: 'image', url: 'https://cdn.example.com/cat.jpg', width: 800, height: 600 }],
 }
 
+const videoJoke: FlowJokeData = {
+  id: 100,
+  fmt: 'video',
+  setup: 'A dog skateboarding',
+  media: [{ kind: 'video', url: 'https://cdn.example.com/dog.mp4', poster_url: 'https://cdn.example.com/dog-poster.jpg', width: 1280, height: 720 }],
+}
+
+const audioJoke: FlowJokeData = {
+  id: 101,
+  fmt: 'audio',
+  setup: 'A very punny podcast clip',
+  media: [{ kind: 'audio', url: 'https://cdn.example.com/clip.mp3' }],
+}
+
 function renderCard(joke: FlowJokeData) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -120,6 +134,18 @@ describe('FlowJokeCard — anonymous paywall', () => {
   it('image-format joke is reveal-gated: over cap + fresh image joke renders the locked CTA', () => {
     canRevealMock.mockReturnValue(false)
     renderCard(imageJoke)
+    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+  })
+
+  it('video-format joke is reveal-gated: over cap + fresh video joke renders the locked CTA', () => {
+    canRevealMock.mockReturnValue(false)
+    renderCard(videoJoke)
+    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+  })
+
+  it('audio-format joke is reveal-gated: over cap + fresh audio joke renders the locked CTA', () => {
+    canRevealMock.mockReturnValue(false)
+    renderCard(audioJoke)
     expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
   })
 })

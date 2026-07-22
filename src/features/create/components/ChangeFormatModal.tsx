@@ -15,11 +15,15 @@ export interface ChangeFormatModalProps {
    * during the FE-first deploy window the current prod backend has no `video`/
    * `audio` Format row yet, and picking one would PATCH format:'video' into a
    * 400 that breaks autosave. Loading/error states resolve to an empty/undefined
-   * array here, which falls back to the full static list.
+   * array here, which falls back to the pinned prod-only list (see
+   * FALLBACK_FORMAT_OPTIONS below).
    */
   formats?: FormatRule[]
 }
 
+// Master option labels — the catalog-driven path filters this list down to
+// whatever the real backend catalog serves, so video/audio stay here even
+// though the *fallback* list below omits them.
 const FORMAT_OPTIONS: { value: FormatSlug; label: string }[] = [
   { value: 'oneliner', label: 'One-liner' },
   { value: 'setup', label: 'Setup / Punchline' },
@@ -32,13 +36,18 @@ const FORMAT_OPTIONS: { value: FormatSlug; label: string }[] = [
   { value: 'audio', label: 'Audio' },
 ]
 
+// Fallback pinned to formats live in prod; the real catalog serves video/audio
+// once the wave-2 backend deploys — fallback only matters on catalog error,
+// where hiding beats a 400 draft-create.
+const FALLBACK_FORMAT_OPTIONS = FORMAT_OPTIONS.filter((o) => o.value !== 'video' && o.value !== 'audio')
+
 function visibleOptions(formats: FormatRule[] | undefined): typeof FORMAT_OPTIONS {
-  if (!formats || formats.length === 0) return FORMAT_OPTIONS
+  if (!formats || formats.length === 0) return FALLBACK_FORMAT_OPTIONS
   const known = new Set(formats.map((f) => f.slug))
   const filtered = FORMAT_OPTIONS.filter((o) => known.has(o.value))
   // Never show zero options — a catalog missing every known slug is more
   // likely a bad response shape than an intentional empty catalog.
-  return filtered.length > 0 ? filtered : FORMAT_OPTIONS
+  return filtered.length > 0 ? filtered : FALLBACK_FORMAT_OPTIONS
 }
 
 export function ChangeFormatModal({ open, current, onClose, onConfirm, formats }: ChangeFormatModalProps) {

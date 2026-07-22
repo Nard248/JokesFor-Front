@@ -85,10 +85,14 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   const telemetryId = source ? numericId : undefined
 
   // Locked = server strip (hard boundary) OR client-side cap tightening: on a
-  // reveal-gated format (setup / knock / image), once the user is over their
-  // free cap, a not-yet-revealed joke is blocked with the same CTA. Already-
-  // revealed and uncapped jokes stay open (canReveal handles both).
-  const revealGated = joke.fmt === 'setup' || joke.fmt === 'knock' || joke.fmt === 'image'
+  // reveal-gated format (setup / knock / image / video / audio), once the user
+  // is over their free cap, a not-yet-revealed joke is blocked with the same
+  // CTA. Already-revealed and uncapped jokes stay open (canReveal handles
+  // both). Media formats (video/audio) join image in the gated set — without
+  // them, an over-cap reader could keep re-revealing an already-fetched
+  // video/audio joke for free, counting the cap asymmetrically.
+  const revealGated =
+    joke.fmt === 'setup' || joke.fmt === 'knock' || joke.fmt === 'image' || joke.fmt === 'video' || joke.fmt === 'audio'
   const softLocked =
     numericId !== undefined && revealGated && !joke.isLocked && !canReveal(numericId)
   const locked = !!joke.isLocked || softLocked
