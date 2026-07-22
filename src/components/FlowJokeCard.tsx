@@ -195,6 +195,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
         locked={locked}
         ctaLabel={isAuthenticated ? undefined : 'Sign up free'}
         onUnlock={() => navigate(isAuthenticated ? '/settings/billing' : '/register')}
+        watchMeta={numericId !== undefined && source ? { jokeId: numericId, source } : undefined}
       />
 
       {/* Reaction row: only for real jokes with numeric IDs (skip previews/mocks). */}

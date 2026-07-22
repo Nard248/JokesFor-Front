@@ -249,3 +249,88 @@ describe('trackDwell helper (Phase 2)', () => {
     expect(beacon).not.toHaveBeenCalled()
   })
 })
+
+describe('trackWatch helper (Phase 3)', () => {
+  function captureBeaconBodies() {
+    const bodies: string[] = []
+    const RealBlob = globalThis.Blob
+    vi.stubGlobal(
+      'Blob',
+      class extends RealBlob {
+        constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
+          super(parts, opts)
+          bodies.push(String(parts[0]))
+        }
+      },
+    )
+    return bodies
+  }
+
+  it('enqueues a watch event with watch_ms and watch_pct', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackWatch(7, 'feed', 5_200, 9)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0]).toEqual({
+      joke: 7,
+      type: 'watch',
+      source: 'feed',
+      watch_ms: 5_200,
+      watch_pct: 9,
+    })
+  })
+
+  it('omits watch_pct when not provided', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackWatch(7, 'daily', 3_000)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0]).toEqual({ joke: 7, type: 'watch', source: 'daily', watch_ms: 3_000 })
+    expect('watch_pct' in payload.events[0]).toBe(false)
+  })
+
+  it('clamps watch_ms to the 600000ms cap and rounds + clamps watch_pct', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackWatch(7, 'feed', 9_999_999, 142.7)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events[0].watch_ms).toBe(600_000)
+    expect(payload.events[0].watch_pct).toBe(100)
+  })
+
+  it('does NOT dedupe watch — multiple watch samples for one joke all count', async () => {
+    const bodies = captureBeaconBodies()
+    const t = await loadTelemetry({ mocks: false })
+    t.trackWatch(7, 'feed', 2_000)
+    t.trackWatch(7, 'feed', 5_000)
+    t.flush()
+    const payload = JSON.parse(bodies[0])
+    expect(payload.events).toHaveLength(2)
+  })
+
+  it('does not send when anonymous / gate closed (not authenticated)', async () => {
+    authState.isAuthenticated = false
+    const t = await loadTelemetry({ mocks: false })
+    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    t.trackWatch(7, 'feed', 5_000, 50)
+    t.flush()
+    expect(beacon).not.toHaveBeenCalled()
+  })
+
+  it('respects the gate (no watch when consent is off)', async () => {
+    consent = { analytics: false }
+    const t = await loadTelemetry({ mocks: false })
+    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    t.trackWatch(7, 'feed', 5_000, 50)
+    t.flush()
+    expect(beacon).not.toHaveBeenCalled()
+  })
+
+  it('never throws even with a non-finite watch_ms', async () => {
+    const t = await loadTelemetry({ mocks: false })
+    expect(() => t.trackWatch(7, 'feed', NaN, 50)).not.toThrow()
+  })
+})

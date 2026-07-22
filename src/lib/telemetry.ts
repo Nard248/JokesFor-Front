@@ -24,7 +24,7 @@ import { readConsent } from '@/features/consent/storage'
 import { isAdult } from '@/features/consent/age'
 import { useAuthStore } from '@/features/auth/store'
 
-export type TelemetryType = 'impression' | 'reveal' | 'dwell'
+export type TelemetryType = 'impression' | 'reveal' | 'dwell' | 'watch'
 export type TelemetrySource = 'feed' | 'explore' | 'search' | 'daily' | 'pack' | 'other'
 
 interface TelemetryEvent {
@@ -35,11 +35,18 @@ interface TelemetryEvent {
   value?: number
   /** Dwell only: max scroll depth reached within the content, 0-100. Optional. */
   scroll_pct?: number
+  /** Watch only: accumulated played time in ms (backend clamps to [0,600000], drops <500ms). */
+  watch_ms?: number
+  /** Watch only: 0-100 max watch-through depth. Optional (omitted when duration is unknown/invalid). */
+  watch_pct?: number
 }
 
 /** Phase-2 dwell tuning. Mirrors the backend contract (ignores <500ms). */
 const DWELL_MIN_MS = 1000
 const DWELL_MAX_MS = 600_000
+
+/** Phase-3 watch tuning. Mirrors the backend's WATCH_MAX_MS clamp exactly. */
+const WATCH_MAX_MS = 600_000
 
 const FLUSH_AT = 10
 const MAX_BATCH = 50
@@ -202,6 +209,40 @@ export function trackDwell(
     const event: TelemetryEvent = { joke: jokeId, type: 'dwell', source, value }
     if (typeof scrollPct === 'number' && Number.isFinite(scrollPct)) {
       event.scroll_pct = Math.max(0, Math.min(100, Math.round(scrollPct)))
+    }
+    enqueue(event, false)
+  } catch {
+    /* never throw */
+  }
+}
+
+/**
+ * Record how much of a video/audio joke was actually played back.
+ *
+ * Unlike impression/reveal this is NOT deduped by the client's per-session
+ * seen-set: a reader can legitimately re-watch the same clip several times
+ * (scrub back, replay), and each sample is real additive watch-time signal
+ * for the backend (append-only, like dwell). This mirrors `trackDwell`
+ * exactly by calling `enqueue(event, false)` — see that function above.
+ *
+ * - `watchMs` is clamped to [0, 600000] and rounded to an integer (the
+ *   backend's ingest requires an int, not a float).
+ * - `watchPct` (0-100) is optional — omit it when the media's duration is
+ *   unknown/invalid (0, NaN, Infinity); the caller (useWatchTracking) already
+ *   guards this, but this is defensive too.
+ */
+export function trackWatch(
+  jokeId: number,
+  source: TelemetrySource,
+  watchMs: number,
+  watchPct?: number,
+): void {
+  try {
+    if (!Number.isFinite(watchMs)) return
+    const value = Math.max(0, Math.min(Math.round(watchMs), WATCH_MAX_MS))
+    const event: TelemetryEvent = { joke: jokeId, type: 'watch', source, watch_ms: value }
+    if (typeof watchPct === 'number' && Number.isFinite(watchPct)) {
+      event.watch_pct = Math.max(0, Math.min(100, Math.round(watchPct)))
     }
     enqueue(event, false)
   } catch {

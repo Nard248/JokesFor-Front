@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Sparkles, Lock, Music } from 'lucide-react'
 import type { JokeMediaItem } from '@/lib/api'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
+import { useWatchTracking } from '@/features/telemetry/useWatchTracking'
+import type { TelemetrySource } from '@/lib/telemetry'
 
 export type FlowJokeFormat = 'setup' | 'oneliner' | 'observ' | 'anti' | 'knock' | 'story' | 'image' | 'video' | 'audio'
 
@@ -145,6 +147,14 @@ interface JokeRendererProps {
   onUnlock?: () => void
   /** Overrides the locked CTA's label (e.g. 'Sign up free' for anonymous readers). */
   ctaLabel?: string
+  /**
+   * Wave-2: real watch-time telemetry for the video/audio branches, via
+   * `useWatchTracking`. Only `FlowJokeCard` supplies this (it already knows
+   * the numeric joke id + telemetry source); the editor `PreviewPane` and
+   * other bespoke render paths omit it, so the hook stays a no-op there —
+   * this keeps `JokeRenderer` itself router- and telemetry-context-free.
+   */
+  watchMeta?: { jokeId: number; source: TelemetrySource }
 }
 
 /** Redacted filler shown under the blur when the payoff has been stripped. */
@@ -191,7 +201,7 @@ function DurationChip({ label }: { label: string }) {
  */
 export function JokeRenderer({
   payload, big = false, revealed: revealedProp, interactive = true, read, className, onReveal,
-  locked = false, onUnlock, ctaLabel,
+  locked = false, onUnlock, ctaLabel, watchMeta,
 }: JokeRendererProps) {
   const { format: fmt } = payload
   const skin = SKIN[fmt] ?? SKIN.setup
@@ -205,6 +215,24 @@ export function JokeRenderer({
   // Called unconditionally (hooks rule) even though only the video branch's
   // is_gif path consumes it — mirrors the other top-level state hooks above.
   const prefersReducedMotion = usePrefersReducedMotion()
+  // Computed up-front (rather than after the `locked` early return below) so
+  // it's available to the watch-tracking wiring, which — like every hook
+  // here — must be called unconditionally regardless of format/lock state.
+  const revealed = revealedProp ?? localRevealed
+
+  // Wave-2: video/audio are mutually exclusive per format instance, but hooks
+  // must be called unconditionally, so both refs + hook calls always exist.
+  // `useWatchTracking` only receives a real jokeId/source once the payoff is
+  // revealed and unlocked AND the format matches — there's no player to
+  // observe otherwise, and passing `undefined` until then is also what
+  // re-triggers the hook's effect at the exact render where the media
+  // element mounts.
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const trackVideo = !locked && revealed && fmt === 'video'
+  const trackAudio = !locked && revealed && fmt === 'audio'
+  useWatchTracking(videoRef, trackVideo ? watchMeta?.jokeId : undefined, trackVideo ? watchMeta?.source : undefined)
+  useWatchTracking(audioRef, trackAudio ? watchMeta?.jokeId : undefined, trackAudio ? watchMeta?.source : undefined)
 
   // Paywall: a locked payoff short-circuits every format's interactive path, so
   // the reveal handlers (and onReveal telemetry) can never fire for it.
@@ -212,7 +240,6 @@ export function JokeRenderer({
     return <LockedBody payload={payload} skin={skin} big={big} className={className} onUnlock={onUnlock} ctaLabel={ctaLabel} />
   }
 
-  const revealed = revealedProp ?? localRevealed
   const lines = payload.lines ?? []
   const visibleKnock = interactive ? lines.slice(0, knockStep + 1) : lines
 
@@ -403,6 +430,7 @@ export function JokeRenderer({
         >
           {revealed ? (
             <video
+              ref={videoRef}
               data-testid="video-player"
               controls={!autoplayGif}
               autoPlay={autoplayGif}
@@ -457,6 +485,7 @@ export function JokeRenderer({
         >
           {revealed ? (
             <audio
+              ref={audioRef}
               data-testid="audio-player"
               controls
               src={first?.url ?? undefined}
