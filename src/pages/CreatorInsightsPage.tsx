@@ -67,6 +67,21 @@ function secs(n: number | null | undefined): string {
   return s === 0 ? `${m}m` : `${m}m ${s}s`
 }
 
+/**
+ * Format seconds as `m:ss` for the watch-time chip (e.g. 12 -> '0:12', 72 -> '1:12').
+ * Mirrors JokeRenderer's ms-based `formatDuration`, but `avg_watch_seconds` arrives
+ * from the backend already in seconds. Returns null for missing/invalid input —
+ * callers only call this once they've already confirmed the value is non-null,
+ * so the chip is omitted rather than rendering a "—" placeholder.
+ */
+function watchDuration(seconds: number | null | undefined): string | null {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null
+  const total = Math.round(seconds)
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 // Fluid bar sparkline. Rendered in an intrinsic 280×40 coordinate space via
 // `viewBox`, but sized to 100% of its container with a fixed pixel height, so it
 // scales down cleanly on a phone instead of overflowing at its old fixed 280px.
@@ -589,6 +604,17 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
                       { label: 'Payoff', val: pct(joke.payoff_rate) },
                       { label: 'Avg read', val: secs(joke.avg_read_seconds) },
                       { label: 'Read rate', val: pct(joke.read_rate) },
+                      // Wave-2 watch-time telemetry (media jokes only). The backend
+                      // always emits these keys (null for text/image jokes), but
+                      // current prod omits them entirely — so absence and null are
+                      // handled identically: the chip simply isn't rendered, rather
+                      // than falling back to the "—" placeholder the other stats use.
+                      ...(joke.avg_watch_seconds != null
+                        ? [{ label: 'Avg watch', val: watchDuration(joke.avg_watch_seconds)! }]
+                        : []),
+                      ...(joke.watch_completion_rate != null
+                        ? [{ label: 'watched to end', val: pct(joke.watch_completion_rate) }]
+                        : []),
                     ].map(({ label, val }) => (
                       <span key={label} style={{ fontSize: 12, color: '#71717A', fontFamily: 'var(--font-sans)' }}>
                         <span style={{ fontWeight: 700, color: '#52525B' }}>{val}</span> {label}

@@ -906,6 +906,12 @@ export interface TopJokeItem {
   avg_read_seconds?: number | null
   /** Fraction of this joke's impressions that became a real read. */
   read_rate?: number | null
+  // Wave-2 watch-time telemetry (media jokes only; additive, absent from
+  // current prod responses, null until there's enough data).
+  /** Average watch time for this joke's media, in seconds. */
+  avg_watch_seconds?: number | null
+  /** Fraction of watches that reached (near) the end of the media. */
+  watch_completion_rate?: number | null
 }
 
 export interface AudienceTasteItem {

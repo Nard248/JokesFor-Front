@@ -276,4 +276,100 @@ describe('CreatorInsightsPage', () => {
     expect(screen.getByText('Payoff Rate')).toBeDefined()
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
   })
+
+  it('renders watch-time chips on a top joke when the API returns them', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        top_jokes: [
+          {
+            ...MOCK_DATA.top_jokes[0],
+            avg_watch_seconds: 12,
+            watch_completion_rate: 0.74,
+          },
+          MOCK_DATA.top_jokes[1],
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    // avg_watch_seconds 12 -> "0:12"; watch_completion_rate 0.74 -> "74%"
+    expect(screen.getByText('0:12')).toBeDefined()
+    expect(screen.getByText('74%')).toBeDefined()
+    expect(screen.getByText('Avg watch')).toBeDefined()
+    expect(screen.getByText('watched to end')).toBeDefined()
+  })
+
+  it('formats avg watch seconds over a minute as "m:ss"', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        top_jokes: [
+          { ...MOCK_DATA.top_jokes[0], avg_watch_seconds: 72, watch_completion_rate: 0.5 },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('1:12')).toBeDefined()
+  })
+
+  it('omits both watch-time chips on a top joke when the fields are entirely absent', () => {
+    // MOCK_DATA.top_jokes entries carry no avg_watch_seconds/watch_completion_rate
+    // keys at all — mirrors current prod's absent-key contract.
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.queryByText('Avg watch')).toBeNull()
+    expect(screen.queryByText('watched to end')).toBeNull()
+  })
+
+  it('omits both watch-time chips on a top joke when the fields are explicitly null', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        top_jokes: [
+          {
+            ...MOCK_DATA.top_jokes[0],
+            avg_watch_seconds: null,
+            watch_completion_rate: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.queryByText('Avg watch')).toBeNull()
+    expect(screen.queryByText('watched to end')).toBeNull()
+  })
+
+  it('renders one watch chip independently when only one of the two fields is present', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: {
+        ...MOCK_DATA,
+        top_jokes: [
+          {
+            ...MOCK_DATA.top_jokes[0],
+            avg_watch_seconds: 5,
+            watch_completion_rate: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Avg watch')).toBeDefined()
+    expect(screen.getByText('0:05')).toBeDefined()
+    expect(screen.queryByText('watched to end')).toBeNull()
+  })
 })
