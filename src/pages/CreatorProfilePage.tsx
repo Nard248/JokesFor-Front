@@ -1,9 +1,76 @@
-import { useParams, useNavigate } from 'react-router'
+import { Link, useParams, useNavigate } from 'react-router'
 import { FlowAppShell } from '@/components/FlowAppShell'
+import { FORMAT_LABEL, formatSlugToFlow } from '@/components/JokeRenderer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { JokeCard } from '@/components/JokeCard'
 import { BlockButton } from '@/components/BlockButton'
 import { useCreatorProfile, FollowButton } from '@/features/follows'
+import type { Joke } from '@/lib/api'
+
+// The creator-profile endpoint serves jokes via the lean JokeListSerializer:
+// media items are DIMS-ONLY ({kind,width,height} — no urls, by paywall
+// design) and format/taxonomies are slug strings. Media jokes therefore
+// render as a dimensioned placeholder card that links to the detail page,
+// where the full serializer + paywall decide what the viewer may see.
+const MEDIA_FORMATS = new Set(['image', 'video', 'audio'])
+
+function mediaSlug(joke: Joke): string | null {
+  const raw = typeof joke.format === 'string' ? joke.format : joke.format?.slug
+  const slug = (raw ?? '').toLowerCase()
+  return MEDIA_FORMATS.has(slug) ? slug : null
+}
+
+function MediaJokeCard({ joke, slug }: { joke: Joke; slug: string }) {
+  const item = joke.media?.[0]
+  const flow = formatSlugToFlow(slug)
+  const label = flow ? FORMAT_LABEL[flow] : 'Media'
+  const ratio =
+    item?.width && item?.height ? `${item.width} / ${item.height}` : '4 / 3'
+  const isAudio = slug === 'audio'
+  return (
+    <Link
+      to={`/jokes/${joke.id}?source=other`}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+    >
+      <article
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E9E8E7',
+          borderRadius: 18,
+          padding: 18,
+          overflow: 'hidden',
+        }}
+      >
+        <span className="tag-flow amber">{label}</span>
+        <div
+          data-testid="media-placeholder"
+          aria-hidden
+          style={{
+            marginTop: 12,
+            ...(isAudio ? { height: 88 } : { aspectRatio: ratio, maxHeight: 320 }),
+            borderRadius: 12,
+            background:
+              'repeating-linear-gradient(45deg, #E9E8E7, #E9E8E7 12px, #F1EFEC 12px, #F1EFEC 24px)',
+          }}
+        />
+        {joke.text && (
+          <div
+            style={{
+              marginTop: 10,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 600,
+              fontSize: 14,
+              color: '#1A1A1A',
+              lineHeight: 1.35,
+            }}
+          >
+            {joke.text}
+          </div>
+        )}
+      </article>
+    </Link>
+  )
+}
 
 function ProfileSkeleton() {
   return (
@@ -173,9 +240,14 @@ export function CreatorProfilePage() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {data.jokes.map((joke) => (
-                    <JokeCard key={joke.id} joke={joke} showReport />
-                  ))}
+                  {data.jokes.map((joke) => {
+                    const slug = mediaSlug(joke)
+                    return slug ? (
+                      <MediaJokeCard key={joke.id} joke={joke} slug={slug} />
+                    ) : (
+                      <JokeCard key={joke.id} joke={joke} showReport />
+                    )
+                  })}
                 </div>
               )}
             </>
