@@ -26,6 +26,13 @@ vi.mock('@/features/create', async (importOriginal) => {
   }
 })
 
+// ── Mock useMyAppeals so we can control the appeals-strip data per test ─────
+const mockUseMyAppeals = vi.fn()
+
+vi.mock('@/features/appeals', () => ({
+  useMyAppeals: () => mockUseMyAppeals(),
+}))
+
 import { CreatorHubPage } from './CreatorHubPage'
 import type { ContentDraft } from '@/features/create'
 
@@ -78,6 +85,8 @@ beforeEach(() => {
     isError: false,
     refetch: vi.fn(),
   })
+  // Default: no appeals — strip hidden
+  mockUseMyAppeals.mockReturnValue({ data: [] })
 })
 
 describe('CreatorHubPage', () => {
@@ -225,6 +234,47 @@ describe('CreatorHubPage', () => {
 
     await waitFor(() => {
       expect(s2.getByTestId('view-page')).toBeDefined()
+    })
+  })
+
+  describe('appeals status strip', () => {
+    it('hides entirely when there are no appeals', () => {
+      mockUseMyAppeals.mockReturnValue({ data: [] })
+      const Wrapper = makeWrapper()
+      render(<CreatorHubPage />, { wrapper: Wrapper })
+      expect(screen.queryByTestId('appeals-strip')).toBeNull()
+    })
+
+    it('hides entirely when the endpoint is absent (data undefined)', () => {
+      mockUseMyAppeals.mockReturnValue({ data: undefined })
+      const Wrapper = makeWrapper()
+      render(<CreatorHubPage />, { wrapper: Wrapper })
+      expect(screen.queryByTestId('appeals-strip')).toBeNull()
+    })
+
+    it('renders a Pending chip when a pending appeal exists', () => {
+      mockUseMyAppeals.mockReturnValue({
+        data: [{ id: 1, action_type: 'takedown', status: 'pending', reason_text: 'x', target_type: 'joke', target_id: 1, target_preview: '', created_at: 'x', resolved_at: null, resolution_note: '' }],
+      })
+      const Wrapper = makeWrapper()
+      render(<CreatorHubPage />, { wrapper: Wrapper })
+      expect(screen.getByTestId('appeals-strip')).toBeDefined()
+      expect(screen.getByText('Pending appeal: 1')).toBeDefined()
+    })
+
+    it('renders both Pending and Resolved chips with correct counts', () => {
+      mockUseMyAppeals.mockReturnValue({
+        data: [
+          { id: 1, action_type: 'takedown', status: 'pending', reason_text: 'x', target_type: 'joke', target_id: 1, target_preview: '', created_at: 'x', resolved_at: null, resolution_note: '' },
+          { id: 2, action_type: 'takedown', status: 'pending', reason_text: 'x', target_type: 'joke', target_id: 2, target_preview: '', created_at: 'x', resolved_at: null, resolution_note: '' },
+          { id: 3, action_type: 'rejection', status: 'upheld', reason_text: 'x', target_type: 'submission', target_id: 3, target_preview: '', created_at: 'x', resolved_at: 'y', resolution_note: '' },
+          { id: 4, action_type: 'rejection', status: 'reversed', reason_text: 'x', target_type: 'submission', target_id: 4, target_preview: '', created_at: 'x', resolved_at: 'y', resolution_note: '' },
+        ],
+      })
+      const Wrapper = makeWrapper()
+      render(<CreatorHubPage />, { wrapper: Wrapper })
+      expect(screen.getByText('Pending appeals: 2')).toBeDefined()
+      expect(screen.getByText('Resolved: 2')).toBeDefined()
     })
   })
 })

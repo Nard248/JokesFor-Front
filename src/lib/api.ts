@@ -1027,7 +1027,12 @@ export const moderationApi = {
 // In-app notifications (inbox)
 // ─────────────────────────────────────────────────────────────────────────
 
-export type NotificationVerb = 'followed_you' | 'joke_published' | 'joke_removed'
+export type NotificationVerb =
+  | 'followed_you'
+  | 'joke_published'
+  | 'joke_removed'
+  | 'joke_rejected'
+  | 'appeal_resolved'
 
 export interface NotificationActor {
   id: number
@@ -1042,12 +1047,48 @@ export interface NotificationDTO {
   created_at: string
   actor: NotificationActor | null
   joke: { id: number; preview: string } | null
+  /** Verb-specific payload (e.g. takedown reason + appeal deadline, rejection
+   * reason, appeal outcome). Optional — absent on notifications created
+   * before this field existed, so callers must treat it as possibly missing. */
+  data?: Record<string, unknown>
 }
 
 export const notificationsApi = {
   list: () => api.get<PaginatedResponse<NotificationDTO>>('/notifications/'),
   unreadCount: () => api.get<{ count: number }>('/notifications/unread-count/'),
   markRead: () => api.post<{ marked: number }>('/notifications/mark-read/', {}),
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Appeals (Appeals & Notices wave): creator appeal of a takedown/rejection
+// ─────────────────────────────────────────────────────────────────────────
+
+export type AppealActionType = 'takedown' | 'rejection'
+export type AppealStatus = 'pending' | 'upheld' | 'reversed'
+
+/** Read shape — matches jokes.serializers.AppealSerializer verbatim. */
+export interface AppealDTO {
+  id: number
+  action_type: AppealActionType
+  status: AppealStatus
+  reason_text: string
+  target_type: 'joke' | 'submission'
+  target_id: number
+  target_preview: string
+  created_at: string
+  resolved_at: string | null
+  resolution_note: string
+}
+
+export interface CreateAppealInput {
+  joke_id?: number
+  submission_id?: number
+  reason_text: string
+}
+
+export const appealsApi = {
+  create: (data: CreateAppealInput) => api.post<AppealDTO>('/appeals/', data),
+  myAppeals: () => api.get<PaginatedResponse<AppealDTO>>('/users/me/appeals/'),
 }
 
 // ─────────────────────────────────────────────────────────────────────────

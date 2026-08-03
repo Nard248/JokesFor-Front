@@ -248,5 +248,13 @@ describe('SubmissionDetailPage', () => {
       expect(editLink).toBeDefined()
       expect(editLink.getAttribute('href')).toBe('/create/42')
     })
+
+    it('shows an "Appeal this decision" CTA', () => {
+      const Wrapper = makeWrapper()
+      render(<SubmissionDetailPage />, { wrapper: Wrapper })
+
+      expect(screen.getByTestId('appeal-button')).toBeDefined()
+      expect(screen.getByText('Appeal this decision')).toBeDefined()
+    })
   })
 })

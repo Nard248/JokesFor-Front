@@ -9,6 +9,7 @@ import type { ContentDraft, SubmissionStatus } from '@/features/create'
 import { track } from '@/features/create/analytics'
 import { useCreatorStore } from '@/features/create/store'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { useMyAppeals } from '@/features/appeals'
 
 type TabId = 'all' | SubmissionStatus
 
@@ -37,6 +38,13 @@ export function CreatorHubPage() {
   const { data, isLoading, isError, refetch } = useDrafts()
   const [activeTab, setActiveTab] = useState<TabId>('all')
   const { markSeen } = useCreatorStore()
+
+  // Appeals status strip — graceful-absent: useMyAppeals() resolves to [] both
+  // when the creator has no appeals and when the endpoint 404s (not yet
+  // deployed), so the strip is simply hidden in either case.
+  const { data: appeals } = useMyAppeals()
+  const pendingAppeals = appeals?.filter((a) => a.status === 'pending').length ?? 0
+  const resolvedAppeals = appeals?.filter((a) => a.status !== 'pending').length ?? 0
 
   // Analytics: track hub viewed once on mount; also clear the header dot
   useEffect(() => {
@@ -97,6 +105,36 @@ export function CreatorHubPage() {
               </Button>
             </div>
           </div>
+
+          {/* Appeals status strip — hidden entirely when there are no appeals */}
+          {appeals && appeals.length > 0 && (
+            <div data-testid="appeals-strip" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+              {pendingAppeals > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 14px', borderRadius: 9999,
+                    background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E',
+                    fontSize: 12, fontWeight: 700,
+                  }}
+                >
+                  Pending appeal{pendingAppeals === 1 ? '' : 's'}: {pendingAppeals}
+                </span>
+              )}
+              {resolvedAppeals > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 14px', borderRadius: 9999,
+                    background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46',
+                    fontSize: 12, fontWeight: 700,
+                  }}
+                >
+                  Resolved: {resolvedAppeals}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Status tabs */}
           <div

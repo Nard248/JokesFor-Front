@@ -22,6 +22,7 @@ const realApi = {
   followsApi: { follow: vi.fn(), unfollow: vi.fn(), status: vi.fn() },
   creatorProfileApi: { get: vi.fn() },
   draftsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), submit: vi.fn(), delete: vi.fn() },
+  appealsApi: { create: vi.fn(), myAppeals: vi.fn() },
 }
 vi.mock('@/lib/api', () => realApi)
 
@@ -635,5 +636,63 @@ describe('creatorProfileAdapter real path', () => {
     const out = normalizeProfileJoke(nested)
     expect(out.tones).toEqual([{ id: 9, name: 'Dad', slug: 'dad' }])
     expect(out.format).toEqual({ id: 5, name: 'One Liner', slug: 'one-liner' })
+  })
+})
+
+describe('appealsAdapter', () => {
+  it('create (real) POSTs the payload and returns the appeal', async () => {
+    const appeal = {
+      id: 1, action_type: 'takedown', status: 'pending', reason_text: 'Please review',
+      target_type: 'joke', target_id: 5, target_preview: '', created_at: 'x',
+      resolved_at: null, resolution_note: '',
+    }
+    realApi.appealsApi.create.mockResolvedValue({ data: appeal })
+    const { appealsAdapter } = await loadAdapterReal()
+    const out = await appealsAdapter.create({ joke_id: 5, reason_text: 'Please review' })
+    expect(realApi.appealsApi.create).toHaveBeenCalledWith({ joke_id: 5, reason_text: 'Please review' })
+    expect(out).toEqual(appeal)
+  })
+
+  it('create (real) propagates a 400 duplicate/window rejection unchanged', async () => {
+    const err = { response: { status: 400, data: { non_field_errors: ['An appeal is already pending for this joke.'] } } }
+    realApi.appealsApi.create.mockRejectedValue(err)
+    const { appealsAdapter } = await loadAdapterReal()
+    await expect(appealsAdapter.create({ joke_id: 5, reason_text: 'x' })).rejects.toEqual(err)
+  })
+
+  it('myAppeals (real) unwraps paginated results', async () => {
+    realApi.appealsApi.myAppeals.mockResolvedValue({
+      data: {
+        count: 1, next: null, previous: null,
+        results: [{ id: 1, action_type: 'takedown', status: 'pending', reason_text: '', target_type: 'joke', target_id: 5, target_preview: '', created_at: 'x', resolved_at: null, resolution_note: '' }],
+      },
+    })
+    const { appealsAdapter } = await loadAdapterReal()
+    const out = await appealsAdapter.myAppeals()
+    expect(out).toHaveLength(1)
+    expect(out[0].status).toBe('pending')
+  })
+
+  it('myAppeals (real) treats a 404 (endpoint not yet deployed) as an empty list', async () => {
+    realApi.appealsApi.myAppeals.mockRejectedValue({ response: { status: 404 } })
+    const { appealsAdapter } = await loadAdapterReal()
+    await expect(appealsAdapter.myAppeals()).resolves.toEqual([])
+  })
+
+  it('myAppeals (real) still rejects on a non-404 error', async () => {
+    const err = { response: { status: 500 } }
+    realApi.appealsApi.myAppeals.mockRejectedValue(err)
+    const { appealsAdapter } = await loadAdapterReal()
+    await expect(appealsAdapter.myAppeals()).rejects.toEqual(err)
+  })
+
+  it('mock path: create() then myAppeals() round-trips without hitting the real api', async () => {
+    const { appealsAdapter } = await loadAdapterMock()
+    const created = await appealsAdapter.create({ submission_id: 7, reason_text: 'Please reconsider' })
+    expect(created).toMatchObject({ status: 'pending', target_type: 'submission', target_id: 7, reason_text: 'Please reconsider' })
+    const list = await appealsAdapter.myAppeals()
+    expect(list).toEqual([created])
+    expect(realApi.appealsApi.create).not.toHaveBeenCalled()
+    expect(realApi.appealsApi.myAppeals).not.toHaveBeenCalled()
   })
 })

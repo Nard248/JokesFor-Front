@@ -5,6 +5,7 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { JokeRenderer } from '@/components/JokeRenderer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { AppealButton } from '@/components/AppealButton'
 import { useDraft, PublishedStats, toJokePayload } from '@/features/create'
 import type { SubmissionStatus } from '@/features/create'
 
@@ -252,20 +253,23 @@ export function SubmissionDetailPage() {
                       {draft.rejectionReason}
                     </p>
                   )}
-                  <Link
-                    to={`/create/${draft.id}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: '#6A1CF6',
-                      fontWeight: 700,
-                      fontSize: 14,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Edit and resubmit
-                  </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                    <Link
+                      to={`/create/${draft.id}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color: '#6A1CF6',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Edit and resubmit
+                    </Link>
+                    <AppealButton submissionId={draft.id} label="Appeal this decision" />
+                  </div>
                 </div>
               )}
             </>

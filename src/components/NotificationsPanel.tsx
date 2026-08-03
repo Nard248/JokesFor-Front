@@ -1,19 +1,83 @@
 import { useEffect, useRef } from 'react'
+import { Link } from 'react-router'
 import { Bell, Check, Sparkles, UserPlus, ShieldAlert } from 'lucide-react'
 import { useNotifications, useMarkAllRead } from '@/features/notifications'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { AppealButton } from '@/components/AppealButton'
 import type { NotificationDTO } from '@/lib/api'
 
-type PanelItem = { icon: React.ReactNode; title: string; sub: string; tone: 'purple' | 'lime' | 'amber' }
+/** Appeal affordance for a notice: either a direct takedown appeal (we know
+ * the joke id) or, for a rejection notice, a link to the creator hub — the
+ * `joke_rejected` notification carries no submission id to appeal directly
+ * from the inbox (rejected submissions aren't Jokes), so the CTA routes the
+ * creator to where they CAN appeal (the rejected SubmissionDetailPage). */
+type AppealAction = { kind: 'joke'; jokeId: number } | { kind: 'review' }
+
+type PanelItem = {
+  icon: React.ReactNode
+  title: string
+  sub: string
+  tone: 'purple' | 'lime' | 'amber'
+  appeal?: AppealAction
+}
+
+/** slug/verb string -> "Title Case" for the reason shown in the removal notice. */
+function prettify(value: string): string {
+  return value
+    .split(/[-_]/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
+function formatDeadline(iso: string): string | null {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
 
 function mapNotification(n: NotificationDTO): PanelItem {
+  const data = n.data ?? {}
   switch (n.verb) {
     case 'followed_you':
       return { icon: <UserPlus size={15} />, title: `${n.actor?.name ?? 'Someone'} followed you`, sub: n.actor?.username ?? '', tone: 'purple' }
     case 'joke_published':
       return { icon: <Sparkles size={15} />, title: 'Your joke was published', sub: n.joke?.preview ?? '', tone: 'lime' }
-    case 'joke_removed':
-      return { icon: <ShieldAlert size={15} />, title: 'A joke was removed', sub: n.joke?.preview ?? 'It broke our guidelines.', tone: 'amber' }
+    case 'joke_removed': {
+      // Richer notice (statement of reasons): most-common report reason +
+      // appeal deadline, when present. Graceful — older notifications carry
+      // no `data`, so fall back to the original copy.
+      const reason = typeof data.reason === 'string' ? data.reason : undefined
+      const deadline = typeof data.appeal_deadline === 'string' ? formatDeadline(data.appeal_deadline) : null
+      const sub = reason
+        ? `Reason: ${prettify(reason)}.${deadline ? ` Appeal by ${deadline}.` : ''}`
+        : n.joke?.preview ?? 'It broke our guidelines.'
+      return {
+        icon: <ShieldAlert size={15} />,
+        title: 'A joke was removed',
+        sub,
+        tone: 'amber',
+        appeal: n.joke ? { kind: 'joke', jokeId: n.joke.id } : undefined,
+      }
+    }
+    case 'joke_rejected': {
+      const reason = typeof data.rejection_reason === 'string' ? data.rejection_reason : ''
+      return {
+        icon: <ShieldAlert size={15} />,
+        title: 'Your submission was rejected',
+        sub: reason || 'It did not meet our guidelines.',
+        tone: 'amber',
+        appeal: { kind: 'review' },
+      }
+    }
+    case 'appeal_resolved': {
+      const reversed = data.outcome === 'reversed'
+      return {
+        icon: <Sparkles size={15} />,
+        title: reversed ? 'Your appeal was approved' : 'Your appeal was reviewed',
+        sub: reversed ? 'The decision was reversed.' : 'The original decision stands.',
+        tone: reversed ? 'lime' : 'purple',
+      }
+    }
     default:
       return { icon: <Sparkles size={15} />, title: 'Notification', sub: '', tone: 'purple' }
   }
@@ -169,6 +233,20 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                   {it.title}
                 </div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2, lineHeight: 1.4 }}>{it.sub}</div>
+                {it.appeal && (
+                  <div style={{ marginTop: 6 }}>
+                    {it.appeal.kind === 'joke' ? (
+                      <AppealButton jokeId={it.appeal.jokeId} label="Appeal" compact />
+                    ) : (
+                      <Link
+                        to="/create"
+                        style={{ fontSize: 12, fontWeight: 700, color: '#6A1CF6', textDecoration: 'none' }}
+                      >
+                        Review &amp; appeal
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
             </li>
           ))}

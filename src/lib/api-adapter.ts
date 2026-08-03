@@ -9,8 +9,8 @@ import type {
   Achievement,
   UserPreferences,
 } from './mock-data'
-import type { BlockedUser, ContentReportInput, NotificationDTO } from './api'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi, draftsApi } from './api'
+import type { BlockedUser, ContentReportInput, NotificationDTO, AppealDTO, CreateAppealInput } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi, draftsApi, appealsApi } from './api'
 import type { DraftJokeDTO } from './api'
 import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
 import {
@@ -507,6 +507,48 @@ export const moderationAdapter = {
 
   myBlocks: (): Promise<BlockedUser[]> =>
     USE_MOCKS ? Promise.resolve(mockBlocked) : moderationApi.myBlocks().then((r) => r.data.results),
+}
+
+// ── Appeals Adapter ──
+// Real path hits the Appeals & Notices endpoints. Mock keeps an in-memory list
+// (seeded empty, like mockBlocked) so the offline demo lets a creator file an
+// appeal and immediately see it show up as pending.
+let mockAppealId = 1
+let mockAppeals: AppealDTO[] = []
+
+export const appealsAdapter = {
+  create: (data: CreateAppealInput): Promise<AppealDTO> => {
+    if (USE_MOCKS) {
+      const appeal: AppealDTO = {
+        id: mockAppealId++,
+        action_type: data.joke_id ? 'takedown' : 'rejection',
+        status: 'pending',
+        reason_text: data.reason_text,
+        target_type: data.joke_id ? 'joke' : 'submission',
+        target_id: (data.joke_id ?? data.submission_id ?? 0),
+        target_preview: '',
+        created_at: new Date().toISOString(),
+        resolved_at: null,
+        resolution_note: '',
+      }
+      mockAppeals = [appeal, ...mockAppeals]
+      return Promise.resolve(appeal)
+    }
+    return appealsApi.create(data).then((r) => r.data)
+  },
+
+  // Graceful-absent: the endpoint may not exist yet on some deploys — treat a
+  // 404 as "no appeals" rather than surfacing an error to the UI.
+  myAppeals: (): Promise<AppealDTO[]> => {
+    if (USE_MOCKS) return Promise.resolve(mockAppeals)
+    return appealsApi
+      .myAppeals()
+      .then((r) => r.data.results)
+      .catch((err) => {
+        if ((err as { response?: { status?: number } })?.response?.status === 404) return []
+        throw err
+      })
+  },
 }
 
 export const accountIdentityAdapter = {
