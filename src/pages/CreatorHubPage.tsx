@@ -59,7 +59,11 @@ export function CreatorHubPage() {
     : sortByLastEdited(allDrafts.filter((d) => d.status === activeTab))
 
   function handleCardClick(draft: ContentDraft) {
-    if (draft.status === 'draft' || draft.status === 'rejected') {
+    // Only an in-progress draft goes to the editor. Pending/published/rejected
+    // all go to the (read-only) SubmissionDetailPage — rejected in particular
+    // needs to land there, not the editor, since that's where the rejection
+    // reason and the Appeal CTA live.
+    if (draft.status === 'draft') {
       navigate(`/create/${draft.id}`)
     } else {
       navigate(`/create/${draft.id}/view`)

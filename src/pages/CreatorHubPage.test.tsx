@@ -237,6 +237,41 @@ describe('CreatorHubPage', () => {
     })
   })
 
+  it('clicking a rejected card navigates to /create/:id/view (SubmissionDetailPage — rejection reason + Appeal CTA live there, not the editor)', async () => {
+    // Show only the rejected draft
+    mockUseDrafts.mockReturnValue({
+      data: [makeDraft({ id: 3, status: 'rejected', text: '', rejectionReason: 'Timing off.', lastEditedAt: '2026-05-15T11:00:00Z' })],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+
+    const { MemoryRouter: MR, Route, Routes } = await import('react-router')
+    const { render: r2, screen: s2 } = await import('@testing-library/react')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    r2(
+      <QueryClientProvider client={qc}>
+        <MR initialEntries={['/create']}>
+          <Routes>
+            <Route path="/create" element={<CreatorHubPage />} />
+            <Route path="/create/:id" element={<div data-testid="editor-page">editor</div>} />
+            <Route path="/create/:id/view" element={<div data-testid="view-page">view</div>} />
+          </Routes>
+        </MR>
+      </QueryClientProvider>
+    )
+
+    const draftCards = document.querySelectorAll('[role="button"][tabindex="0"]')
+    expect(draftCards.length).toBeGreaterThan(0)
+    ;(draftCards[0] as HTMLElement).click()
+
+    await waitFor(() => {
+      expect(s2.getByTestId('view-page')).toBeDefined()
+    })
+    expect(s2.queryByTestId('editor-page')).toBeNull()
+  })
+
   describe('appeals status strip', () => {
     it('hides entirely when there are no appeals', () => {
       mockUseMyAppeals.mockReturnValue({ data: [] })

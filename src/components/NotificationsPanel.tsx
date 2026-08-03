@@ -6,12 +6,15 @@ import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { AppealButton } from '@/components/AppealButton'
 import type { NotificationDTO } from '@/lib/api'
 
-/** Appeal affordance for a notice: either a direct takedown appeal (we know
- * the joke id) or, for a rejection notice, a link to the creator hub — the
- * `joke_rejected` notification carries no submission id to appeal directly
- * from the inbox (rejected submissions aren't Jokes), so the CTA routes the
- * creator to where they CAN appeal (the rejected SubmissionDetailPage). */
-type AppealAction = { kind: 'joke'; jokeId: number } | { kind: 'review' }
+/** Appeal affordance for a notice: a direct takedown appeal (we know the joke
+ * id) or a direct rejection appeal (backend now carries `data.submission_id`
+ * on `joke_rejected` notices) open the modal inline. `review` is the
+ * fallback for older `joke_rejected` notices filed before that field
+ * existed — those link to the creator hub instead of guessing an id. */
+type AppealAction =
+  | { kind: 'joke'; jokeId: number }
+  | { kind: 'submission'; submissionId: number }
+  | { kind: 'review' }
 
 type PanelItem = {
   icon: React.ReactNode
@@ -61,12 +64,13 @@ function mapNotification(n: NotificationDTO): PanelItem {
     }
     case 'joke_rejected': {
       const reason = typeof data.rejection_reason === 'string' ? data.rejection_reason : ''
+      const submissionId = typeof data.submission_id === 'number' ? data.submission_id : undefined
       return {
         icon: <ShieldAlert size={15} />,
         title: 'Your submission was rejected',
         sub: reason || 'It did not meet our guidelines.',
         tone: 'amber',
-        appeal: { kind: 'review' },
+        appeal: submissionId !== undefined ? { kind: 'submission', submissionId } : { kind: 'review' },
       }
     }
     case 'appeal_resolved': {
@@ -235,9 +239,13 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2, lineHeight: 1.4 }}>{it.sub}</div>
                 {it.appeal && (
                   <div style={{ marginTop: 6 }}>
-                    {it.appeal.kind === 'joke' ? (
+                    {it.appeal.kind === 'joke' && (
                       <AppealButton jokeId={it.appeal.jokeId} label="Appeal" compact />
-                    ) : (
+                    )}
+                    {it.appeal.kind === 'submission' && (
+                      <AppealButton submissionId={it.appeal.submissionId} label="Appeal" compact />
+                    )}
+                    {it.appeal.kind === 'review' && (
                       <Link
                         to="/create"
                         style={{ fontSize: 12, fontWeight: 700, color: '#6A1CF6', textDecoration: 'none' }}

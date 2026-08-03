@@ -105,6 +105,7 @@ export function AppealButton({ jokeId, submissionId, label = 'Appeal this decisi
             Tell us why you think this decision should be reversed. Our team reviews every appeal.
           </p>
           <Textarea
+            aria-label="Reason for appeal"
             placeholder="Explain why this joke/submission shouldn't have been removed or rejected…"
             value={reasonText}
             onChange={(e) => setReasonText(e.target.value)}

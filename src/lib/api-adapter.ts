@@ -451,6 +451,9 @@ let mockIdentity: PublicIdentity = { display_name: '', handle: null, name: 'You'
 // ── Notifications (inbox) Adapter ──
 // In-app notifications. Mock keeps a small seeded inbox so the offline demo
 // shows the panel populated and "mark all read" round-trips.
+// Appeals & Notices wave: seed one of each moderation-notice verb so the
+// richer copy + Appeal CTAs (see NotificationsPanel) actually show up when
+// developing against mocks, not just against the real backend.
 let mockNotifications: NotificationDTO[] = [
   {
     id: 1, verb: 'followed_you', read: false, created_at: '2026-06-19T12:00:00Z',
@@ -459,6 +462,21 @@ let mockNotifications: NotificationDTO[] = [
   {
     id: 2, verb: 'joke_published', read: false, created_at: '2026-06-18T09:30:00Z',
     actor: null, joke: { id: 42, preview: 'Why did the scarecrow win an award? ...' },
+  },
+  {
+    id: 3, verb: 'joke_removed', read: false, created_at: '2026-06-17T15:00:00Z',
+    actor: null, joke: { id: 43, preview: 'A removed joke about...' },
+    data: { reason: 'harassment', appeal_deadline: '2026-07-01T00:00:00Z' },
+  },
+  {
+    id: 4, verb: 'joke_rejected', read: false, created_at: '2026-06-16T11:00:00Z',
+    actor: null, joke: null,
+    data: { submission_id: 501, rejection_reason: 'Too similar to an existing joke.' },
+  },
+  {
+    id: 5, verb: 'appeal_resolved', read: false, created_at: '2026-06-15T09:00:00Z',
+    actor: null, joke: { id: 43, preview: 'A removed joke about...' },
+    data: { outcome: 'reversed' },
   },
 ]
 

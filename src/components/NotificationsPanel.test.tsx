@@ -89,10 +89,27 @@ describe('NotificationsPanel', () => {
   })
 
   describe('joke_rejected', () => {
-    it('shows the rejection reason and a review-and-appeal link (no id to appeal directly from the inbox)', () => {
+    it('with submission_id: shows the rejection reason and an inline Appeal CTA wired to the submission id (not the /create link)', () => {
       notifications = [
         {
           id: 6, verb: 'joke_rejected', read: false, created_at: 'x', actor: null, joke: null,
+          data: { submission_id: 501, rejection_reason: 'Too similar to an existing joke.' },
+        },
+      ]
+      renderPanel()
+      expect(screen.getByText('Your submission was rejected')).toBeTruthy()
+      expect(screen.getByText('Too similar to an existing joke.')).toBeTruthy()
+      const cta = screen.getByTestId('appeal-cta')
+      expect(cta.getAttribute('data-submission-id')).toBe('501')
+      expect(cta.getAttribute('data-joke-id')).toBeNull()
+      expect(cta.textContent).toBe('Appeal')
+      expect(screen.queryByRole('link', { name: /review & appeal/i })).toBeNull()
+    })
+
+    it('without submission_id: falls back to the review-and-appeal link (older notices, no id to appeal directly from the inbox)', () => {
+      notifications = [
+        {
+          id: 7, verb: 'joke_rejected', read: false, created_at: 'x', actor: null, joke: null,
           data: { rejection_reason: 'Too similar to an existing joke.' },
         },
       ]
@@ -104,21 +121,43 @@ describe('NotificationsPanel', () => {
       expect(screen.queryByTestId('appeal-cta')).toBeNull()
     })
 
-    it('graceful — a joke_rejected notification without data still renders (no crash)', () => {
+    it('graceful — a joke_rejected notification without data at all still renders (no crash)', () => {
       notifications = [
-        { id: 7, verb: 'joke_rejected', read: false, created_at: 'x', actor: null, joke: null },
+        { id: 8, verb: 'joke_rejected', read: false, created_at: 'x', actor: null, joke: null },
       ]
       renderPanel()
       expect(screen.getByText('Your submission was rejected')).toBeTruthy()
       expect(screen.getByText('It did not meet our guidelines.')).toBeTruthy()
+      expect(screen.getByRole('link', { name: /review & appeal/i })).toBeTruthy()
     })
   })
 
   it('appeal_resolved renders a reviewed/approved notice without crashing', () => {
     notifications = [
-      { id: 8, verb: 'appeal_resolved', read: false, created_at: 'x', actor: null, joke: null, data: { outcome: 'reversed' } },
+      { id: 9, verb: 'appeal_resolved', read: false, created_at: 'x', actor: null, joke: null, data: { outcome: 'reversed' } },
     ]
     renderPanel()
     expect(screen.getByText('Your appeal was approved')).toBeTruthy()
+  })
+
+  it('the local-dev mock seed notifications (joke_removed/joke_rejected/appeal_resolved) all render richer copy + CTAs', async () => {
+    // Exercises the real notificationsAdapter mock seed (api-adapter.ts) end
+    // to end through the panel's own mapping/rendering, not a hand-rolled
+    // fixture — regresses if the seed shapes and the panel's field reads
+    // (`data.reason`, `data.submission_id`, `data.outcome`, …) ever drift.
+    const { notificationsAdapter } = await import('@/lib/api-adapter')
+    notifications = await notificationsAdapter.list()
+    renderPanel()
+
+    // joke_removed seed: reason + deadline copy, CTA wired to the joke id
+    expect(screen.getByText(/Reason: Harassment/)).toBeTruthy()
+    // joke_rejected seed: rejection reason copy, CTA wired to the submission id
+    expect(screen.getByText('Too similar to an existing joke.')).toBeTruthy()
+    // appeal_resolved seed
+    expect(screen.getByText('Your appeal was approved')).toBeTruthy()
+
+    const ctas = screen.getAllByTestId('appeal-cta')
+    expect(ctas.some((cta) => cta.getAttribute('data-joke-id') === '43')).toBe(true)
+    expect(ctas.some((cta) => cta.getAttribute('data-submission-id') === '501')).toBe(true)
   })
 })
