@@ -12,6 +12,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
+import { HelmetProvider } from 'react-helmet-async'
 
 // Mock all non-legal pages so their deps (auth store, TanStack Query, etc.)
 // don't run in this test suite.
@@ -78,7 +79,11 @@ const DRAFT_NOTICE = 'DRAFT — pending counsel review'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(<RouterProvider router={router} />)
+  return render(
+    <HelmetProvider>
+      <RouterProvider router={router} />
+    </HelmetProvider>,
+  )
 }
 
 describe('Legal pages render correct title and DRAFT notice', () => {

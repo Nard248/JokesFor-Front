@@ -18,6 +18,7 @@ import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import { dailyResetLocalLabel } from '@/lib/dailyReset'
 import { useAuth } from '@/features/auth'
 import type { ReactionSlug } from '@/lib/api'
+import { Seo, jokeJsonLd, truncate } from '@/lib/seo'
 
 /** Map the URL ?source= (JokeSource) onto the telemetry source vocabulary. */
 function telemetrySourceFor(source: JokeSource): TelemetrySource {
@@ -29,6 +30,24 @@ function telemetrySourceFor(source: JokeSource): TelemetrySource {
       return source
     default:
       return 'other'
+  }
+}
+
+/** Build <Seo> props from a loaded joke — image is the backend-generated share card. */
+function jokeSeoProps(joke: Joke) {
+  const titleSource = joke.setup || joke.text || 'A joke'
+  const descriptionSource =
+    joke.setup && joke.punchline
+      ? `${joke.setup} ${joke.punchline}`
+      : joke.setup || joke.text || 'A hand-picked joke from JokesFor.'
+
+  return {
+    title: `${truncate(titleSource, 60)} · JokesFor`,
+    description: truncate(descriptionSource, 155),
+    canonicalPath: `/jokes/${joke.id}`,
+    image: joke.share_image_url || undefined,
+    type: 'article' as const,
+    jsonLd: jokeJsonLd(joke),
   }
 }
 
@@ -76,6 +95,11 @@ export function JokeDetailPage() {
   if (isLoading || !joke) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+        <Seo
+          title="Joke · JokesFor"
+          description="A hand-picked joke from JokesFor."
+          canonicalPath={`/jokes/${id ?? ''}`}
+        />
         <FlowAppShell active="today">
           <div style={{ padding: '40px 0' }}>
             <DetailSkeleton />
@@ -87,6 +111,7 @@ export function JokeDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo {...jokeSeoProps(joke)} />
       <FlowAppShell active="today">
         <div style={{ padding: '40px 0', maxWidth: 1100, margin: '0 auto' }}>
           <button

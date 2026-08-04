@@ -7,6 +7,7 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
 import type { JokeMediaItem } from '@/lib/api'
+import { Seo } from '@/lib/seo'
 
 /**
  * DailyJokePage — reskinned in iteration 4 to match FlowCanvasPage's
@@ -23,6 +24,11 @@ export function DailyJokePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo
+        title="Daily Joke · JokesFor"
+        description="A fresh hand-picked joke every day — new material, new laugh, every single morning."
+        canonicalPath="/daily"
+      />
       <FlowAppShell active="today">
         <div style={{ padding: '40px 0' }}>
           {/* Hero strip */}

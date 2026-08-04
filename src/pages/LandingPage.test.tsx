@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
+import { HelmetProvider } from 'react-helmet-async'
 
 // useAuth is mocked per-test so we can flip anonymous ↔ authenticated.
 const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }))
@@ -11,13 +12,15 @@ import { LandingPage } from './LandingPage'
 
 function renderLanding() {
   return render(
-    <MemoryRouter initialEntries={['/']}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        {/* Redirect target for the authenticated-user test */}
-        <Route path="/flow-canvas" element={<div data-testid="app-home" />} />
-      </Routes>
-    </MemoryRouter>,
+    <HelmetProvider>
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          {/* Redirect target for the authenticated-user test */}
+          <Route path="/flow-canvas" element={<div data-testid="app-home" />} />
+        </Routes>
+      </MemoryRouter>
+    </HelmetProvider>,
   )
 }
 

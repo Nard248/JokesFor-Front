@@ -9,6 +9,7 @@ import {
   tagToneFor,
 } from '@/components/JokeRenderer'
 import type { FlowJokeFormat } from '@/components/JokeRenderer'
+import { Seo, siteJsonLd } from '@/lib/seo'
 
 /**
  * LandingPage — the anonymous marketing landing at `/`.
@@ -37,6 +38,12 @@ export function LandingPage() {
 
   return (
     <div className="lp-root">
+      <Seo
+        title="JokesFor — A Fresh Joke Every Morning"
+        description="Hand-picked jokes in six formats — setups, one-liners, stories and more. Reveal the punchline, save your favorites, and follow real comedians."
+        canonicalPath="/"
+        jsonLd={siteJsonLd()}
+      />
       <LandingStyles />
       <LandingHeader />
       <main>

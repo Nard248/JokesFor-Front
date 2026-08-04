@@ -6,7 +6,8 @@ import { JokeCard } from '@/components/JokeCard'
 import { BlockButton } from '@/components/BlockButton'
 import { useCreatorProfile, FollowButton } from '@/features/follows'
 import { TipButton, TipsReceived } from '@/features/tips'
-import type { Joke } from '@/lib/api'
+import type { Joke, CreatorProfile } from '@/lib/api'
+import { Seo, creatorJsonLd } from '@/lib/seo'
 
 // The creator-profile endpoint serves jokes via the lean JokeListSerializer:
 // media items are DIMS-ONLY ({kind,width,height} — no urls, by paywall
@@ -73,6 +74,27 @@ function MediaJokeCard({ joke, slug }: { joke: Joke; slug: string }) {
   )
 }
 
+/** Build <Seo> props from the profile data — sensible defaults while loading/404'd. */
+function creatorSeoProps(data: CreatorProfile | undefined, creatorId: string | undefined) {
+  const canonicalPath = `/creators/${creatorId ?? ''}`
+  if (!data) {
+    return {
+      title: 'Creator · JokesFor',
+      description: "View this creator's published jokes on JokesFor.",
+      canonicalPath,
+    }
+  }
+  const jokeWord = data.published_jokes === 1 ? 'joke' : 'jokes'
+  const followerWord = data.follower_count === 1 ? 'follower' : 'followers'
+  return {
+    title: `${data.display_name} (${data.handle}) · JokesFor`,
+    description: `${data.display_name} has published ${data.published_jokes.toLocaleString()} ${jokeWord} on JokesFor — ${data.follower_count.toLocaleString()} ${followerWord} and counting.`,
+    canonicalPath,
+    image: data.avatar_url || undefined,
+    jsonLd: creatorJsonLd(data),
+  }
+}
+
 function ProfileSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -98,6 +120,7 @@ export function CreatorProfilePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo type="profile" {...creatorSeoProps(data, creatorId)} />
       <FlowAppShell>
         <div style={{ padding: '40px 0', maxWidth: 860, margin: '0 auto' }}>
           {isLoading && <ProfileSkeleton />}

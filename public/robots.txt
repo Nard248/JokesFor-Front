@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Authenticated / private app surfaces — no public content to index.
+Disallow: /create
+Disallow: /settings
+Disallow: /profile
+Disallow: /flow
+Disallow: /flow-canvas
+Disallow: /explore
+Disallow: /collections
+Disallow: /favorites
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /auth/
+Disallow: /legacy
+
+Sitemap: https://jokesforfront.web.app/sitemap.xml

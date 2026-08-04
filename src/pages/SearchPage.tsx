@@ -6,6 +6,7 @@ import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { Seo } from '@/lib/seo'
 
 /**
  * SearchPage — Sentence Builder redesign per
@@ -100,6 +101,11 @@ export function SearchPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo
+        title="Search Jokes · JokesFor"
+        description="Search JokesFor's full joke library by format, theme, and tone to find exactly the laugh you need."
+        canonicalPath="/search"
+      />
       <FlowAppShell active="search">
         <div style={{ padding: '40px 0', position: 'relative' }}>
           <span className="eyebrow-mono">Search · Build the moment</span>

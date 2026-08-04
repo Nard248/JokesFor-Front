@@ -1,10 +1,13 @@
 import type { LegalDoc } from '@/content/legal'
+import { Seo } from '@/lib/seo'
 
 interface Props {
   doc: LegalDoc
+  /** Site-relative canonical path for this legal doc's route (e.g. "/privacy"). */
+  path: string
 }
 
-export function LegalDocPage({ doc }: Props) {
+export function LegalDocPage({ doc, path }: Props) {
   return (
     <div
       style={{
@@ -16,6 +19,11 @@ export function LegalDocPage({ doc }: Props) {
         lineHeight: 1.6,
       }}
     >
+      <Seo
+        title={`${doc.title} · JokesFor`}
+        description={`Read JokesFor's ${doc.title} — last updated ${doc.lastUpdated}.`}
+        canonicalPath={path}
+      />
       {/* Prominent DRAFT notice */}
       <div
         role="note"

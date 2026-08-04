@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HelmetProvider } from 'react-helmet-async'
 import type { Joke } from '@/lib/api'
 
 // ── Router: real MemoryRouter, but spy navigation + fixed params ──────────────
@@ -81,11 +82,13 @@ const LOCKED_MEDIA_JOKE: Joke = {
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <JokeDetailPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <HelmetProvider>
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <JokeDetailPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </HelmetProvider>,
   )
 }
 

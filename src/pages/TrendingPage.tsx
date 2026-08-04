@@ -13,6 +13,7 @@ import {
   useTopJokesters,
   usePopularThemes,
 } from '@/features/trending'
+import { Seo } from '@/lib/seo'
 
 /**
  * TrendingPage — redesigned for iteration 4.
@@ -37,6 +38,11 @@ export function TrendingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo
+        title="Trending Jokes · JokesFor"
+        description="See what's landing right now — the community's funniest, most-saved, most-shared jokes, updated continuously."
+        canonicalPath="/trending"
+      />
       <FlowAppShell active="explore">
         <div style={{ padding: '40px 0' }}>
           {/* Hero */}

@@ -2,6 +2,7 @@ import React, { act } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { HelmetProvider } from 'react-helmet-async'
 import type { Joke, JokeSearchParams, PaginatedResponse } from '@/lib/api'
 
 vi.mock('@/components/FlowAppShell', () => ({
@@ -46,9 +47,11 @@ function page(jokes: Joke[]): PaginatedResponse<Joke> {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/search']}>
-      <SearchPage />
-    </MemoryRouter>,
+    <HelmetProvider>
+      <MemoryRouter initialEntries={['/search']}>
+        <SearchPage />
+      </MemoryRouter>
+    </HelmetProvider>,
   )
 }
 

@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { HelmetProvider } from 'react-helmet-async'
 
 vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -75,9 +76,11 @@ const HISTORY = {
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <DailyJokePage />
-    </MemoryRouter>,
+    <HelmetProvider>
+      <MemoryRouter>
+        <DailyJokePage />
+      </MemoryRouter>
+    </HelmetProvider>,
   )
 }
 

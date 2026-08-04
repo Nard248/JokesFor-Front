@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { usePack, useRecordPackProgress } from '@/features/packs'
+import { Seo, truncate } from '@/lib/seo'
 
 /**
  * PackDetailPage — editorial joke bundle.
@@ -22,6 +23,11 @@ export function PackDetailPage() {
   if (isError) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+        <Seo
+          title="Pack not found · JokesFor"
+          description="This joke pack may have expired or been unpublished."
+          canonicalPath={`/packs/${slug ?? ''}`}
+        />
         <FlowAppShell active="library">
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
             <h2
@@ -52,6 +58,11 @@ export function PackDetailPage() {
   if (isLoading || !pack) {
     return (
       <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+        <Seo
+          title="Joke Pack · JokesFor"
+          description="A curated pack of jokes on JokesFor."
+          canonicalPath={`/packs/${slug ?? ''}`}
+        />
         <FlowAppShell active="library">
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
             <PackSkeleton />
@@ -76,6 +87,14 @@ export function PackDetailPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
+      <Seo
+        title={`${truncate(pack.title, 60)} · JokesFor`}
+        description={truncate(
+          pack.description || pack.subtitle || `A curated pack of ${pack.joke_count} jokes on JokesFor.`,
+          155,
+        )}
+        canonicalPath={`/packs/${pack.slug}`}
+      />
       <FlowAppShell active="library">
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
           <button
