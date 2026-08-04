@@ -195,7 +195,13 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   }
 
   const handleCopy = () => {
-    const text = joke.setup && joke.punchline ? `${joke.setup} ${joke.punchline}` : joke.text
+    // A locked joke's `text` still carries the withheld punchline for non-one-liner
+    // formats — copy only the visible setup so Copy can't bypass the paywall.
+    const text = locked
+      ? joke.setup || ''
+      : joke.setup && joke.punchline
+        ? `${joke.setup} ${joke.punchline}`
+        : joke.text
     if (text) {
       navigator.clipboard
         .writeText(text)
