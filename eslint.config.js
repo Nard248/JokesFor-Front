@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .remember is local agent tool-state (untracked, has its own nested
+  // .gitignore) — not part of the app, never present in a fresh clone/CI.
+  globalIgnores(['dist', '.remember']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -18,6 +20,14 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      // Codebase convention: prefix intentionally-unused params/vars with `_`
+      // (see src/lib/mock-api.ts, test files) instead of deleting them.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   },
 ])

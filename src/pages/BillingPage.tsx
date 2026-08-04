@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCard, Zap, CheckCircle2, XCircle, Infinity } from 'lucide-react'
+import { CreditCard, Zap, CheckCircle2, XCircle, Infinity as InfinityIcon } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -474,7 +474,7 @@ function PlanCard({
           <li key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#52525B' }}>
             <span>{LIMIT_LABELS[key] ?? key}</span>
             <span style={{ fontWeight: 700, color: '#1A1A1A' }}>
-              {val === null ? <Infinity size={13} /> : val}
+              {val === null ? <InfinityIcon size={13} /> : val}
             </span>
           </li>
         ))}

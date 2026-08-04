@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { mockJokes } from '@/lib/mock-data'
 
 export function NotFoundPage() {
-  // Pick a random joke for the 404 page
-  const randomJoke = mockJokes[Math.floor(Math.random() * mockJokes.length)]
+  // Pick a random joke for the 404 page (once per mount, not on every render).
+  // Lazy useState initializer, not useMemo — memoization isn't guaranteed
+  // once-per-mount, so an impure call still needs the state escape hatch.
+  const [randomJoke] = useState(() => mockJokes[Math.floor(Math.random() * mockJokes.length)])
 
   return (
     <div className="page-enter min-h-screen bg-[#F8F6F6] flex flex-col items-center justify-center px-4 text-center">
