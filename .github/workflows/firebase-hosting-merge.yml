@@ -10,7 +10,7 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: npm ci && npm run build
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://jokesforbackend-332865216810.us-east1.run.app/api/v1' }}
