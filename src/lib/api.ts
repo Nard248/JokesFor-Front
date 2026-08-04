@@ -1149,3 +1149,50 @@ export const billingApi = {
   createPortalSession: () =>
     api.post<PortalSessionResponse>('/billing/portal-session'),
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tips (Creator Tips wave): one-off tips on the same env-gated Stripe rails
+// as subscriptions — dormant (503 billing_unavailable) until Stripe live-mode.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Fixed tip tiers in cents ($1/$3/$5/$10) — server validates against this allowlist; no arbitrary amounts. */
+export const TIP_TIERS = [100, 300, 500, 1000] as const
+export type TipTierCents = (typeof TIP_TIERS)[number]
+
+export interface TipCheckoutInput {
+  creator_id: number
+  joke_id?: number
+  amount_cents: number
+}
+
+export interface TipCheckoutResponse {
+  checkout_url: string
+  tip_id: number
+}
+
+export interface TipsSummary {
+  count: number
+  total_cents: number
+}
+
+export interface Tip {
+  id: number
+  creator: number
+  joke: number | null
+  amount_cents: number
+  currency: string
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded'
+  created_at: string
+  completed_at: string | null
+}
+
+export const tipsApi = {
+  createCheckout: (input: TipCheckoutInput) =>
+    api.post<TipCheckoutResponse>('/tips/checkout/', input),
+  // Public — no auth required. Returns {count:0, total_cents:0} for an
+  // unknown/zero creator rather than 404 (graceful-absent).
+  creatorSummary: (creatorId: number) =>
+    api.get<TipsSummary>(`/creators/${creatorId}/tips/summary/`),
+  // Auth. DRF-paginated: {count, next, previous, results}.
+  mySentTips: () => api.get<PaginatedResponse<Tip>>('/users/me/tips/'),
+}

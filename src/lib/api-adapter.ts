@@ -10,9 +10,9 @@ import type {
   UserPreferences,
 } from './mock-data'
 import type { BlockedUser, ContentReportInput, NotificationDTO, AppealDTO, CreateAppealInput } from './api'
-import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, profileApi, moderationApi, notificationsApi, draftsApi, appealsApi } from './api'
+import { jokesApi, dailyJokeApi, collectionsApi, savedJokesApi, trendingApi, favoritesApi, creatorInsightsApi, followsApi, creatorProfileApi, billingApi, tipsApi, profileApi, moderationApi, notificationsApi, draftsApi, appealsApi } from './api'
 import type { DraftJokeDTO } from './api'
-import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
+import type { InsightsPeriod, CreatorInsights, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse, TipCheckoutInput, TipCheckoutResponse, TipsSummary, Tip } from './api'
 import {
   mockJokesApi,
   mockDailyJokeApi,
@@ -27,6 +27,7 @@ import {
   mockFollowsApi,
   mockCreatorProfileApi,
   mockBillingApi,
+  mockTipsApi,
 } from './mock-api'
 
 const USE_MOCKS =
@@ -761,4 +762,22 @@ export const billingAdapter = {
     USE_MOCKS
       ? mockBillingApi.createPortalSession()
       : billingApi.createPortalSession().then((r) => r.data),
+}
+
+// ── Tips Adapter ──
+export const tipsAdapter = {
+  createCheckout: (input: TipCheckoutInput): Promise<TipCheckoutResponse> =>
+    USE_MOCKS
+      ? mockTipsApi.createCheckout(input)
+      : tipsApi.createCheckout(input).then((r) => r.data),
+
+  creatorSummary: (creatorId: number): Promise<TipsSummary> =>
+    USE_MOCKS
+      ? mockTipsApi.creatorSummary(creatorId)
+      : tipsApi.creatorSummary(creatorId).then((r) => r.data),
+
+  mySentTips: (): Promise<PaginatedResponse<Tip>> =>
+    USE_MOCKS
+      ? mockTipsApi.mySentTips()
+      : tipsApi.mySentTips().then((r) => r.data),
 }

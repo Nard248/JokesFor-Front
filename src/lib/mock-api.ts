@@ -1,4 +1,5 @@
-import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse } from './api'
+import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse, TipCheckoutInput, TipCheckoutResponse, TipsSummary, Tip } from './api'
+import { TIP_TIERS } from './api'
 import {
   mockJokes,
   mockDailyJoke,
@@ -415,4 +416,48 @@ export const mockBillingApi = {
 // Exported so tests can reset plan state
 export function _resetMockBillingPlan(slug = 'free') {
   mockCurrentPlanSlug = slug
+}
+
+// ── Tips (stateful: tracks sent tips for the demo "my tips" history) ──
+const mockSentTips: Tip[] = []
+let mockTipIdSeq = 9000
+
+export const mockTipsApi = {
+  createCheckout: async (input: TipCheckoutInput): Promise<TipCheckoutResponse> => {
+    await delay(400)
+    if (!(TIP_TIERS as readonly number[]).includes(input.amount_cents)) {
+      throw Object.assign(new Error('Invalid amount'), { response: { status: 400, data: { detail: 'Invalid tip amount' } } })
+    }
+    if (input.creator_id === mockUser.pk) {
+      throw Object.assign(new Error('Cannot tip yourself'), { response: { status: 400, data: { detail: 'Cannot tip yourself' } } })
+    }
+    const tip_id = mockTipIdSeq++
+    mockSentTips.push({
+      id: tip_id,
+      creator: input.creator_id,
+      joke: input.joke_id ?? null,
+      amount_cents: input.amount_cents,
+      currency: 'usd',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      completed_at: null,
+    })
+    return { checkout_url: `https://checkout.stripe.com/demo?tip=${input.amount_cents}`, tip_id }
+  },
+
+  // Public endpoint — {count:0,total_cents:0} for an unknown/zero creator
+  // (graceful-absent). The demo creator profile (id 7) shows a nonzero
+  // received summary so the panel is visible in the mock walkthrough.
+  creatorSummary: async (creatorId: number): Promise<TipsSummary> => {
+    await delay(250)
+    if (creatorId === mockCreatorProfile.id) {
+      return { count: 12, total_cents: 3400 }
+    }
+    return { count: 0, total_cents: 0 }
+  },
+
+  mySentTips: async (): Promise<PaginatedResponse<Tip>> => {
+    await delay(250)
+    return { count: mockSentTips.length, next: null, previous: null, results: [...mockSentTips].reverse() }
+  },
 }

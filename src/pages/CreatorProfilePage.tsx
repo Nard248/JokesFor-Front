@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { JokeCard } from '@/components/JokeCard'
 import { BlockButton } from '@/components/BlockButton'
 import { useCreatorProfile, FollowButton } from '@/features/follows'
+import { TipButton, TipsReceived } from '@/features/tips'
 import type { Joke } from '@/lib/api'
 
 // The creator-profile endpoint serves jokes via the lean JokeListSerializer:
@@ -205,10 +206,13 @@ export function CreatorProfilePage() {
                       </span>{' '}
                       Jokes
                     </span>
+                    {/* Tips received (earned) — hidden entirely when zero. */}
+                    <TipsReceived creatorId={data.id} />
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <TipButton creatorId={data.id} isFollowing={data.is_following} />
                   <FollowButton
                     creatorId={data.id}
                     isFollowing={data.is_following}

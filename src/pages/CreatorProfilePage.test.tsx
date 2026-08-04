@@ -32,6 +32,14 @@ vi.mock('@/features/follows', async (importOriginal) => {
   }
 })
 
+vi.mock('@/features/tips', () => ({
+  TipButton: ({ isFollowing, creatorId }: { isFollowing: boolean | null; creatorId: number }) =>
+    isFollowing === null ? null : <button data-testid="tip-button" data-creator-id={creatorId}>Tip</button>,
+  TipsReceived: ({ creatorId }: { creatorId: number }) => (
+    <span data-testid="tips-received" data-creator-id={creatorId}>12 tips received · $34.00</span>
+  ),
+}))
+
 import { CreatorProfilePage } from './CreatorProfilePage'
 
 const MOCK_JOKES = [
@@ -153,6 +161,29 @@ describe('CreatorProfilePage', () => {
     const btn = screen.getByTestId('follow-button')
     expect(btn).toBeDefined()
     expect(btn.textContent).toBe('Follow')
+  })
+
+  it('renders the TipButton for non-self profiles, passing creatorId through', () => {
+    render(<CreatorProfilePage />, { wrapper: makeWrapper() })
+    const btn = screen.getByTestId('tip-button')
+    expect(btn).toBeDefined()
+    expect(btn.getAttribute('data-creator-id')).toBe('7')
+  })
+
+  it('hides the TipButton on self-view (is_following = null)', () => {
+    mockUseCreatorProfile.mockReturnValue({
+      data: { ...MOCK_PROFILE, is_following: null },
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
+    render(<CreatorProfilePage />, { wrapper: makeWrapper() })
+    expect(screen.queryByTestId('tip-button')).toBeNull()
+  })
+
+  it('renders the tips-received summary', () => {
+    render(<CreatorProfilePage />, { wrapper: makeWrapper() })
+    expect(screen.getByTestId('tips-received')).toBeDefined()
   })
 
   it('shows "No jokes yet" when jokes array is empty', () => {
