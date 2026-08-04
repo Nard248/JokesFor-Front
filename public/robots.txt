@@ -17,5 +17,7 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /auth/
 Disallow: /legacy
+Disallow: /library
+Disallow: /onboarding
 
 Sitemap: https://jokesforfront.web.app/sitemap.xml
