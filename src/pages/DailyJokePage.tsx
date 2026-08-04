@@ -7,7 +7,7 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
 import type { JokeMediaItem } from '@/lib/api'
-import { Seo } from '@/lib/seo'
+import { Seo, jokeShareUrl } from '@/lib/seo'
 
 /**
  * DailyJokePage — reskinned in iteration 4 to match FlowCanvasPage's
@@ -171,7 +171,7 @@ function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps
 
   const handleShare = () => {
     if (!jokeId) return
-    const url = `${window.location.origin}/jokes/${jokeId}`
+    const url = jokeShareUrl(jokeId)
     navigator.clipboard?.writeText(url).catch(() => { /* best-effort */ })
     recordShare(jokeId, 'copy')
   }

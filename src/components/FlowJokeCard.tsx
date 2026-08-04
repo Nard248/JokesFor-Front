@@ -9,6 +9,7 @@ import { useDailyReads, dailyReadsKeys } from '@/features/daily-reads'
 import { useAuth } from '@/features/auth'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import { revealApi, type Joke, type JokeMediaItem, type ReactionSlug } from '@/lib/api'
+import { jokeShareUrl } from '@/lib/seo'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, formatSlugToFlow, type FlowJokeFormat } from './JokeRenderer'
 
 // Re-export the format type so existing importers don't break.
@@ -131,7 +132,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation()
     const text = joke.setup && joke.punch ? `${joke.setup} ${joke.punch}` : joke.text ?? ''
-    const url = numericId !== undefined ? `${window.location.origin}/jokes/${numericId}` : ''
+    const url = numericId !== undefined ? jokeShareUrl(numericId) : ''
     const payload = url || text
     if (payload) {
       navigator.clipboard?.writeText(payload).catch(() => { /* best-effort */ })

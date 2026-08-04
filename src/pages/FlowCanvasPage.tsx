@@ -17,6 +17,7 @@ import { recordShare, useDwell } from '@/features/telemetry'
 import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal } from '@/lib/telemetry'
 import { timeUntilDailyReset, dailyResetLocalLabel } from '@/lib/dailyReset'
+import { jokeShareUrl } from '@/lib/seo'
 import type { JokeMediaItem } from '@/lib/api'
 
 /**
@@ -199,7 +200,7 @@ export function FlowCanvasPage() {
                     onClick={() => {
                       const id = today?.joke?.id
                       if (!id) return
-                      const url = `${window.location.origin}/jokes/${id}`
+                      const url = jokeShareUrl(id)
                       navigator.clipboard?.writeText(url).catch(() => { /* best-effort */ })
                       recordShare(id, 'copy')
                     }}

@@ -21,3 +21,26 @@ export const DEFAULT_OG_IMAGE = `${SITE_URL}/Logos/banner_purple.svg`
 
 export const DEFAULT_DESCRIPTION =
   "Discover hand-picked jokes every morning — setups, one-liners, stories and more. Reveal the punchline, save your favorites, and follow real comedians."
+
+/**
+ * Backend origin — derived from VITE_API_URL by stripping a trailing
+ * `/api/v1`, falling back to the known production backend host. Used for
+ * URLs that must hit the Django app directly rather than the SPA
+ * (per-joke share links so social scrapers get a real OG preview instead
+ * of the bare app shell).
+ */
+export const BACKEND_ORIGIN = (
+  import.meta.env.VITE_API_URL || 'https://jokesforbackend-332865216810.us-east1.run.app/api/v1'
+).replace(/\/api\/v1\/?$/, '')
+
+/**
+ * Per-joke share URL. Points at the backend's `/jokes/:id/share/` endpoint,
+ * which serves per-joke Open Graph/Twitter tags for link-unfurling
+ * crawlers and redirects human visitors back to the SPA's joke detail
+ * page. Always use this (never a bare `{SITE_URL}/jokes/:id` link) for
+ * anything copied to the clipboard or passed to navigator.share — that's
+ * the only way shared links get a real per-joke preview.
+ */
+export function jokeShareUrl(id: number | string): string {
+  return `${BACKEND_ORIGIN}/jokes/${id}/share/`
+}

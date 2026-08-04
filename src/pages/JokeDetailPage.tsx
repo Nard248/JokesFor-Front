@@ -18,7 +18,7 @@ import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import { dailyResetLocalLabel } from '@/lib/dailyReset'
 import { useAuth } from '@/features/auth'
 import type { ReactionSlug } from '@/lib/api'
-import { Seo, jokeJsonLd, truncate } from '@/lib/seo'
+import { Seo, jokeJsonLd, jokeShareUrl, truncate } from '@/lib/seo'
 
 /** Map the URL ?source= (JokeSource) onto the telemetry source vocabulary. */
 function telemetrySourceFor(source: JokeSource): TelemetrySource {
@@ -205,7 +205,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   }
 
   const handleShare = () => {
-    const url = `${window.location.origin}/jokes/${joke.id}`
+    const url = jokeShareUrl(joke.id)
     navigator.clipboard
       .writeText(url)
       .then(() => toast({ message: 'Link copied to clipboard.', variant: 'success' }))
