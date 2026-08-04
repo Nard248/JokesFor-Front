@@ -50,3 +50,7 @@ skills-lock.json
 .firebase/
 firebase-debug.log*
 firestore-debug.log*
+
+# Build-time fetched sitemap (scripts/gen-sitemap.mjs prebuild step) — never
+# commit a generated/stale copy.
+public/sitemap.xml
