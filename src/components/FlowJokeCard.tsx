@@ -324,6 +324,8 @@ function ReactionRow({ jokeId, isAnti, divider }: { jokeId: number; isAnti: bool
             }}
             aria-pressed={active}
             aria-label={r.label}
+            // 28px pill, 44px hit area on touch devices (see .tap44 in index.css).
+            className="tap44"
             style={{
               height: 28,
               padding: '0 10px',
