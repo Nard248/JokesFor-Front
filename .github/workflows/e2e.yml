@@ -1,0 +1,121 @@
+name: E2E
+
+# The tier that exercises the wire between the SPA and the API.
+#
+# The unit suites (799 vitest here, 877 Django there) each mock the other side,
+# so an FE<->BE contract can drift with every test green — which is how three
+# P0s reached production, including a paywall leak affecting 39% of the
+# catalogue that rendered a perfect redaction on screen. This job is the only
+# one that would have caught them.
+#
+# It needs BOTH repos, so it checks out the backend too. That requires a token
+# with read access to Nard248/JokesForBackEnd, stored as the BACKEND_REPO_TOKEN
+# secret. The job skips itself (rather than failing red) when the secret is
+# absent, so a fork or an unconfigured repo does not show a permanently broken
+# check — but see the `guard` job, which makes that state visible instead of
+# silent.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        # Passed through env rather than interpolated into the command line, so
+        # the token never becomes part of a shell argument.
+        env:
+          BACKEND_REPO_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
+        run: |
+          if [ -n "$BACKEND_REPO_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=E2E skipped::BACKEND_REPO_TOKEN is not set, so the end-to-end suite did not run. The FE<->BE contract is UNVERIFIED on this commit."
+          fi
+
+  e2e:
+    needs: guard
+    if: needs.guard.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jokesfor
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out frontend
+        uses: actions/checkout@v4
+
+      - name: Check out backend
+        uses: actions/checkout@v4
+        with:
+          repository: Nard248/JokesForBackEnd
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          path: backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Mirrors the Dockerfile runtime stage: ffmpeg for media normalization,
+      # cairo/pango for share-card rendering.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg libcairo2 libpango-1.0-0 libpangocairo-1.0-0
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end suite
+        env:
+          E2E_BACKEND_DIR: ${{ github.workspace }}/backend
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: postgres
+          E2E_DB_NAME: jokesfor
+          CI: 'true'
+        run: npm run e2e
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
