@@ -389,3 +389,43 @@ img, svg, video {
     @apply bg-background text-foreground;
   }
 }
+
+/* Space reserved for the fixed cookie-consent banner while it is on screen.
+   Without this, the last element on any scrolling page (notably onboarding's
+   "Continue" CTA) ends up underneath the banner and cannot be clicked.
+   ConsentBanner sets --consent-h to its measured height, and 0px once the user
+   has decided. */
+body {
+  padding-bottom: var(--consent-h, 0px);
+}
+
+/* Keep programmatic scrolling clear of the banner too: scrollIntoView and
+   focus/anchor navigation otherwise pin an element flush to the viewport
+   bottom, i.e. straight underneath it. */
+html {
+  scroll-padding-bottom: var(--consent-h, 0px);
+}
+
+/* Touch-target expander.
+   Docs/RESPONSIVE.md requires >= 44px targets on mobile (Apple's HIG says 44pt,
+   which also matters for the planned iOS port). Several controls are visually
+   smaller by design -- the reaction pills are 28px tall, the paywall CTA 40px.
+   This grows the HIT AREA to 44px without touching the visual size, so the
+   design is unchanged and the control is still comfortably tappable.
+   Applied only for coarse pointers so mouse users keep tight hit boxes. */
+@media (pointer: coarse) {
+  .tap44 {
+    position: relative;
+  }
+  .tap44::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 44px;
+    min-width: 44px;
+    /* Purely a hit area — never paints, never intercepts layout. */
+  }
+}

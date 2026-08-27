@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import type { AxiosError } from 'axios'
-import { useRegister, useUpdateUser } from '@/features/auth'
+import { useRegister } from '@/features/auth'
+import { useUpdateIdentity } from '@/features/profile'
 import { getGoogleAuthUrl, stashSignupDob } from '@/features/auth/google-oauth'
 import { isAtLeast13 } from '@/features/consent/age'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
@@ -60,7 +61,7 @@ export function RegisterPage() {
   const location = useLocation()
   const { isMobile } = useBreakpoint()
   const registerMutation = useRegister()
-  const updateUser = useUpdateUser()
+  const updateIdentity = useUpdateIdentity()
 
   // A new user routed here from the login page's Google button lands with a
   // notice (they must sign up DOB-first — the spent code can't be reused).
@@ -133,8 +134,8 @@ export function RegisterPage() {
       { email, password1: password, password2: password, date_of_birth: dob },
       {
         onSuccess: (data) => {
-          // Profile fields from step 2 — applied via updateUser once a session
-          // exists (updateUser needs auth). Computed up front so both modes use them.
+          // Public identity from step 1 — applied via updateIdentity once a session
+          // exists (it needs auth). Computed up front so both modes use them.
           const cleanHandle = handle.replace(/^@/, '').trim()
           const trimmedFirst = firstName.trim()
 
@@ -152,11 +153,13 @@ export function RegisterPage() {
           }
           // Legacy mode (logged in): patch the username (handle without @) + first name.
           // If this fails, we still navigate forward — user can fix in profile.
-          const patch: { first_name?: string; username?: string } = {}
-          if (trimmedFirst) patch.first_name = trimmedFirst
-          if (cleanHandle) patch.username = cleanHandle
+          // Profile fields, not auth_user: `username` is set to the full email
+          // at registration and is not the public handle (see VerifyEmailPage).
+          const patch: { display_name?: string; handle?: string } = {}
+          if (trimmedFirst) patch.display_name = trimmedFirst
+          if (cleanHandle) patch.handle = cleanHandle
           if (Object.keys(patch).length > 0) {
-            updateUser.mutate(patch, {
+            updateIdentity.mutate(patch, {
               onSettled: () => navigate('/flow', { replace: true }),
             })
           } else {
@@ -457,14 +460,14 @@ export function RegisterPage() {
               <button
                 type="button"
                 onClick={handleFinish}
-                disabled={registerMutation.isPending || updateUser.isPending}
+                disabled={registerMutation.isPending || updateIdentity.isPending}
                 className="btn-flow-primary"
                 style={{ height: 52, flex: 1 }}
               >
-                {registerMutation.isPending || updateUser.isPending
+                {registerMutation.isPending || updateIdentity.isPending
                   ? 'Creating…'
                   : 'Create account & start setup'}
-                {!(registerMutation.isPending || updateUser.isPending) && <ArrowRight size={16} />}
+                {!(registerMutation.isPending || updateIdentity.isPending) && <ArrowRight size={16} />}
               </button>
             </div>
           </div>

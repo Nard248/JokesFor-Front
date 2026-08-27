@@ -594,6 +594,9 @@ function UnlockCta({ skin, onUnlock, label }: { skin: SkinSpec; onUnlock?: () =>
         e.preventDefault()
         onUnlock?.()
       }}
+      // 40px pill, 44px hit area on touch devices (see .tap44 in index.css).
+      // This is the conversion CTA — it should not be the hardest thing to tap.
+      className="tap44"
       style={{
         marginTop: 16,
         height: 40,

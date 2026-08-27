@@ -366,7 +366,11 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
 
         /* Mobile bottom tab bar. */
         .flow-tabbar {
-          position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+          /* Sit ABOVE the consent banner rather than under it. The banner is
+             fixed at bottom:0 with z-index 9999, so at 375x812 it covered the
+             whole tab bar and a first-time visitor could not tap any nav item.
+             --consent-h is 0px once consent is decided (see ConsentBanner). */
+          position: fixed; left: 0; right: 0; bottom: var(--consent-h, 0px); z-index: 40;
           display: flex; align-items: stretch; justify-content: space-around;
           background: rgba(255, 255, 255, 0.92);
           backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);

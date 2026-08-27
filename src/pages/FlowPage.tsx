@@ -60,11 +60,17 @@ export function FlowPage() {
   }
 
   const finish = () => {
+    // Only the daily ritual is sent here. The vibes picked in step 1 are already
+    // persisted by PUT /users/me/vibes/, which now also projects them onto the
+    // preferred_tones/preferred_contexts that actually drive the daily joke.
+    //
+    // `tones` and `languages` were never accepted by this endpoint (silently
+    // dropped), and `humorTypes` sent FORMAT slugs into a TONE field, which
+    // matched nothing and wiped the reader's real tone preferences on a 200 OK.
+    // The API now rejects unknown keys instead of ignoring them, so sending them
+    // would 400 — and there is nowhere to persist a format preference anyway.
     updatePreferences.mutate(
       {
-        tones: Array.from(vibes), // legacy synonym for categories
-        humorTypes: Array.from(formats),
-        languages: ['english'],
         // P8: ritual scheduling — converted to snake_case by the adapter.
         notificationEnabled: true,
         notificationTime: ritualTime,

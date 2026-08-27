@@ -34,7 +34,9 @@ beforeEach(() => {
   authState.user = { date_of_birth: '1990-01-01' }
   token = 'tok'
   consent = { analytics: true }
-  // Default: a successful beacon so flush() drains the queue.
+  // Transport is fetch(keepalive) — sendBeacon cannot carry the bearer token
+  // the API requires, so beacon-delivered events were rejected 403.
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true } as Response)))
   vi.stubGlobal('navigator', { sendBeacon: vi.fn(() => true) })
 })
 
@@ -47,71 +49,109 @@ afterEach(() => {
 describe('telemetry gating', () => {
   it('does not send when USE_MOCKS (no real API)', async () => {
     const t = await loadTelemetry({ mocks: true })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('does not send when unauthenticated', async () => {
     authState.isAuthenticated = false
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('does not send when there is no access token', async () => {
     token = null
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('does not send when consent is not granted', async () => {
     consent = { analytics: false }
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('does not send when the user is not a verified adult', async () => {
     authState.user = { date_of_birth: '2015-01-01' }
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('sends when the gate is fully open', async () => {
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')
     t.flush()
-    expect(beacon).toHaveBeenCalledTimes(1)
+    expect(sent).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('telemetry transport', () => {
+  // The backend enforces CSRF on the cookie-auth path. navigator.sendBeacon can
+  // set neither Authorization nor X-CSRFToken, so every beacon-delivered event
+  // was rejected 403 and silently lost -- verified in a real browser, where the
+  // beacon returned true (so the fetch fallback never ran) and the request
+  // landed as "POST /api/v1/telemetry/events => 403 Forbidden".
+  // Events must go out on a transport that can carry the bearer token.
+  it('sends the access token so the request is actually accepted', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve({ ok: true } as Response))
+    vi.stubGlobal('fetch', fetchMock)
+    const beacon = vi.fn(() => true)
+    vi.stubGlobal('navigator', { sendBeacon: beacon })
+
+    const t = await loadTelemetry({ mocks: false })
+    t.trackImpression(1, 'feed')
+    t.flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer tok')
+    expect(init.keepalive).toBe(true)
+    expect(beacon).not.toHaveBeenCalled()
+  })
+
+  it('still delivers on unload via keepalive rather than a credential-less beacon', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve({ ok: true } as Response))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('navigator', { sendBeacon: vi.fn(() => true) })
+
+    const t = await loadTelemetry({ mocks: false })
+    t.trackReveal(2, 'search')
+    t.flush()
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(init.keepalive).toBe(true)
   })
 })
 
 describe('telemetry buffering + dedup', () => {
-  // Capture the JSON sent to a beacon. jsdom's Blob has no async text(), so we
-  // intercept the Blob constructor to record the body string it was built from.
+  // Capture the JSON each flush puts on the wire. The transport is
+  // fetch(keepalive) with a plain string body, so read it straight off the call.
   function captureBeaconBodies() {
     const bodies: string[] = []
-    const RealBlob = globalThis.Blob
     vi.stubGlobal(
-      'Blob',
-      class extends RealBlob {
-        constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
-          super(parts, opts)
-          bodies.push(String(parts[0]))
-        }
-      },
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.body) bodies.push(String(init.body))
+        return Promise.resolve({ ok: true } as Response)
+      }),
     )
     return bodies
   }
@@ -119,11 +159,11 @@ describe('telemetry buffering + dedup', () => {
   it('dedupes the same (type, joke, source) within a page-session', async () => {
     const bodies = captureBeaconBodies()
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(7, 'feed')
     t.trackImpression(7, 'feed') // duplicate — dropped
     t.flush()
-    expect(beacon).toHaveBeenCalledTimes(1)
+    expect(sent).toHaveBeenCalledTimes(1)
     const payload = JSON.parse(bodies[0])
     expect(payload.events).toHaveLength(1)
     expect(payload.events[0]).toEqual({ joke: 7, type: 'impression', source: 'feed' })
@@ -141,19 +181,19 @@ describe('telemetry buffering + dedup', () => {
 
   it('auto-flushes once the queue reaches the batch threshold (~10)', async () => {
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     for (let i = 1; i <= 10; i++) t.trackImpression(i, 'feed')
     // Reached FLUSH_AT — should have auto-flushed without an explicit flush().
-    expect(beacon).toHaveBeenCalledTimes(1)
+    expect(sent).toHaveBeenCalledTimes(1)
   })
 
   it('ignores non-positive joke ids', async () => {
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(0, 'feed')
     t.trackImpression(-3, 'feed')
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('never throws even if the transport fails', async () => {
@@ -174,15 +214,12 @@ describe('telemetry buffering + dedup', () => {
 describe('trackDwell helper (Phase 2)', () => {
   function captureBeaconBodies() {
     const bodies: string[] = []
-    const RealBlob = globalThis.Blob
     vi.stubGlobal(
-      'Blob',
-      class extends RealBlob {
-        constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
-          super(parts, opts)
-          bodies.push(String(parts[0]))
-        }
-      },
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.body) bodies.push(String(init.body))
+        return Promise.resolve({ ok: true } as Response)
+      }),
     )
     return bodies
   }
@@ -214,10 +251,10 @@ describe('trackDwell helper (Phase 2)', () => {
 
   it('drops sub-1s samples (too short to count as a read)', async () => {
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackDwell(7, 'feed', 800)
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('clamps value to the 600000ms cap and rounds + clamps scroll_pct', async () => {
@@ -243,25 +280,22 @@ describe('trackDwell helper (Phase 2)', () => {
   it('respects the gate (no dwell when consent is off)', async () => {
     consent = { analytics: false }
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackDwell(7, 'feed', 4_000)
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 })
 
 describe('trackWatch helper (Phase 3)', () => {
   function captureBeaconBodies() {
     const bodies: string[] = []
-    const RealBlob = globalThis.Blob
     vi.stubGlobal(
-      'Blob',
-      class extends RealBlob {
-        constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
-          super(parts, opts)
-          bodies.push(String(parts[0]))
-        }
-      },
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.body) bodies.push(String(init.body))
+        return Promise.resolve({ ok: true } as Response)
+      }),
     )
     return bodies
   }
@@ -314,19 +348,19 @@ describe('trackWatch helper (Phase 3)', () => {
   it('does not send when anonymous / gate closed (not authenticated)', async () => {
     authState.isAuthenticated = false
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackWatch(7, 'feed', 5_000, 50)
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('respects the gate (no watch when consent is off)', async () => {
     consent = { analytics: false }
     const t = await loadTelemetry({ mocks: false })
-    const beacon = navigator.sendBeacon as ReturnType<typeof vi.fn>
+    const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackWatch(7, 'feed', 5_000, 50)
     t.flush()
-    expect(beacon).not.toHaveBeenCalled()
+    expect(sent).not.toHaveBeenCalled()
   })
 
   it('never throws even with a non-finite watch_ms', async () => {

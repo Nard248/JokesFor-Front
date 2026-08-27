@@ -98,19 +98,20 @@ function send(events: TelemetryEvent[]): void {
   const token = getAccessToken()
 
   try {
-    // Prefer sendBeacon on page-hide paths — it survives unload. It can't set
-    // an Authorization header, but the backend also accepts the httpOnly
-    // refresh/session cookie (withCredentials), so beacon stays authenticated.
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const blob = new Blob([body], { type: 'application/json' })
-      if (navigator.sendBeacon(ENDPOINT, blob)) return
-    }
-  } catch {
-    // fall through to fetch
-  }
-
-  try {
-    // keepalive lets the request outlive the page on a normal flush, too.
+    // `fetch` with keepalive — deliberately NOT sendBeacon.
+    //
+    // The API enforces CSRF on the cookie-auth path, and sendBeacon can set
+    // neither `Authorization` nor `X-CSRFToken`. A beacon authenticated by
+    // cookie alone is therefore rejected 403 and the event is silently lost.
+    // It used to be tried FIRST and returned early whenever the browser queued
+    // it (which it always does), so the fetch below never ran and essentially
+    // all audience telemetry — impressions, reveals, dwell, watch — was
+    // dropped. Confirmed in a real browser: sendBeacon returned true and the
+    // request landed as `POST /api/v1/telemetry/events => 403 Forbidden`,
+    // which meant creator insights were built on almost nothing.
+    //
+    // keepalive gives the same "outlives the page" guarantee for payloads
+    // under 64KB and can carry the bearer token, which the API accepts (202).
     void fetch(ENDPOINT, {
       method: 'POST',
       keepalive: true,

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
-import { useVerifyEmail, useResendVerification, useUpdateUser } from '@/features/auth'
+import { useVerifyEmail, useResendVerification } from '@/features/auth'
+import { useUpdateIdentity } from '@/features/profile'
 import { parseAuthError } from '@/features/auth/parseAuthError'
 import { trackVerify } from '@/features/auth/analytics'
 import { OtpInput } from '@/components/ui/otp-input'
@@ -23,7 +24,7 @@ export function VerifyEmailPage() {
 
   const verify = useVerifyEmail()
   const resend = useResendVerification()
-  const updateUser = useUpdateUser()
+  const updateIdentity = useUpdateIdentity()
 
   // Profile fields carried from registration (gated mode) — applied after the
   // code is confirmed. Lost on a hard refresh of this screen; that's acceptable
@@ -55,14 +56,21 @@ export function VerifyEmailPage() {
       // Session is now established (useVerifyEmail set the token). Apply the
       // profile fields carried from registration — best-effort, so a failure
       // never blocks entry (user can fix in profile), matching legacy behavior.
-      const patch: { first_name?: string; username?: string } = {}
-      if (pendingProfile?.firstName) patch.first_name = pendingProfile.firstName
-      if (pendingProfile?.handle) patch.username = pendingProfile.handle
+      //
+      // These go to the PROFILE, not to auth_user. `username` is not a public
+      // handle: registration sets it to the full email address, so writing the
+      // chosen handle there left it invisible (the profile kept showing
+      // @user<id>) and put it outside the uniqueness check that
+      // PATCH /users/me/profile/ applies. display_name/handle are the fields
+      // the public identity actually reads.
+      const patch: { display_name?: string; handle?: string } = {}
+      if (pendingProfile?.firstName) patch.display_name = pendingProfile.firstName
+      if (pendingProfile?.handle) patch.handle = pendingProfile.handle
       if (Object.keys(patch).length > 0) {
         try {
-          await updateUser.mutateAsync(patch)
+          await updateIdentity.mutateAsync(patch)
         } catch {
-          /* best-effort — user can fix it in profile */
+          /* best-effort — user can fix it in profile (e.g. handle already taken) */
         }
       }
       trackVerify('verify_succeeded')

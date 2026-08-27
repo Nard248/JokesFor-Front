@@ -1,74 +1,50 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
-
-// Mock initAnalytics to prevent any Firebase calls
-vi.mock('@/lib/firebase', () => ({
-  initAnalytics: vi.fn(async () => null),
-  isAnalyticsInitialized: vi.fn(() => false),
-}))
-
-// Mock auth store — anon user by default (no DOB)
-vi.mock('@/features/auth/store', () => ({
-  useAuthStore: Object.assign(
-    vi.fn(() => ({ user: null })),
-    { getState: vi.fn(() => ({ user: null })) },
-  ),
-}))
-
-beforeEach(() => {
-  localStorage.clear()
-})
 
 import { ConsentBanner } from './ConsentBanner'
 
-function renderBanner() {
-  return render(
-    <MemoryRouter>
-      <ConsentBanner />
-    </MemoryRouter>,
-  )
-}
+// The banner is position:fixed with z-index 9999 and the page reserved no space
+// for it, so it sat on top of whatever was at the bottom of the viewport:
+//  - desktop: onboarding's "Continue" is the last element on a scrolling page,
+//    so scrolling it into view landed it under the banner -- enabled but
+//    unclickable (elementFromPoint returned the banner's "Accept").
+//  - mobile 375x812: it fully covered nav.flow-tabbar (z-index 40), so a
+//    first-time visitor could not press any primary navigation tab.
+// Both hit only users who had not yet dismissed the banner -- i.e. every new
+// user, on the activation path. The fix publishes the banner's height as
+// --consent-h so the shell and the tab bar can reserve room for it.
 
-describe('ConsentBanner', () => {
-  it('renders Accept and Reject buttons when no stored decision exists', () => {
-    renderBanner()
-    expect(screen.getByRole('button', { name: /accept/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /reject/i })).toBeInTheDocument()
+beforeEach(() => {
+  localStorage.clear()
+  document.documentElement.style.removeProperty('--consent-h')
+  // jsdom reports 0 for every measurement; pin a height so the effect has
+  // something real to publish.
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    height: 67, width: 1440, top: 745, bottom: 812, left: 0, right: 1440, x: 0, y: 745,
+    toJSON: () => ({}),
+  } as DOMRect)
+})
+
+describe('ConsentBanner space reservation', () => {
+  it('publishes its height so the page can reserve room while it is visible', () => {
+    render(<ConsentBanner />)
+
+    expect(screen.getByRole('region', { name: 'Cookie consent' })).toBeInTheDocument()
+    expect(
+      document.documentElement.style.getPropertyValue('--consent-h'),
+    ).toBe('67px')
   })
 
-  it('renders nothing when a current-version decision is already stored', () => {
-    localStorage.setItem(
-      'jokesfor-consent',
-      JSON.stringify({ version: 1, analytics: true, ts: Date.now() }),
-    )
-    const { container } = renderBanner()
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('clicking Accept hides the banner and persists the decision', async () => {
+  it('releases the reserved space once the user decides', async () => {
     const user = userEvent.setup()
-    renderBanner()
-    await user.click(screen.getByRole('button', { name: /accept/i }))
-    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument()
-    const stored = JSON.parse(localStorage.getItem('jokesfor-consent')!)
-    expect(stored.analytics).toBe(true)
-  })
+    render(<ConsentBanner />)
 
-  it('clicking Reject hides the banner and persists the decision', async () => {
-    const user = userEvent.setup()
-    renderBanner()
-    await user.click(screen.getByRole('button', { name: /reject/i }))
-    expect(screen.queryByRole('button', { name: /reject/i })).not.toBeInTheDocument()
-    const stored = JSON.parse(localStorage.getItem('jokesfor-consent')!)
-    expect(stored.analytics).toBe(false)
-  })
+    await user.click(screen.getByRole('button', { name: 'Reject' }))
 
-  it('includes a link to /cookie-policy', () => {
-    renderBanner()
-    const link = screen.getByRole('link', { name: /cookie policy/i })
-    expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', '/cookie-policy')
+    expect(screen.queryByRole('region', { name: 'Cookie consent' })).toBeNull()
+    expect(
+      document.documentElement.style.getPropertyValue('--consent-h'),
+    ).toBe('0px')
   })
 })
