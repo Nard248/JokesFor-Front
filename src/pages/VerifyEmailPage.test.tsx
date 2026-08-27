@@ -6,12 +6,17 @@ import { vi } from 'vitest'
 
 const mockVerify = vi.fn()
 const mockResend = vi.fn()
-const mockUpdateUser = vi.fn()
+const mockUpdateIdentity = vi.fn()
 vi.mock('@/features/auth', async (orig) => ({
   ...(await orig<typeof import('@/features/auth')>()),
   useVerifyEmail: () => ({ mutateAsync: mockVerify, isPending: false }),
   useResendVerification: () => ({ mutate: mockResend, isPending: false }),
-  useUpdateUser: () => ({ mutateAsync: mockUpdateUser, isPending: false }),
+}))
+// The chosen handle goes to the PROFILE identity endpoint, not to auth_user:
+// `username` is the full email at registration and is not a public handle.
+vi.mock('@/features/profile', async (orig) => ({
+  ...(await orig<typeof import('@/features/profile')>()),
+  useUpdateIdentity: () => ({ mutateAsync: mockUpdateIdentity, isPending: false }),
 }))
 
 import { VerifyEmailPage } from './VerifyEmailPage'
@@ -56,7 +61,7 @@ test('entering the correct code verifies and redirects', async () => {
 test('applies profile fields carried from registration after a successful verify', async () => {
   const user = userEvent.setup()
   mockVerify.mockResolvedValue({ user: { email: 'a@b.com' } })
-  mockUpdateUser.mockResolvedValue({})
+  mockUpdateIdentity.mockResolvedValue({})
   const qc = new QueryClient()
   render(
     <QueryClientProvider client={qc}>
@@ -75,7 +80,7 @@ test('applies profile fields carried from registration after a successful verify
   await user.click(screen.getAllByRole('textbox')[0])
   await user.keyboard('135790')
   await waitFor(() =>
-    expect(mockUpdateUser).toHaveBeenCalledWith({ first_name: 'Alex', username: 'alexj' }),
+    expect(mockUpdateIdentity).toHaveBeenCalledWith({ display_name: 'Alex', handle: 'alexj' }),
   )
   await waitFor(() => expect(screen.getByText('onboarding-page')).toBeInTheDocument())
 })
@@ -83,7 +88,7 @@ test('applies profile fields carried from registration after a successful verify
 test('a profile-patch failure still lets the user into the app (best-effort)', async () => {
   const user = userEvent.setup()
   mockVerify.mockResolvedValue({ user: { email: 'a@b.com' } })
-  mockUpdateUser.mockRejectedValue(new Error('patch failed'))
+  mockUpdateIdentity.mockRejectedValue(new Error('patch failed'))
   const qc = new QueryClient()
   render(
     <QueryClientProvider client={qc}>
