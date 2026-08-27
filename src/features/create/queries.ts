@@ -1,4 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+
+import { useAuthStore } from '@/features/auth/store'
+
 import { contentAdapter } from './adapter'
 
 const ONE_HOUR = 1000 * 60 * 60
@@ -68,9 +71,15 @@ export function useLanguages() {
 }
 
 export function useDrafts() {
+  // Drafts are authenticated-only. Firing this while logged out produced a 401
+  // (and a console error) on every PUBLIC page an anonymous visitor opened,
+  // spending their 100 req/h anonymous IP budget on requests that could never
+  // succeed.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery({
     queryKey: createKeys.drafts.list,
     queryFn: () => contentAdapter.listDrafts(),
+    enabled: isAuthenticated,
     staleTime: THIRTY_SECONDS,
   })
 }

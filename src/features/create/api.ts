@@ -15,7 +15,9 @@ import type {
 
 // ── Real API endpoints ──
 export const contentApi = {
-  formats: () => api.get<{ results: FormatRule[] }>('/formats/'),
+  // Lookup catalogues are unpaginated (bounded reference tables). `unwrapList`
+  // in adapter.ts still tolerates either shape.
+  formats: () => api.get<FormatRule[]>('/formats/'),
   ageRatings: () => api.get<AgeRating[]>('/age-ratings/'),
   tones: () => api.get<Taxon[]>('/tones/'),
   contextTags: () => api.get<Taxon[]>('/context-tags/'),
