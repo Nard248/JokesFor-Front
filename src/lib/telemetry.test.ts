@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ── Mocks for the gate's dependencies ──────────────────────────────────────
-const authState = { isAuthenticated: true, user: { date_of_birth: '1990-01-01' } as { date_of_birth?: string | null } }
+const authState = { isAuthenticated: true, user: { pk: 1, date_of_birth: '1990-01-01' } as { pk: number; date_of_birth?: string | null } }
 vi.mock('@/features/auth/store', () => ({
-  useAuthStore: { getState: () => authState },
+  useAuthStore: { getState: () => authState, subscribe: () => () => {} },
 }))
 
 let token: string | null = 'tok'
@@ -13,7 +13,7 @@ vi.mock('@/lib/axios', () => ({
 
 let consent: { analytics: boolean } | null = { analytics: true }
 vi.mock('@/features/consent/storage', () => ({
-  readConsent: () => consent,
+  readConsent: () => consent, subscribeConsent: () => () => {},
 }))
 // Real isAdult is fine, but keep it deterministic and independent.
 vi.mock('@/features/consent/age', () => ({
@@ -25,13 +25,15 @@ async function loadTelemetry(opts: { mocks: boolean }) {
   vi.resetModules()
   vi.stubEnv('VITE_API_URL', opts.mocks ? '' : 'http://x/api/v1')
   vi.stubEnv('VITE_USE_MOCKS', opts.mocks ? 'true' : 'false')
+  const session = await import('@/features/telemetry/session')
+  session.setAccountAnalyticsPreference(1, true)
   return await import('./telemetry')
 }
 
 beforeEach(() => {
   // Reset gate inputs to the "open" baseline before each test.
   authState.isAuthenticated = true
-  authState.user = { date_of_birth: '1990-01-01' }
+  authState.user = { pk: 1, date_of_birth: '1990-01-01' }
   token = 'tok'
   consent = { analytics: true }
   // Transport is fetch(keepalive) — sendBeacon cannot carry the bearer token
@@ -83,7 +85,7 @@ describe('telemetry gating', () => {
   })
 
   it('does not send when the user is not a verified adult', async () => {
-    authState.user = { date_of_birth: '2015-01-01' }
+    authState.user = { pk: 1, date_of_birth: '2015-01-01' }
     const t = await loadTelemetry({ mocks: false })
     const sent = fetch as unknown as ReturnType<typeof vi.fn>
     t.trackImpression(1, 'feed')

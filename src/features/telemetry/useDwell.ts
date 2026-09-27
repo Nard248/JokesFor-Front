@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { trackDwell, type TelemetrySource } from '@/lib/telemetry'
+import { getTelemetrySession, subscribeTelemetrySession } from './session'
+import { trackDwell, flush as flushTelemetry, type TelemetrySource } from '@/lib/telemetry'
 
 /**
  * Phase-2 read-time telemetry. Measures how long a joke is actually visible to
@@ -71,7 +72,7 @@ export function useDwell<T extends HTMLElement = HTMLElement>(
 
     // Begin counting if conditions allow (in viewport AND tab visible).
     const resume = () => {
-      if (startedAt === null && visibleInViewport && isPageVisible()) {
+      if (startedAt === null && visibleInViewport && isPageVisible() && getTelemetrySession().eligible) {
         startedAt = now()
       }
     }
@@ -127,12 +128,25 @@ export function useDwell<T extends HTMLElement = HTMLElement>(
       const scrollPct = trackScroll && scrollSeen ? maxScrollPct : undefined
       maxScrollPct = 0
       scrollSeen = false
-      trackDwell(jokeId, source, ms, scrollPct)
+      if (ms > 0) trackDwell(jokeId, source, ms, scrollPct)
     }
+
+    const onPageHide = () => {
+      flushDwell()
+      // The global unload listener may already have run before this hook.
+      flushTelemetry()
+    }
+    const unsubscribe = subscribeTelemetrySession(() => {
+      accumulatedMs = 0
+      startedAt = null
+      maxScrollPct = 0
+      scrollSeen = false
+      resume()
+    })
 
     const onVisibilityChange = () => {
       if (isPageVisible()) resume()
-      else pause()
+      else onPageHide()
     }
 
     let observer: IntersectionObserver | null = null
@@ -164,7 +178,7 @@ export function useDwell<T extends HTMLElement = HTMLElement>(
 
     try {
       document.addEventListener('visibilitychange', onVisibilityChange)
-      window.addEventListener('pagehide', flushDwell)
+      window.addEventListener('pagehide', onPageHide)
       if (trackScroll) {
         el.addEventListener('scroll', sampleScroll, { passive: true })
         // The detail page scrolls the window past a tall element, so also
@@ -176,6 +190,7 @@ export function useDwell<T extends HTMLElement = HTMLElement>(
     }
 
     return () => {
+      unsubscribe()
       try {
         observer?.disconnect()
       } catch {
@@ -183,7 +198,7 @@ export function useDwell<T extends HTMLElement = HTMLElement>(
       }
       try {
         document.removeEventListener('visibilitychange', onVisibilityChange)
-        window.removeEventListener('pagehide', flushDwell)
+        window.removeEventListener('pagehide', onPageHide)
         if (trackScroll) {
           el.removeEventListener('scroll', sampleScroll)
           window.removeEventListener('scroll', sampleScroll)

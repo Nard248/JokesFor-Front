@@ -30,6 +30,9 @@ vi.mock('@/components/BlockedUsersList', () => ({ BlockedUsersList: () => <div /
 const mockToast = vi.fn()
 vi.mock('@/components/ui/toast', () => ({ useToast: () => ({ toast: mockToast }) }))
 
+import { readConsent, clearConsent } from '@/features/consent/storage'
+const mockUpdatePreferences = vi.fn()
+
 // ── Preferences hooks ────────────────────────────────────────────────────────
 vi.mock('@/features/preferences', () => ({
   usePreferences: () => ({
@@ -39,7 +42,7 @@ vi.mock('@/features/preferences', () => ({
       privacy: { publicProfile: true, showActivity: true, shareAnalytics: false },
     },
   }),
-  useUpdatePreferences: () => ({ mutate: vi.fn() }),
+  useUpdatePreferences: () => ({ mutate: mockUpdatePreferences }),
 }))
 
 // ── Auth hooks ───────────────────────────────────────────────────────────────
@@ -68,6 +71,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  clearConsent()
 })
 
 describe('SettingsPage — change password', () => {
@@ -140,5 +144,23 @@ describe('SettingsPage — export data', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: /export my data/i }))
     expect(mockExportMutate).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('SettingsPage audience analytics controls', () => {
+  it('persists account opt-in separately from browser consent', () => {
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Audience analytics' }))
+    expect(mockUpdatePreferences.mock.calls[0][0].privacy.shareAnalytics).toBe(true)
+    expect(readConsent()).toBeNull()
+  })
+  it('lets the user grant and withdraw browser consent without changing the account preference', () => {
+    renderPage()
+    const button = screen.getByRole('button', { name: 'Analytics in this browser' })
+    fireEvent.click(button)
+    expect(readConsent()?.analytics).toBe(true)
+    fireEvent.click(button)
+    expect(readConsent()?.analytics).toBe(false)
+    expect(mockUpdatePreferences).not.toHaveBeenCalled()
   })
 })

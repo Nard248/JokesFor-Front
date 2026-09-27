@@ -10,6 +10,7 @@ const KEY = 'jokesfor-consent'
 
 beforeEach(() => {
   localStorage.clear()
+  clearConsent()
 })
 
 describe('writeConsent / readConsent round-trip', () => {

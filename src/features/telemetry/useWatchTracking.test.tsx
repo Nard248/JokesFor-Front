@@ -1,201 +1,108 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useRef } from 'react'
 import { render, fireEvent } from '@testing-library/react'
-
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 const trackWatch = vi.fn()
-const flushTelemetry = vi.fn()
-vi.mock('@/lib/telemetry', () => ({
-  trackWatch: (...args: unknown[]) => trackWatch(...args),
-  flush: (...args: unknown[]) => flushTelemetry(...args),
+const flush = vi.fn()
+let eligible = true
+const listeners = new Set<() => void>()
+vi.mock('@/lib/telemetry', () => ({ trackWatch: (...args: unknown[]) => trackWatch(...args), flush: () => flush() }))
+vi.mock('./session', () => ({
+  getTelemetrySession: () => ({ eligible }),
+  subscribeTelemetrySession: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb) },
 }))
-
 import { useWatchTracking } from './useWatchTracking'
-
-function setMediaState(el: HTMLVideoElement, currentTime: number, duration: number) {
-  Object.defineProperty(el, 'currentTime', { value: currentTime, configurable: true })
-  Object.defineProperty(el, 'duration', { value: duration, configurable: true })
-}
-
-// A harness that mirrors how JokeRenderer wires the hook: a ref shared between
-// the hook call and the <video> element, jokeId/source passed straight
-// through (JokeRenderer's own "undefined until revealed" gating is what
-// re-triggers the effect in real usage; here the video is present from the
-// first render, same as useDwell's test harness).
-function Video({ jokeId, source = 'feed' as const }: { jokeId?: number; source?: 'feed' }) {
+function Player({ id = 42 }: { id?: number }) {
   const ref = useRef<HTMLVideoElement>(null)
-  useWatchTracking(ref, jokeId, source)
-  return <video ref={ref} data-testid="video" />
+  useWatchTracking(ref, id, 'feed')
+  return <video ref={ref} data-testid="player" />
 }
+let nowMs = 0
+beforeEach(() => { nowMs = 0; eligible = true; trackWatch.mockClear(); flush.mockClear(); vi.spyOn(performance, 'now').mockImplementation(() => nowMs) })
+afterEach(() => vi.restoreAllMocks())
+const player = () => {
+  const view = render(<Player />)
+  const el = view.getByTestId('player') as HTMLVideoElement
+  Object.defineProperty(el, 'duration', { configurable: true, value: 100 })
+  return { ...view, el }
+}
+const changeSession = (value: boolean) => { eligible = value; listeners.forEach((cb) => cb()) }
 
-beforeEach(() => {
-  trackWatch.mockClear()
-  flushTelemetry.mockClear()
-})
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
-
-describe('useWatchTracking', () => {
-  it('sends accumulated watch time on pause', () => {
-    const { getByTestId } = render(<Video jokeId={42} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 5.2, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-    expect(trackWatch).toHaveBeenCalledWith(42, 'feed', 5200, 9)
+describe('elapsed media playback', () => {
+  it('sends segment deltas after repeated play and pause instead of cumulative time', () => {
+    const { el } = player()
+    fireEvent.playing(el)
+    nowMs = 2000
+    fireEvent.pause(el)
+    nowMs = 10000
+    fireEvent.playing(el)
+    nowMs = 13000
+    fireEvent.pause(el)
+    expect(trackWatch.mock.calls.map((call) => call[2])).toEqual([2000, 3000])
   })
-
-  it('sends accumulated watch time on ended', () => {
-    const { getByTestId } = render(<Video jokeId={7} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 60, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.ended(video)
-
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-    expect(trackWatch).toHaveBeenCalledWith(7, 'feed', 60_000, 100)
-  })
-
-  it('sends unsent progress on unmount when the delta is >= 500ms', () => {
-    const { getByTestId, unmount } = render(<Video jokeId={9} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 3, 60)
-    fireEvent.timeUpdate(video)
-    unmount()
-
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-    expect(trackWatch).toHaveBeenCalledWith(9, 'feed', 3_000, 5)
-  })
-
-  it('does NOT send on unmount when the unsent delta is < 500ms', () => {
-    const { getByTestId, unmount } = render(<Video jokeId={9} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 0.3, 60)
-    fireEvent.timeUpdate(video)
-    unmount()
-
+  it('does not count seeking to the end as playback', () => {
+    const { el } = player()
+    el.currentTime = 99
+    fireEvent.timeUpdate(el)
+    fireEvent.pause(el)
     expect(trackWatch).not.toHaveBeenCalled()
   })
-
-  it('omits watch_pct when duration is 0, NaN, or Infinity', () => {
-    const { getByTestId, rerender } = render(<Video jokeId={1} />)
-    let video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 2, 0)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenLastCalledWith(1, 'feed', 2_000, undefined)
-
-    rerender(<Video jokeId={2} />)
-    video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 2, NaN)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenLastCalledWith(2, 'feed', 2_000, undefined)
-
-    rerender(<Video jokeId={3} />)
-    video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 2, Infinity)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenLastCalledWith(3, 'feed', 2_000, undefined)
+  it('excludes time spent seeking and buffering', () => {
+    const { el } = player()
+    fireEvent.playing(el)
+    nowMs = 1000
+    fireEvent.seeking(el)
+    nowMs = 5000
+    fireEvent.seeked(el)
+    fireEvent.playing(el)
+    nowMs = 6500
+    fireEvent.waiting(el)
+    nowMs = 10000
+    fireEvent.playing(el)
+    nowMs = 11000
+    fireEvent.pause(el)
+    expect(trackWatch.mock.calls.reduce((sum, call) => sum + call[2], 0)).toBe(3500)
   })
-
-  it('does not send twice for the same accumulated value', () => {
-    const { getByTestId } = render(<Video jokeId={42} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 5, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-
-    // Paused again with no further progress — must not resend.
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenCalledTimes(1)
+  it('counts replay time and never duplicates on ended, pause or unmount', () => {
+    const { el, unmount } = player()
+    fireEvent.playing(el)
+    nowMs = 1000
+    fireEvent.ended(el)
+    fireEvent.pause(el)
+    el.currentTime = 0
+    fireEvent.playing(el)
+    nowMs = 2000
+    fireEvent.pause(el)
+    unmount()
+    expect(trackWatch.mock.calls.map((call) => call[2])).toEqual([1000, 1000])
   })
-
-  it('sends a second sample once new progress accrues after a pause', () => {
-    const { getByTestId } = render(<Video jokeId={42} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 5, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-
-    setMediaState(video, 10, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).toHaveBeenCalledTimes(2)
-    expect(trackWatch).toHaveBeenLastCalledWith(42, 'feed', 10_000, 17)
-  })
-
-  it('is a no-op without a valid joke id', () => {
-    const { getByTestId } = render(<Video jokeId={undefined} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 5, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).not.toHaveBeenCalled()
-  })
-
-  it('sends on pagehide (tab close / hard nav) and force-flushes; a later unmount does not double-send', () => {
-    const { getByTestId, unmount } = render(<Video jokeId={5} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 4, 60)
-    fireEvent.timeUpdate(video)
-
+  it('flushes the last sample on pagehide after enqueueing', () => {
+    const { el, unmount } = player()
+    fireEvent.playing(el)
+    nowMs = 2500
     window.dispatchEvent(new Event('pagehide'))
-    expect(trackWatch).toHaveBeenCalledTimes(1)
-    expect(trackWatch).toHaveBeenCalledWith(5, 'feed', 4_000, 7)
-    // The module-level pagehide flush listener (registered on the first
-    // enqueue of the session) has already run by the time this hook's handler
-    // enqueues — the hook must flush explicitly so the sample rides a
-    // sendBeacon out before unload.
-    expect(flushTelemetry).toHaveBeenCalled()
-
-    // Same accumulated value must not be re-sent by React's unmount cleanup
-    // (e.g. bfcache-less unload where both paths run).
     unmount()
     expect(trackWatch).toHaveBeenCalledTimes(1)
+    expect(trackWatch.mock.calls[0][2]).toBe(2500)
+    expect(flush.mock.invocationCallOrder[0]).toBeGreaterThan(trackWatch.mock.invocationCallOrder[0])
   })
-
-  it('does NOT send on pagehide when the unsent delta is < 500ms', () => {
-    const { getByTestId } = render(<Video jokeId={5} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 0.3, 60)
-    fireEvent.timeUpdate(video)
-
-    window.dispatchEvent(new Event('pagehide'))
-    expect(trackWatch).not.toHaveBeenCalled()
+  it('discards pre-consent playback and resets an in-progress sample on account change', () => {
+    eligible = false
+    const { el } = player()
+    fireEvent.playing(el)
+    nowMs = 5000
+    changeSession(true)
+    nowMs = 6000
+    changeSession(true) // same eligibility, different account session
+    nowMs = 8000
+    fireEvent.pause(el)
+    expect(trackWatch.mock.calls.map((call) => call[2])).toEqual([2000])
   })
-
-  it('removes the pagehide listener on unmount', () => {
-    const { getByTestId, unmount } = render(<Video jokeId={5} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 4, 60)
-    fireEvent.timeUpdate(video)
-    unmount() // sends the 4000ms sample via cleanup
-    trackWatch.mockClear()
-
-    setMediaState(video, 20, 60)
-    window.dispatchEvent(new Event('pagehide'))
-    expect(trackWatch).not.toHaveBeenCalled()
-  })
-
-  it('cleans up listeners on unmount (no further sends after teardown)', () => {
-    const { getByTestId, unmount } = render(<Video jokeId={42} />)
-    const video = getByTestId('video') as HTMLVideoElement
-    setMediaState(video, 5, 60)
-    fireEvent.timeUpdate(video)
-    unmount()
-    trackWatch.mockClear()
-
-    // Dispatch further events on the now-unmounted element — must be inert.
-    setMediaState(video, 20, 60)
-    fireEvent.timeUpdate(video)
-    fireEvent.pause(video)
-    expect(trackWatch).not.toHaveBeenCalled()
+  it('omits completion rather than interpreting a seek position as watched coverage', () => {
+    const { el } = player()
+    fireEvent.playing(el)
+    nowMs = 1000
+    el.currentTime = 99
+    fireEvent.pause(el)
+    expect(trackWatch).toHaveBeenCalledWith(42, 'feed', 1000)
   })
 })

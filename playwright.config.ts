@@ -21,6 +21,11 @@ const BACKEND_DIR =
   process.env.E2E_BACKEND_DIR ?? '/Users/narekmeloyan/PycharmProjects/JokesForProject'
 const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? '8011'
 const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? '5274'
+// macOS strips inherited DYLD_* variables when starting /bin/sh. Assign it
+// inside the shell, immediately before Python loads cairosvg's native library.
+const PYTHON = process.platform === 'darwin'
+  ? 'DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python'
+  : '.venv/bin/python'
 
 /** Where the API drops sent emails; specs read verification codes from here. */
 const MAIL_DIR = process.env.E2E_MAIL_DIR ?? path.join(os.tmpdir(), 'jokesfor-e2e-mail')
@@ -52,6 +57,12 @@ const backendEnv = {
   CORS_ALLOWED_ORIGINS: APP_ORIGIN,
   CSRF_TRUSTED_ORIGINS: APP_ORIGIN,
   STRIPE_SECRET_KEY: '',
+  CREATOR_CHECKOUT_ENABLED: 'false',
+  TIPS_ENABLED: 'false',
+  GS_BUCKET_NAME: '',
+  SAFESEARCH_ENABLED: 'false',
+  RESEND_API_KEY: '',
+  SENTRY_DSN: '',
   // The suite drives dozens of real signups and reads from ONE IP, which trips
   // the production limits within a few specs. Raised only for this process;
   // the limits themselves are covered by the backend's own throttle tests.
@@ -103,10 +114,10 @@ export default defineConfig({
       // migrate + seed BEFORE serving — a suite must never run against a stale
       // schema or an empty catalogue.
       command:
-        `.venv/bin/python manage.py migrate --noinput ` +
-        `&& .venv/bin/python manage.py seed_achievements ` +
-        `&& .venv/bin/python manage.py seed_e2e ` +
-        `&& .venv/bin/python manage.py runserver ${BACKEND_PORT} --noreload`,
+        `${PYTHON} manage.py migrate --noinput ` +
+        `&& ${PYTHON} manage.py seed_achievements ` +
+        `&& ${PYTHON} manage.py seed_e2e ` +
+        `&& ${PYTHON} manage.py runserver ${BACKEND_PORT} --noreload`,
       cwd: BACKEND_DIR,
       url: `${API_ORIGIN}/livez`,
       // Never reuse: a server left over from an earlier run may have been

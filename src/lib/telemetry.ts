@@ -9,7 +9,7 @@
  *   - MUST be fire-and-forget. It MUST NEVER throw, block, or break the UI.
  *     Every public entry point is wrapped; failures are silent.
  *   - Only enqueue/flush when the gate is open:
- *       authenticated  AND  consent granted  AND  verified adult
+ *       authenticated AND browser consent AND account opt-in AND verified adult
  *       AND real-API mode (VITE_API_URL set and not USE_MOCKS).
  *   - Batch size ≤ 50 (backend cap). We flush at ~10, and on page-hide.
  *   - Impressions are deduped server-side per user/joke/day, but the client
@@ -20,9 +20,7 @@
  * the page-hide flush works without a mounted component.
  */
 import { getAccessToken } from './axios'
-import { readConsent } from '@/features/consent/storage'
-import { isAdult } from '@/features/consent/age'
-import { useAuthStore } from '@/features/auth/store'
+import { getTelemetrySession, subscribeTelemetrySession } from '@/features/telemetry/session'
 
 export type TelemetryType = 'impression' | 'reveal' | 'dwell' | 'watch'
 export type TelemetrySource = 'feed' | 'explore' | 'search' | 'daily' | 'pack' | 'other'
@@ -51,9 +49,6 @@ const WATCH_MAX_MS = 600_000
 const FLUSH_AT = 10
 const MAX_BATCH = 50
 
-const USE_MOCKS =
-  !import.meta.env.VITE_API_URL || import.meta.env.VITE_USE_MOCKS === 'true'
-
 // Resolve the events endpoint against the same base URL axios uses, so a
 // sendBeacon (which can't use the axios instance) hits the right host.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
@@ -66,26 +61,15 @@ const queue: TelemetryEvent[] = []
 const seen = new Set<string>()
 let listenersBound = false
 
-/**
- * The gate. Telemetry only flows when EVERY condition holds. Defensive: any
- * exception (e.g. storage access throwing) collapses to `false` — no tracking.
- */
+// A synchronous transition clears both queued samples and dedup. In particular,
+// decline→accept and logout→login cannot resurrect events from the old session.
+subscribeTelemetrySession(() => {
+  queue.length = 0
+  seen.clear()
+})
+
 function gateOpen(): boolean {
-  try {
-    if (USE_MOCKS) return false
-    if (!getAccessToken()) return false
-
-    const { isAuthenticated, user } = useAuthStore.getState()
-    if (!isAuthenticated) return false
-    if (!isAdult(user?.date_of_birth)) return false
-
-    const consent = readConsent()
-    if (!consent?.analytics) return false
-
-    return true
-  } catch {
-    return false
-  }
+  try { return getTelemetrySession().eligible } catch { return false }
 }
 
 function dedupKey(e: TelemetryEvent): string {
