@@ -46,6 +46,7 @@ vi.mock('@/pages', () => ({
   CreatorHubPage: () => <div data-testid="page-creator-hub" />,
   CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
   CreatorContentPage: () => <div data-testid="page-creator-content" />,
+  CreatorLibraryPage: () => <div data-testid="page-creator-library" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,
@@ -118,6 +119,11 @@ describe('create routes', () => {
   it('/create/content renders CreatorContentPage before the draft wildcard', async () => {
     renderAt('/create/content')
     expect(await screen.findByTestId('page-creator-content')).toBeInTheDocument()
+  })
+
+  it('/create/library renders CreatorLibraryPage before the draft wildcard', async () => {
+    renderAt('/create/library')
+    expect(await screen.findByTestId('page-creator-library')).toBeInTheDocument()
   })
 
   it('/create/new renders FormatPickerPage', async () => {

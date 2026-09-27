@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ── Mocks for the gate's dependencies ──────────────────────────────────────
-const authState = { isAuthenticated: true, user: { pk: 1, date_of_birth: '1990-01-01' } as { pk: number; date_of_birth?: string | null } }
+const authState = { isAuthenticated: true, get accessToken() { return token }, user: { pk: 1, date_of_birth: '1990-01-01' } as { pk: number; date_of_birth?: string | null } }
 vi.mock('@/features/auth/store', () => ({
   useAuthStore: { getState: () => authState, subscribe: () => () => {} },
 }))
@@ -168,7 +168,7 @@ describe('telemetry buffering + dedup', () => {
     expect(sent).toHaveBeenCalledTimes(1)
     const payload = JSON.parse(bodies[0])
     expect(payload.events).toHaveLength(1)
-    expect(payload.events[0]).toEqual({ joke: 7, type: 'impression', source: 'feed' })
+    expect(payload.events[0]).toMatchObject({ joke: 7, type: 'impression', source: 'feed' })
   })
 
   it('treats impression and reveal of the same joke as distinct events', async () => {
@@ -232,7 +232,7 @@ describe('trackDwell helper (Phase 2)', () => {
     t.trackDwell(7, 'feed', 3_200, 64)
     t.flush()
     const payload = JSON.parse(bodies[0])
-    expect(payload.events[0]).toEqual({
+    expect(payload.events[0]).toMatchObject({
       joke: 7,
       type: 'dwell',
       source: 'feed',
@@ -247,7 +247,7 @@ describe('trackDwell helper (Phase 2)', () => {
     t.trackDwell(7, 'daily', 1_500)
     t.flush()
     const payload = JSON.parse(bodies[0])
-    expect(payload.events[0]).toEqual({ joke: 7, type: 'dwell', source: 'daily', value: 1_500 })
+    expect(payload.events[0]).toMatchObject({ joke: 7, type: 'dwell', source: 'daily', value: 1_500 })
     expect('scroll_pct' in payload.events[0]).toBe(false)
   })
 
@@ -308,7 +308,7 @@ describe('trackWatch helper (Phase 3)', () => {
     t.trackWatch(7, 'feed', 5_200, 9)
     t.flush()
     const payload = JSON.parse(bodies[0])
-    expect(payload.events[0]).toEqual({
+    expect(payload.events[0]).toMatchObject({
       joke: 7,
       type: 'watch',
       source: 'feed',
@@ -323,7 +323,7 @@ describe('trackWatch helper (Phase 3)', () => {
     t.trackWatch(7, 'daily', 3_000)
     t.flush()
     const payload = JSON.parse(bodies[0])
-    expect(payload.events[0]).toEqual({ joke: 7, type: 'watch', source: 'daily', watch_ms: 3_000 })
+    expect(payload.events[0]).toMatchObject({ joke: 7, type: 'watch', source: 'daily', watch_ms: 3_000 })
     expect('watch_pct' in payload.events[0]).toBe(false)
   })
 

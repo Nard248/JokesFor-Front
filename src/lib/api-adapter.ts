@@ -724,15 +724,20 @@ function fromDTO(dto: PreferencesDTO): UserPreferences {
   }
 }
 
+export interface PreferencesTransport {
+  get: () => Promise<PreferencesDTO>
+  update: (data: Partial<PreferencesDTO>) => Promise<PreferencesDTO>
+}
+
 export const preferencesAdapter = {
-  get: (): Promise<UserPreferences> =>
+  get: (transport?: PreferencesTransport): Promise<UserPreferences> =>
     USE_REAL_PREFERENCES
-      ? preferencesApi.get().then((r) => fromDTO(r.data))
+      ? (transport ? transport.get() : preferencesApi.get().then((r) => r.data)).then(fromDTO)
       : mockPreferencesApi.get(),
 
-  update: (data: Partial<UserPreferences>): Promise<UserPreferences> =>
+  update: (data: Partial<UserPreferences>, transport?: PreferencesTransport): Promise<UserPreferences> =>
     USE_REAL_PREFERENCES
-      ? preferencesApi.update(toDTO(data)).then((r) => fromDTO(r.data))
+      ? (transport ? transport.update(toDTO(data)) : preferencesApi.update(toDTO(data)).then((r) => r.data)).then(fromDTO)
       : mockPreferencesApi.update(data),
 }
 

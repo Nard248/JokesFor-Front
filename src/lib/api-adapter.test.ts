@@ -186,6 +186,29 @@ describe('preferencesAdapter (real path via USE_MOCKS=false)', () => {
     expect(out.humorTypes).toEqual(['dad'])
     expect(out.theme).toBe('dark')
   })
+  it('uses the account-bound transport for reads and mapped writes when supplied', async () => {
+    const transport = {
+      get: vi.fn().mockResolvedValue({ privacy: { share_analytics: true }, theme: 'dark' }),
+      update: vi.fn().mockResolvedValue({ privacy: { share_analytics: false }, theme: 'light' }),
+    }
+    const { preferencesAdapter } = await loadAdapterReal()
+    expect((await preferencesAdapter.get(transport)).privacy.shareAnalytics).toBe(true)
+    const updated = await preferencesAdapter.update({
+      privacy: { shareAnalytics: false, publicProfile: true, showActivity: false },
+    }, transport)
+    expect(updated.privacy.shareAnalytics).toBe(false)
+    expect(transport.update).toHaveBeenCalledWith(expect.objectContaining({
+      privacy: { share_analytics: false, public_profile: true, show_activity: false },
+    }))
+    expect(realApi.preferencesApi.get).not.toHaveBeenCalled()
+    expect(realApi.preferencesApi.update).not.toHaveBeenCalled()
+  })
+  it('preserves the mock flag instead of dispatching the injected transport', async () => {
+    const transport = { get: vi.fn(), update: vi.fn() }
+    const { preferencesAdapter } = await loadAdapterMock()
+    await preferencesAdapter.get(transport)
+    expect(transport.get).not.toHaveBeenCalled()
+  })
 })
 
 describe('default mock path', () => {

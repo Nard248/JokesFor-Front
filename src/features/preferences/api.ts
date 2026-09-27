@@ -1,28 +1,49 @@
 import { useEffect } from 'react'
-import { useAuthStore } from '@/features/auth/store'
-import { setAccountAnalyticsPreference, withdrawAccountAnalytics, isAccountAnalyticsWithdrawn } from '@/features/telemetry/session'
 import { useQuery, useMutation, useQueryClient, type MutateOptions } from '@tanstack/react-query'
-import { preferencesAdapter } from '@/lib/api-adapter'
+import {
+  setAccountAnalyticsPreference, withdrawAccountAnalytics, isAccountAnalyticsWithdrawn,
+  getAccountAnalyticsWithdrawalRevision,
+} from '@/features/telemetry/session'
+import { preferencesAdapter, type PreferencesTransport } from '@/lib/api-adapter'
+import {
+  accountRequest, assertAccountIntent, captureAccountIntent, isAccountIntentCurrent,
+  useAccountIdentity, type AccountIntent,
+} from '@/lib/account-request'
 import type { UserPreferences } from '@/lib/mock-data'
 
 export const preferencesKeys = {
   all: ['preferences'] as const,
   user: (owner: number | undefined) => ['preferences', owner] as const,
+  session: (owner: number | undefined, revision: number) => ['preferences', owner, revision] as const,
+}
+
+function transport(intent: AccountIntent, signal?: AbortSignal): PreferencesTransport {
+  return {
+    get: () => accountRequest(intent, 'GET', '/users/me/preferences/', undefined, signal),
+    update: (data) => accountRequest(intent, 'PATCH', '/users/me/preferences/', data),
+  }
 }
 
 export function usePreferences() {
-  const owner = useAuthStore((state) => state.isAuthenticated ? state.user?.pk : undefined)
+  const { owner, revision } = useAccountIdentity()
   const query = useQuery({
-    queryKey: preferencesKeys.user(owner),
-    queryFn: () => preferencesAdapter.get(),
+    queryKey: preferencesKeys.session(owner, revision),
+    queryFn: async ({ signal }) => {
+      const intent = { ...captureAccountIntent(), owner, revision }
+      assertAccountIntent(intent)
+      const data = await preferencesAdapter.get(transport(intent, signal))
+      assertAccountIntent(intent)
+      return data
+    },
     enabled: owner !== undefined,
     staleTime: 1000 * 60 * 10,
+    retry: false,
   })
   useEffect(() => {
-    if (owner !== undefined && query.data) {
+    if (owner !== undefined && query.data && isAccountIntentCurrent({ owner, revision, token: null })) {
       setAccountAnalyticsPreference(owner, query.data.privacy.shareAnalytics)
     }
-  }, [owner, query.data])
+  }, [owner, revision, query.data])
   return {
     ...query,
     data: query.data && isAccountAnalyticsWithdrawn(owner)
@@ -31,26 +52,38 @@ export function usePreferences() {
   }
 }
 
-type PreferenceIntent = { owner: number | undefined; data: Partial<UserPreferences> }
+type PreferenceIntent = {
+  account: AccountIntent
+  data: Partial<UserPreferences>
+  withdrawalRevision: string | null
+}
 type MutationContext = { owner: number | undefined }
 type PreferenceOptions = MutateOptions<UserPreferences, Error, Partial<UserPreferences>, MutationContext>
+
+function capturePreferenceIntent(data: Partial<UserPreferences>): PreferenceIntent {
+  const account = captureAccountIntent()
+  return {
+    account, data,
+    withdrawalRevision: account.owner === undefined ? null : getAccountAnalyticsWithdrawalRevision(account.owner),
+  }
+}
 
 export function useUpdatePreferences() {
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: ({ owner, data }: PreferenceIntent) => {
-      const current = useAuthStore.getState()
-      // cancelQueries is asynchronous: a different reader may have signed in
-      // since the click. Never send this account's intent with their credentials.
-      if (owner === undefined || !current.isAuthenticated || current.user?.pk !== owner) {
-        throw new Error('Your account changed. Please retry this setting.')
-      }
-      return preferencesAdapter.update(data)
+    mutationFn: async ({ account, data }: PreferenceIntent) => {
+      assertAccountIntent(account)
+      const updated = await preferencesAdapter.update(data, transport(account))
+      assertAccountIntent(account)
+      return updated
     },
-    onMutate: async ({ owner, data }: PreferenceIntent) => {
+    retry: false,
+    onMutate: async ({ account, data }: PreferenceIntent) => {
+      assertAccountIntent(account)
+      const { owner, revision } = account
       if (owner !== undefined && data.privacy?.shareAnalytics === false) {
         withdrawAccountAnalytics(owner)
-        queryClient.setQueryData<UserPreferences>(preferencesKeys.user(owner), (previous) => previous
+        queryClient.setQueryData<UserPreferences>(preferencesKeys.session(owner, revision), (previous) => previous
           ? { ...previous, privacy: { ...previous.privacy, shareAnalytics: false } }
           : previous)
       }
@@ -58,26 +91,34 @@ export function useUpdatePreferences() {
       return { owner }
     },
     onSuccess: (updated, intent) => {
-      const owner = intent.owner
+      if (!isAccountIntentCurrent(intent.account)) return
+      const { owner, revision } = intent.account
       if (owner === undefined) return
-      queryClient.setQueryData(preferencesKeys.user(owner), updated)
-      setAccountAnalyticsPreference(owner, updated.privacy.shareAnalytics, intent.data.privacy?.shareAnalytics === true)
-      queryClient.invalidateQueries({ queryKey: ['daily-joke', 'today'] })
+      queryClient.setQueryData(preferencesKeys.session(owner, revision), updated)
+      setAccountAnalyticsPreference(owner, updated.privacy.shareAnalytics,
+        intent.data.privacy?.shareAnalytics === true, intent.withdrawalRevision)
+      void queryClient.invalidateQueries({ queryKey: ['daily-joke', 'today'] })
     },
   })
   const bindOptions = (options?: PreferenceOptions): MutateOptions<UserPreferences, Error, PreferenceIntent, MutationContext> => ({
-    onSuccess: (data, intent, result, context) => options?.onSuccess?.(data, intent.data, result, context),
-    onError: (error, intent, result, context) => options?.onError?.(error, intent.data, result, context),
-    onSettled: (data, error, intent, result, context) => options?.onSettled?.(data, error, intent.data, result, context),
+    onSuccess: (data, intent, result, context) => {
+      if (isAccountIntentCurrent(intent.account)) options?.onSuccess?.(data, intent.data, result, context)
+    },
+    onError: (error, intent, result, context) => {
+      if (isAccountIntentCurrent(intent.account)) options?.onError?.(error, intent.data, result, context)
+    },
+    onSettled: (data, error, intent, result, context) => {
+      if (isAccountIntentCurrent(intent.account)) options?.onSettled?.(data, error, intent.data, result, context)
+    },
   })
   return {
     ...mutation,
     variables: mutation.variables?.data,
     mutate: (data: Partial<UserPreferences>, options?: PreferenceOptions) => {
-      mutation.mutate({ owner: useAuthStore.getState().user?.pk, data }, bindOptions(options))
+      mutation.mutate(capturePreferenceIntent(data), bindOptions(options))
     },
     mutateAsync: (data: Partial<UserPreferences>, options?: PreferenceOptions) => {
-      return mutation.mutateAsync({ owner: useAuthStore.getState().user?.pk, data }, bindOptions(options))
+      return mutation.mutateAsync(capturePreferenceIntent(data), bindOptions(options))
     },
   }
 }

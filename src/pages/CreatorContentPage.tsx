@@ -41,6 +41,7 @@ function ContentCard({ row }: { row: CreatorContentRow }) {
         {row.metadata_missing.length > 0 && <p style={{ color: '#71717A', margin: '0 0 8px' }}>Missing: {row.metadata_missing.join(', ')}</p>}
         <p style={{ background: '#F7F0FF', borderRadius: 10, padding: 12, color: '#4B327A', margin: '12px 0 0' }}>{row.recommendation.detail}</p>
         <p style={{ color: '#71717A', marginBottom: 0 }}>{row.recommendation.sample_size.toLocaleString()} recorded views in this window. Metadata completeness is not a quality score.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 18 }}><Link to={`/create/library?joke=${row.id}`} style={linkStyle}>Private note</Link><Link to={`/create/library?joke=${row.id}&tab=review`} style={linkStyle}>Review metadata</Link></div>
       </div>
     </article>
   )
@@ -88,6 +89,7 @@ export function CreatorContentPage() {
           <nav aria-label="Creator navigation" style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 24 }}>
             <Link to="/create" style={linkStyle}>Your jokes</Link>
             <Link to="/create/insights" style={linkStyle}>Basic insights</Link>
+            <Link to="/create/library" style={linkStyle}>Working library</Link>
           </nav>
           <header style={{ marginBottom: 28 }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem, 5vw, 2.75rem)', letterSpacing: '-0.02em', margin: '0 0 12px' }}>Content workbench</h1>

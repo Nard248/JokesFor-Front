@@ -19,7 +19,7 @@
  * detail pages, daily hero) can call the helpers without prop-drilling, and so
  * the page-hide flush works without a mounted component.
  */
-import { getAccessToken } from './axios'
+import { useAuthStore } from '@/features/auth/store'
 import { getTelemetrySession, subscribeTelemetrySession } from '@/features/telemetry/session'
 
 export type TelemetryType = 'impression' | 'reveal' | 'dwell' | 'watch'
@@ -37,6 +37,14 @@ interface TelemetryEvent {
   watch_ms?: number
   /** Watch only: 0-100 max watch-through depth. Optional (omitted when duration is unknown/invalid). */
   watch_pct?: number
+}
+
+interface CapturedEvent extends TelemetryEvent {
+  schema_version: 2
+  event_id: string
+  session_id: string
+  platform: 'web'
+  occurred_at: string
 }
 
 /** Phase-2 dwell tuning. Mirrors the backend contract (ignores <500ms). */
@@ -57,15 +65,17 @@ const ENDPOINT = `${API_URL.replace(/\/$/, '')}/telemetry/events`
 // In-memory queue + per-page-session dedup set. A page-session is the lifetime
 // of this module (i.e. until a full reload), which is exactly the window the
 // brief wants for "one impression per card per page-session".
-const queue: TelemetryEvent[] = []
+const queue: CapturedEvent[] = []
 const seen = new Set<string>()
 let listenersBound = false
+let sessionId: string | null = null
 
 // A synchronous transition clears both queued samples and dedup. In particular,
 // decline→accept and logout→login cannot resurrect events from the old session.
 subscribeTelemetrySession(() => {
   queue.length = 0
   seen.clear()
+  sessionId = null
 })
 
 function gateOpen(): boolean {
@@ -76,10 +86,13 @@ function dedupKey(e: TelemetryEvent): string {
   return `${e.type}:${e.joke}:${e.source}`
 }
 
-function send(events: TelemetryEvent[]): void {
+function send(events: CapturedEvent[]): void {
   if (events.length === 0) return
   const body = JSON.stringify({ events })
-  const token = getAccessToken()
+  // The shared axios refresh token can complete after an account switch. Use
+  // the token stored with this identity and never fall back to cookie auth.
+  const token = useAuthStore.getState().accessToken
+  if (!token) return
 
   try {
     // `fetch` with keepalive — deliberately NOT sendBeacon.
@@ -99,10 +112,10 @@ function send(events: TelemetryEvent[]): void {
     void fetch(ENDPOINT, {
       method: 'POST',
       keepalive: true,
-      credentials: 'include',
+      credentials: 'omit',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       body,
     }).catch(() => { /* fire-and-forget */ })
@@ -152,8 +165,12 @@ function enqueue(event: TelemetryEvent, dedupe = true): void {
       seen.add(key)
     }
 
+    // Capture identity and time once. A delivery must never become a new
+    // observation merely because the transport retries or a token refreshes.
+    const eventId = crypto.randomUUID()
+    sessionId ??= crypto.randomUUID()
     bindPageHideListeners()
-    queue.push(event)
+    queue.push({ ...event, schema_version: 2, event_id: eventId, session_id: sessionId, platform: 'web', occurred_at: new Date().toISOString() })
     if (queue.length >= FLUSH_AT) flush()
   } catch {
     /* never throw */
@@ -239,4 +256,5 @@ export function trackWatch(
 export function __resetTelemetryForTests(): void {
   queue.length = 0
   seen.clear()
+  sessionId = null
 }

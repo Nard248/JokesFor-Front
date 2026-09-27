@@ -16,6 +16,7 @@
 import { expect, test, type Response } from '@playwright/test'
 
 import { createVerifiedPersona, loginThroughUi } from './fixtures/auth'
+import { apiSend } from './fixtures/api'
 
 const CONSENT_KEY = 'jokesfor-consent'
 const TELEMETRY = /\/api\/v1\/telemetry\/events/
@@ -37,15 +38,15 @@ test.describe('telemetry delivery', () => {
     const persona = await createVerifiedPersona('telem')
     await withConsent(page, true)
     await loginThroughUi(page, persona)
+    expect((await apiSend(page, 'PATCH', '/users/me/preferences/', { privacy: { share_analytics: true } })).status).toBe(200)
 
     const responses: Response[] = []
     page.on('response', (res) => {
       if (TELEMETRY.test(res.url())) responses.push(res)
     })
 
-    // A joke view emits a `reveal` immediately on load. Impressions are also
-    // emitted, but only after sustained visibility, so a detail view is the
-    // reliable way to put something in the queue.
+    // A detail view emits an impression after sustained visibility. A reveal
+    // is only captured when the reader actually reveals a hidden punchline.
     const first = await page.evaluate(async (api) => {
       const body = await fetch(`${api}/jokes/`, { credentials: 'include' }).then((r) => r.json())
       return body.results[0].id as number
@@ -70,6 +71,22 @@ test.describe('telemetry delivery', () => {
       `telemetry rejected: ${statuses.join(', ')} — 403 means the credential-less ` +
         'beacon transport is back and every event is being dropped',
     ).toBe(true)
+
+    const delivery = responses[0]
+    const payload = delivery.request().postDataJSON()
+    expect(payload.events.length).toBeGreaterThan(0)
+    for (const event of payload.events) {
+      expect(event).toMatchObject({ schema_version: 2, platform: 'web', event_id: expect.any(String), session_id: expect.any(String), occurred_at: expect.any(String) })
+      expect(Number.isNaN(Date.parse(event.occurred_at))).toBe(false)
+      expect(event.user_id).toBeUndefined()
+    }
+    expect((await delivery.json()).accepted).toBeGreaterThan(0)
+    const retry = await apiSend<{ accepted: number; duplicates: number }>(page, 'POST', '/telemetry/events', payload)
+    expect(retry.status).toBe(202)
+    expect(retry.body).toMatchObject({ accepted: 0, duplicates: payload.events.length })
+    expect((await apiSend(page, 'PATCH', '/users/me/preferences/', { privacy: { share_analytics: false } })).status).toBe(200)
+    const afterWithdrawal = await apiSend<{ accepted: number; rejected: number }>(page, 'POST', '/telemetry/events', payload)
+    expect(afterWithdrawal.body).toMatchObject({ accepted: 0, rejected: payload.events.length })
   })
 
   test('declining analytics sends nothing at all', async ({ page }) => {

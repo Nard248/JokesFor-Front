@@ -776,6 +776,7 @@ export function CreatorInsightsPage() {
             </h1>
 
             <Button variant="outline" onClick={() => navigate('/create/content')} style={{ minHeight: 44 }}>Content workbench</Button>
+            <Button variant="outline" onClick={() => navigate('/create/library')} style={{ minHeight: 44 }}>Working library</Button>
             {/* Period selector */}
             <div style={{ display: 'flex', gap: 4 }}>
               {PERIODS.map(({ id, label }) => (

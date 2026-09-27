@@ -91,6 +91,7 @@ export function CreatorHubPage() {
             </h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <Button variant="outline" size="sm" onClick={() => navigate('/create/content')} style={{ minHeight: 44 }}>Content workbench</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/create/library')} style={{ minHeight: 44 }}>Working library</Button>
               <Button
                 variant="outline"
                 size="sm"
