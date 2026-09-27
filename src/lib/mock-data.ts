@@ -680,39 +680,16 @@ export const mockBillingPlans: BillingPlan[] = [
   {
     slug: 'free',
     name: 'Free',
-    description: 'The basics, forever free.',
+    description: 'Read, publish, and explore basic creator insights for free.',
     interval: null,
     amount_cents: 0,
     currency: 'usd',
     amount_display: 'Free',
-    features: { creator_analytics: false, daily_joke_preview: false, mature_content_addon: false },
-    limits: { mystery_box_rolls_per_day: 1, submissions_per_day: 2, daily_jokes_per_day: 3, daily_joke_history_days: 7 },
+    features: { creator_analytics: true, daily_joke_preview: true, mature_content_addon: false },
+    limits: { mystery_box_rolls_per_day: null, submissions_per_day: null, daily_jokes_per_day: null, daily_joke_history_days: null },
     sort_order: 0,
   },
-  {
-    slug: 'supporter',
-    name: 'Supporter',
-    description: 'More jokes, more laughs.',
-    interval: 'month',
-    amount_cents: 499,
-    currency: 'usd',
-    amount_display: '$4.99 / mo',
-    features: { creator_analytics: false, daily_joke_preview: true, mature_content_addon: true },
-    limits: { mystery_box_rolls_per_day: 5, submissions_per_day: 10, daily_jokes_per_day: 10, daily_joke_history_days: 30 },
-    sort_order: 1,
-  },
-  {
-    slug: 'creator_pro',
-    name: 'Creator Pro',
-    description: 'For comedians who mean business.',
-    interval: 'month',
-    amount_cents: 1299,
-    currency: 'usd',
-    amount_display: '$12.99 / mo',
-    features: { creator_analytics: true, daily_joke_preview: true, mature_content_addon: true },
-    limits: { mystery_box_rolls_per_day: null, submissions_per_day: null, daily_jokes_per_day: null, daily_joke_history_days: null },
-    sort_order: 2,
-  },
+
 ]
 
 export const mockMySubscription: MySubscription = {
@@ -727,15 +704,15 @@ export const mockMySubscription: MySubscription = {
 export const mockBillingEntitlements: BillingEntitlements = {
   plan: 'free',
   features: {
-    creator_analytics: false,
-    daily_joke_preview: false,
+    creator_analytics: true,
+    daily_joke_preview: true,
     mature_content_addon: false,
   },
   limits: {
-    mystery_box_rolls_per_day: 1,
-    submissions_per_day: 2,
-    daily_jokes_per_day: 3,
-    daily_joke_history_days: 7,
+    mystery_box_rolls_per_day: null,
+    submissions_per_day: null,
+    daily_jokes_per_day: null,
+    daily_joke_history_days: null,
   },
 }
 

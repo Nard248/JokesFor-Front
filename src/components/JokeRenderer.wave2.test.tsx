@@ -126,7 +126,7 @@ describe('video joke rendering', () => {
     render(<JokeRenderer payload={payload} locked />)
     expect(screen.queryAllByRole('img')).toHaveLength(0)
     expect(screen.queryByTestId('video-player')).not.toBeInTheDocument()
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
     expect(screen.getByText('the caption')).toBeInTheDocument()
   })
 })
@@ -162,7 +162,7 @@ describe('audio joke rendering', () => {
     const placeholder = screen.getByTestId('locked-media-placeholder')
     expect(placeholder.style.height).toBe('88px')
     expect(screen.queryByTestId('audio-player')).not.toBeInTheDocument()
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
   })
 })
 

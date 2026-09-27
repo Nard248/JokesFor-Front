@@ -208,12 +208,12 @@ export function SettingsPage() {
           </SettingsSection>
 
           {/* Billing */}
-          <SettingsSection icon={<CreditCard size={18} />} title="Billing &amp; Plans" subtitle="Manage your subscription and entitlements.">
+          <SettingsSection icon={<CreditCard size={18} />} title="Billing &amp; Plans" subtitle="Manage creator tools and existing subscriptions.">
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>Subscription</div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                  View plans, upgrade, or manage your billing.
+                  Reading and basic creator tools are free. Manage an existing subscription here.
                 </div>
               </div>
               <Link

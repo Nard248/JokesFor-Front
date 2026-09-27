@@ -4,9 +4,8 @@
  *
  * Two rules this encodes:
  *
- * 1. **Set up through the API, assert through the UI — or vice versa.** Driving
- *    twelve clicks to reach a paywall state is slow and brittle; driving it
- *    through the API and then asserting the UI is fast and precise.
+ * 1. **Set up through the API, assert through the UI — or vice versa.** Use the API
+ *    for repeatable setup and assert the resulting behavior in the browser.
  *
  * 2. **Assert on payloads, not just pixels.** The paywall leak that reached
  *    production rendered a correct redaction on screen while shipping the
@@ -104,36 +103,4 @@ export async function feedIds(page: Page, pages = 3): Promise<number[]> {
 
 export async function dailyReads(page: Page): Promise<DailyReads> {
   return apiGet<DailyReads>(page, '/jokes/daily-reads/')
-}
-
-/**
- * Burn the reader's free allowance by opening distinct jokes, which is what
- * actually consumes it: the authenticated ledger is the JokeView table, written
- * on joke RETRIEVE. (`POST /jokes/{id}/reveal/` is the ANONYMOUS ledger and a
- * 204 no-op when authenticated — an easy and costly thing to get backwards.)
- *
- * Returns the ids consumed, so a spec can then ask for one it has NOT read.
- */
-export async function exhaustFreeReads(page: Page): Promise<number[]> {
-  const ids = await feedIds(page, 3)
-  const consumed: number[] = []
-  for (const id of ids) {
-    const state = await dailyReads(page)
-    if (state.over) break
-    await apiGet(page, `/jokes/${id}/`)
-    consumed.push(id)
-  }
-  return consumed
-}
-
-/** An id the reader has definitely NOT opened today. */
-export async function unreadJokeId(page: Page, consumed: number[]): Promise<number> {
-  const ids = await feedIds(page, 4)
-  const fresh = ids.find((id) => !consumed.includes(id))
-  if (fresh === undefined) {
-    throw new Error(
-      'No unread joke left — seed more content with `manage.py seed_e2e`.',
-    )
-  }
-  return fresh
 }

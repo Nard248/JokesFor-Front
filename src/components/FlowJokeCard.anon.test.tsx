@@ -24,24 +24,6 @@ vi.mock('@/lib/api', () => ({
   revealApi: { post: (jokeId: number) => revealApiPostSpy(jokeId) },
 }))
 
-// ── Daily-reads enforcement (controlled per test) ─────────────────────────────
-const canRevealMock = vi.fn<(id: number) => boolean>(() => true)
-const registerRevealMock = vi.fn()
-vi.mock('@/features/daily-reads', () => ({
-  useDailyReads: () => ({
-    canReveal: canRevealMock,
-    registerReveal: registerRevealMock,
-    hasRevealed: () => false,
-    over: false,
-    active: true,
-    remaining: 0,
-    limit: 10,
-    used: 10,
-    resetAt: null,
-  }),
-  dailyReadsKeys: { all: ['daily-reads'] },
-}))
-
 // ── Reveal telemetry ──────────────────────────────────────────────────────────
 const trackRevealSpy = vi.fn()
 vi.mock('@/lib/telemetry', () => ({
@@ -92,6 +74,7 @@ const audioJoke: FlowJokeData = {
 
 function renderCard(joke: FlowJokeData) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  qc.setQueryData(['daily-reads'], { limit: 10, used: 10, remaining: 0, over: true })
   return render(
     <QueryClientProvider client={qc}>
       <FlowJokeCard joke={joke} source="feed" />
@@ -101,51 +84,29 @@ function renderCard(joke: FlowJokeData) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  canRevealMock.mockReturnValue(true)
   isAuthenticatedMock.mockReturnValue(false)
 })
 
-describe('FlowJokeCard — anonymous paywall', () => {
-  it('anon + unlocked setup joke: tapping the punchline calls revealApi.post and does NOT track a reveal', () => {
+describe('FlowJokeCard — free anonymous reading', () => {
+  it('reveals without sending an anonymous quota-consumption request', () => {
     renderCard(setupJoke)
     fireEvent.click(screen.getByText('Why did the scarecrow win an award?'))
-    expect(registerRevealMock).toHaveBeenCalledWith(42)
-    expect(revealApiPostSpy).toHaveBeenCalledWith(42)
+    expect(screen.getByText('He was outstanding in his field.')).toBeInTheDocument()
+    expect(revealApiPostSpy).not.toHaveBeenCalled()
     expect(trackRevealSpy).not.toHaveBeenCalled()
   })
 
-  it('anon + locked joke: CTA reads "Sign up free" and clicking it navigates to /register', () => {
+  it.each([false, true])('withheld content has no purchase or registration CTA (authenticated=%s)', (authenticated) => {
+    isAuthenticatedMock.mockReturnValue(authenticated)
     renderCard({ ...setupJoke, isLocked: true })
-    const cta = screen.getByTestId('unlock-supporter-cta')
-    expect(cta).toHaveTextContent('Sign up free')
-    fireEvent.click(cta)
-    expect(navigateSpy).toHaveBeenCalledWith('/register')
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unlock|sign up/i })).toBeNull()
+    expect(navigateSpy).not.toHaveBeenCalled()
   })
 
-  it('authed + locked joke: CTA reads "Unlock with Supporter" and navigates to /settings/billing (regression)', () => {
-    isAuthenticatedMock.mockReturnValue(true)
-    renderCard({ ...setupJoke, isLocked: true })
-    const cta = screen.getByTestId('unlock-supporter-cta')
-    expect(cta).toHaveTextContent('Unlock with Supporter')
-    fireEvent.click(cta)
-    expect(navigateSpy).toHaveBeenCalledWith('/settings/billing')
-  })
-
-  it('image-format joke is reveal-gated: over cap + fresh image joke renders the locked CTA', () => {
-    canRevealMock.mockReturnValue(false)
-    renderCard(imageJoke)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-  })
-
-  it('video-format joke is reveal-gated: over cap + fresh video joke renders the locked CTA', () => {
-    canRevealMock.mockReturnValue(false)
-    renderCard(videoJoke)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-  })
-
-  it('audio-format joke is reveal-gated: over cap + fresh audio joke renders the locked CTA', () => {
-    canRevealMock.mockReturnValue(false)
-    renderCard(audioJoke)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+  it.each([imageJoke, videoJoke, audioJoke])('allows free $fmt reveals despite an exhausted legacy quota', (joke) => {
+    renderCard(joke)
+    expect(screen.getByText(/tap to reveal/i)).toBeInTheDocument()
+    expect(screen.queryByText(/unlock with supporter/i)).toBeNull()
   })
 })

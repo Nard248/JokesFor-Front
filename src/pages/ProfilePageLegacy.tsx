@@ -45,7 +45,7 @@ export function ProfilePageLegacy() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="font-display font-bold text-2xl text-[#2E2F2F]">{profile.name}</h1>
-                <Badge variant="default" size="sm">Premium</Badge>
+                <Badge variant="default" size="sm">Community member</Badge>
               </div>
               <p className="text-sm text-[#6B7280] mb-1">{profile.username}</p>
               <p className="text-sm text-[#6B7280] mb-3">Member since {new Date(profile.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>

@@ -179,16 +179,9 @@ export interface Joke {
   text: string
   setup: string | null
   punchline: string | null
-  /**
-   * Freemium paywall (backend contract): true when the backend has STRIPPED the
-   * payoff for this joke because the reader is over their free daily-reads cap.
-   * When true, `punchline`/`lines` are null (and `text` is null for text-only
-   * formats); `setup` still carries the free teaser. Absent/false for paid users,
-   * anonymous readers, already-read-today jokes, and the daily editorial joke.
-   *
-   * GRACEFUL DEGRADATION: when this field is missing entirely (backend not yet
-   * deployed), treat the joke as UNLOCKED — the paywall stays invisible.
-   */
+  /** Compatibility flag for server-withheld content. Current free-reading
+   * responses return false. If true, never render missing/withheld payoff
+   * fields or media; purchasing a subscription is not an access workaround. */
   is_locked?: boolean
   /** P10: array of dialogue lines for `format=knock-knock` jokes; null otherwise.
    * Optional in the type since legacy mock fixtures pre-date this field. */
@@ -268,17 +261,14 @@ export const dailyJokeApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Freemium daily-reads cap (paywall)
+// Deprecated daily-read quota compatibility
 //
-// GET /jokes/daily-reads/ (auth) reports how many distinct joke reveals the
-// user has left today. Free users get a finite `limit`; paid/unlimited users
-// get `limit: null` (no cap). Resets at midnight UTC (`reset_at`).
-//
-// GRACEFUL DEGRADATION: if this endpoint 404s / errors (backend not deployed
-// yet), the caller treats it as "no cap" and the paywall stays inactive.
+// GET /jokes/daily-reads/ is retained for older clients; current servers return an
+// unlimited state for every reader. New reading surfaces do not consume it.
 // ─────────────────────────────────────────────────────────────────────────
+
 export interface DailyReadsStatus {
-  /** Free daily reveal cap, or null for paid/unlimited (no cap). */
+  /** Deprecated quota; current servers return null for everyone. */
   limit: number | null
   /** Distinct reveals used today, or null for unlimited. */
   used: number | null
@@ -295,12 +285,10 @@ export const dailyReadsApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Reveal — anon paywall consumption.
+// Deprecated reveal compatibility endpoint — new clients do not consume a quota.
 //
-// POST /jokes/{id}/reveal/: an anonymous reader hitting this endpoint spends
-// one soft daily-reveal credit. Authenticated readers get 204 (no cap here —
-// their cap, if any, is enforced via dailyReadsApi instead); anonymous readers
-// get 200 with the updated DailyReadsStatus-shaped counters.
+// POST /jokes/{id}/reveal/ returns an unlimited compatibility response for
+// anonymous readers and 204 for authenticated readers. It does not spend reads.
 // ─────────────────────────────────────────────────────────────────────────
 export const revealApi = {
   post: (jokeId: number) => api.post<DailyReadsStatus>(`/jokes/${jokeId}/reveal/`),
@@ -601,18 +589,18 @@ export const vibesApi = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// P3 — Mystery Box (variable reward, daily-capped)
+// Mystery Box — free discovery; null quotas mean unlimited
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface MysteryBoxStatus {
   rolls_used_today: number
-  rolls_remaining_today: number
-  max_per_day: number
+  rolls_remaining_today: number | null
+  max_per_day: number | null
 }
 
 export interface MysteryBoxRollResponse {
   joke: Joke
-  rolls_remaining_today: number
+  rolls_remaining_today: number | null
   /** Optional: which vibe the joke was pulled from (null if global pool fallback). */
   source_vibe: { slug: string; label: string } | null
 }

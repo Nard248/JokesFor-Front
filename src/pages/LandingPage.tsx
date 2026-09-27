@@ -365,9 +365,9 @@ function WhyDifferent() {
 // ──────────────────────────────────────────────────────────────────────────
 
 const CREATOR_PERKS = [
-  'Publish in any of the six formats',
-  'See exactly what lands — analytics built for comedians',
-  'Grow real fans, not vanity followers',
+  'Publish text, images, audio, and video',
+  'Explore basic insights on your published jokes',
+  'Reading and basic publishing are free',
 ]
 
 function CreatorBand() {
@@ -383,8 +383,8 @@ function CreatorBand() {
               Funny? Turn it into a <em className="wink" style={{ color: '#CAFD00' }}>following.</em>
             </h2>
             <p className="lp-band-p">
-              Publish in any format, grow real fans, and see exactly what lands — analytics
-              built for comedians, not influencers.
+              Publish your jokes and explore how readers respond. Basic publishing and insights are free;
+              additional creator tools are the focus of our paid offering.
             </p>
             <div className="lp-cta-row">
               <Link to="/register" className="lp-btn lp-btn-lime">
