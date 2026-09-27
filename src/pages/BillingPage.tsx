@@ -23,12 +23,14 @@ const USE_MOCKS =
 // ────────────────────────────────────────────────────────────────────────────
 const FEATURE_LABELS: Record<string, string> = {
   creator_analytics: 'Basic creator insights · Included',
+  creator_content_explorer: 'Content workbench',
+  creator_exports: 'Content CSV exports',
 }
 
 // Compatibility keys are not paid product benefits. Keep safety and service
 // rate limits separate from the creator-tool subscription catalog.
 const INCLUDED_FEATURES = new Set(['daily_joke_preview', 'mature_content_addon'])
-const SERVICE_LIMITS = new Set(['mystery_box_rolls_per_day', 'submissions_per_day', 'daily_jokes_per_day', 'daily_joke_history_days'])
+const SERVICE_LIMITS = new Set(['free_joke_reads_per_day', 'mystery_box_rolls_per_day', 'submissions_per_day', 'daily_jokes_per_day', 'daily_joke_history_days'])
 
 /** Render an ISO date/datetime as a short readable date; falls back to raw on parse failure. */
 function formatDate(iso: string): string {
@@ -86,7 +88,7 @@ export function BillingPage() {
   })()
 
   function handleSubscribe(plan: BillingPlan) {
-    if (plan.slug === 'supporter') return
+    if (plan.slug === 'supporter' || (plan.slug !== 'free' && plan.purchase_available !== true)) return
     checkoutMutation.mutate(plan.slug, {
       onSuccess: (data) => {
         if (USE_MOCKS) {
@@ -504,6 +506,11 @@ function PlanCard({
         >
           {isManaging ? 'Opening…' : 'Manage subscription'}
         </button>
+      ) : !isFree && plan.purchase_available !== true ? (
+        <div>
+          <button type="button" disabled className="btn-flow-ghost" style={{ width: '100%', minHeight: 44 }}>Purchases unavailable</button>
+          <p style={{ fontSize: 12, color: '#71717A', marginBottom: 0 }}>New subscriptions are not available right now. Reading and basic creator insights remain free.</p>
+        </div>
       ) : (
         <button
           type="button"

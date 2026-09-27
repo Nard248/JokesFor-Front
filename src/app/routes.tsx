@@ -34,6 +34,7 @@ import {
   // Content creation (Phase 5)
   CreatorHubPage,
   CreatorInsightsPage,
+  CreatorContentPage,
   FormatPickerPage,
   EditorPage,
   SubmissionDetailPage,
@@ -86,6 +87,7 @@ export const routes: RouteObject[] = [
   // Content creation — /create/* (specific paths before :draftId wildcard)
   { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
   { path: '/create/insights', element: <ProtectedRoute><CreatorInsightsPage /></ProtectedRoute> },
+  { path: '/create/content', element: <ProtectedRoute><CreatorContentPage /></ProtectedRoute> },
   { path: '/create/new', element: <ProtectedRoute><FormatPickerPage /></ProtectedRoute> },
   { path: '/create/new/:formatSlug', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },
   { path: '/create/:draftId', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },

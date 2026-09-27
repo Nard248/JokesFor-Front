@@ -854,10 +854,12 @@ export interface CreatorOverview {
   shares: number
   peak_read_hour: number | null
   daily_reach_28d: number[]
+  daily_views_28d?: number[]
+  dwell_samples?: number
   followers: number
   follower_growth_28d: number[]
   // Phase-2 read-time telemetry (additive; null until there's enough data).
-  /** Average read time across views, in seconds. */
+  /** Average visible dwell sample duration in seconds, not per viewer. */
   avg_read_seconds?: number | null
   /** Fraction of impressions that turned into a real read (dwell ≥ ~1s). */
   read_rate?: number | null
@@ -882,6 +884,7 @@ export interface SourceMixItem {
 
 export interface TopJokeItem {
   id: number
+  content_available?: boolean
   text: string
   views: number
   reactions: number
@@ -890,13 +893,13 @@ export interface TopJokeItem {
   /** null when the joke has no views yet (no denominator). */
   payoff_rate: number | null
   // Phase-2 read-time telemetry (additive; null until there's enough data).
-  /** Average read time for this joke, in seconds. */
+  /** Average visible dwell sample duration for this joke, in seconds. */
   avg_read_seconds?: number | null
   /** Fraction of this joke's impressions that became a real read. */
   read_rate?: number | null
   // Wave-2 watch-time telemetry (media jokes only; additive, absent from
   // current prod responses, null until there's enough data).
-  /** Average watch time for this joke's media, in seconds. */
+  /** Average persisted playback segment duration, in seconds. */
   avg_watch_seconds?: number | null
   /** Fraction of watches that reached (near) the end of the media. */
   watch_completion_rate?: number | null
@@ -905,9 +908,13 @@ export interface TopJokeItem {
 export interface AudienceTasteItem {
   label: string
   count: number
+  sample_size?: number
 }
 
 export interface CreatorAudience {
+  sample_size?: number
+  minimum_sample_size?: number
+  suppressed?: boolean
   top_themes: AudienceTasteItem[]
   top_categories: AudienceTasteItem[]
   top_formats: AudienceTasteItem[]
@@ -930,6 +937,8 @@ export interface CreatorInsights {
   top_jokes: TopJokeItem[]
   audience: CreatorAudience
   suggestions: CreatorSuggestion[]
+  measurement_notes?: Record<string, string>
+  sample_coverage?: { eligible_viewers: number; impression_viewers: number; dwell_samples: number; audience_minimum: number }
 }
 
 export const creatorInsightsApi = {
@@ -1085,6 +1094,8 @@ export const appealsApi = {
 
 export interface BillingPlan {
   slug: string
+  /** Paid sales require an explicit server confirmation; omitted means unavailable. */
+  purchase_available?: boolean
   name: string
   description: string
   interval: 'month' | 'year' | null

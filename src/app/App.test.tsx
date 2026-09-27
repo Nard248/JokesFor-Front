@@ -24,6 +24,7 @@ vi.mock('@/pages', () => ({
   PackDetailPage: () => <div data-testid="page-pack-detail" />,
   CreatorHubPage: () => <div data-testid="page-creator-hub" />,
   CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
+  CreatorContentPage: () => <div data-testid="page-creator-content" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,
@@ -87,7 +88,7 @@ vi.mock('@/features/auth/store', () => ({
       const state = { user: null, setAuth: mockSetAuth, setLoading: mockSetLoading }
       return selector ? selector(state) : state
     }),
-    { getState: vi.fn(() => ({ user: null })) },
+    { getState: vi.fn(() => ({ user: null })), subscribe: () => () => {} },
   ),
 }))
 vi.mock('@/features/auth', () => ({
@@ -96,7 +97,7 @@ vi.mock('@/features/auth', () => ({
       const state = { user: null, setAuth: mockSetAuth, setLoading: mockSetLoading }
       return selector ? selector(state) : state
     }),
-    { getState: vi.fn(() => ({ user: null })) },
+    { getState: vi.fn(() => ({ user: null })), subscribe: () => () => {} },
   ),
 }))
 

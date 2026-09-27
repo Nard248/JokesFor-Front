@@ -89,7 +89,8 @@ export function CreatorHubPage() {
             >
               Your jokes
             </h1>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <Button variant="outline" size="sm" onClick={() => navigate('/create/content')} style={{ minHeight: 44 }}>Content workbench</Button>
               <Button
                 variant="outline"
                 size="sm"

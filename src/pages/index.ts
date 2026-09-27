@@ -57,3 +57,5 @@ export { DraftsPageLegacy } from './DraftsPageLegacy'
 export { ProfilePageLegacy } from './ProfilePageLegacy'
 export { SettingsPageLegacy } from './SettingsPageLegacy'
 export { SubmitJokePageLegacy } from './SubmitJokePageLegacy'
+
+export { CreatorContentPage } from './CreatorContentPage'

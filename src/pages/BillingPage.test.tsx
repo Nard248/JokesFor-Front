@@ -43,7 +43,7 @@ const MOCK_PLANS: BillingPlan[] = [
     currency: 'usd',
     amount_display: 'Free',
     features: { creator_analytics: false, daily_joke_preview: false, mature_content_addon: false },
-    limits: { mystery_box_rolls_per_day: 1, submissions_per_day: 2, daily_jokes_per_day: 3, daily_joke_history_days: 7 },
+    limits: { free_joke_reads_per_day: null, mystery_box_rolls_per_day: 1, submissions_per_day: 2, daily_jokes_per_day: 3, daily_joke_history_days: 7 },
     sort_order: 0,
   },
   {
@@ -60,13 +60,14 @@ const MOCK_PLANS: BillingPlan[] = [
   },
   {
     slug: 'creator_pro',
+    purchase_available: true,
     name: 'Creator Pro',
     description: 'For comedians who mean business.',
     interval: 'month',
     amount_cents: 1299,
     currency: 'usd',
     amount_display: '$12.99 / mo',
-    features: { creator_analytics: true, daily_joke_preview: true, mature_content_addon: true },
+    features: { creator_analytics: true, creator_content_explorer: true, creator_exports: true, daily_joke_preview: true, mature_content_addon: true },
     limits: { mystery_box_rolls_per_day: null, submissions_per_day: null, daily_jokes_per_day: null, daily_joke_history_days: null },
     sort_order: 2,
   },
@@ -409,5 +410,21 @@ describe('BillingPage', () => {
       render(<BillingPage />, { wrapper: makeWrapper() })
       expect(screen.getByTestId('plan-price-creator_pro').textContent).toBe('—')
     })
+  })
+})
+
+describe('creator tooling benefit labels', () => {
+  beforeEach(setupDefaults)
+  it('does not offer paid checkout until the API confirms purchase availability', () => {
+    mockUseBillingPlans.mockReturnValue({ data: MOCK_PLANS.map((plan) => ({ ...plan, purchase_available: false })), isLoading: false, isError: false })
+    render(<BillingPage />, { wrapper: makeWrapper() })
+    expect(screen.getByRole('button', { name: 'Purchases unavailable' })).toBeDisabled()
+    expect(screen.queryByTestId('subscribe-btn-creator_pro')).not.toBeInTheDocument()
+  })
+  it('uses friendly labels and never markets the compatibility reading allowance', () => {
+    render(<BillingPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Content workbench')).toBeInTheDocument()
+    expect(screen.getByText('Content CSV exports')).toBeInTheDocument()
+    expect(screen.queryByText(/free_joke_reads_per_day/)).not.toBeInTheDocument()
   })
 })
