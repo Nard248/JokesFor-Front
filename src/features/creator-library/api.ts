@@ -45,7 +45,7 @@ export function useLibraryMutation<T = unknown>() {
 export function libraryError(error: unknown): string {
   const response = (error as { response?: { status?: number; data?: Record<string, unknown> } })?.response
   if (response?.status === 401) return 'Your session expired. Sign in again, then retry.'
-  if (response?.status === 403) return 'An eligible creator plan is needed to save changes. Your existing private work remains available.'
+  if (response?.status === 403) return 'Creator Pro is needed to save changes. Your existing private work remains available.'
   if (response?.status === 404) return 'This item is unavailable or no longer accessible to your account.'
   if (response?.status === 409) return 'A change request is already pending for this material. Check your review history.'
   if (response?.status === 400 && response.data) {

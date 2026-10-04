@@ -427,4 +427,22 @@ describe('creator tooling benefit labels', () => {
     expect(screen.getByText('Content CSV exports')).toBeInTheDocument()
     expect(screen.queryByText(/free_joke_reads_per_day/)).not.toBeInTheDocument()
   })
+  it('labels the community audience feature and never shows its raw key', () => {
+    mockUseBillingPlans.mockReturnValue({
+      data: MOCK_PLANS.map((plan) => plan.slug === 'creator_pro' ? { ...plan, features: { ...plan.features, creator_community_insights: true } } : plan),
+      isLoading: false, isError: false,
+    })
+    render(<BillingPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Community audience insights')).toBeInTheDocument()
+    expect(screen.queryByText('creator_community_insights')).not.toBeInTheDocument()
+  })
+  it('presents the creator_pro plan as "Creator Pro" even when the API name is decorated', () => {
+    mockUseBillingPlans.mockReturnValue({
+      data: MOCK_PLANS.map((plan) => plan.slug === 'creator_pro' ? { ...plan, name: 'Creator Pro (Monthly)' } : plan),
+      isLoading: false, isError: false,
+    })
+    render(<BillingPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Creator Pro')).toBeInTheDocument()
+    expect(screen.queryByText('Creator Pro (Monthly)')).not.toBeInTheDocument()
+  })
 })

@@ -7,7 +7,8 @@ test('creator prepares private material and requests reviewed metadata through t
   expect(login.status()).toBe(200)
   await page.goto('/create/library')
   await declineCookies(page)
-  await expect(page.getByRole('heading', { name: 'Your working library' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Library', exact: true })).toBeVisible()
+  await expect(page.getByTestId('studio-tab-library')).toHaveAttribute('aria-current', 'page')
   await page.getByRole('button', { name: 'New collection' }).click()
   const name = `Friday opener ${Date.now()}`
   await page.getByLabel('Collection name').fill(name)

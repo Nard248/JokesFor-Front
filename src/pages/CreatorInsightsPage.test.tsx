@@ -9,6 +9,15 @@ vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
 }))
 
+vi.mock('@/features/creator-studio/useCreatorPlan', () => ({
+  useCreatorPlan: () => ({
+    isPro: false,
+    features: { creator_content_explorer: false, creator_exports: false, creator_community_insights: false },
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 const mockUseCreatorInsights = vi.fn()
 
 vi.mock('@/features/creator-insights', async (importOriginal) => {
@@ -80,9 +89,11 @@ beforeEach(() => {
 })
 
 describe('CreatorInsightsPage', () => {
-  it('renders "Creator Insights" heading', () => {
+  it('renders inside Creator Studio with the "Insights" heading and tab marked current', () => {
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.getByText(/creator insights/i)).toBeDefined()
+    expect(screen.getByRole('heading', { level: 1, name: 'Insights' })).toBeDefined()
+    expect(screen.getByText('Creator Studio')).toBeDefined()
+    expect(screen.getByTestId('studio-tab-insights').getAttribute('aria-current')).toBe('page')
   })
 
   it('renders KPI values: reach, views, payoff rate', () => {
@@ -135,6 +146,9 @@ describe('CreatorInsightsPage', () => {
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
     expect(screen.getAllByText(/publish a joke/i).length).toBeGreaterThanOrEqual(1)
+    // Basic insights are free: the 403 means "not a creator yet", never a paywall.
+    expect(screen.getByRole('heading', { level: 1, name: 'Insights' })).toBeDefined()
+    expect(screen.queryByTestId('creator-pro-gate')).toBeNull()
   })
 
   it('renders audience taste labels', () => {
@@ -387,7 +401,7 @@ describe('Creator insight measurement definitions', () => {
     expect(screen.getByText('Signed-in consenting adults, excluding the creator.')).toBeInTheDocument()
     expect(screen.getByText('Time averages describe samples and segments.')).toBeInTheDocument()
     expect(screen.getByText(/Audience groups need at least 20 eligible readers/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Content workbench' })).toBeInTheDocument()
+    expect(screen.getByTestId('studio-tab-content')).toHaveAttribute('href', '/create/content')
   })
 })
 

@@ -1122,6 +1122,12 @@ export interface BillingEntitlements {
     creator_analytics: boolean
     daily_joke_preview: boolean
     mature_content_addon: boolean
+    /** Creator Pro: content workbench + Library write access. */
+    creator_content_explorer?: boolean
+    /** Creator Pro: CSV export from the content workbench. */
+    creator_exports?: boolean
+    /** Creator Pro: community audience page (/create/communities). */
+    creator_community_insights?: boolean
   }
   limits: {
     mystery_box_rolls_per_day: number | null

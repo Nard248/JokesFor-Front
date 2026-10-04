@@ -1,8 +1,8 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Download, Search } from 'lucide-react'
-import { FlowAppShell } from '@/components/FlowAppShell'
 import { Button } from '@/components/ui/button'
+import { CREATOR_PRO_BILLING_PATH, CreatorProGate, CreatorStudioLayout } from '@/features/creator-studio'
 import { useFormats, useLanguages, useContextTags, useTones } from '@/features/create/queries'
 import {
   useCreatorContent, useExportCreatorContent, contentStatus, contentDemoMode, contentErrorMessage,
@@ -12,6 +12,13 @@ import {
 const defaults: ContentFilters = { period: 'month', sort: 'newest' }
 const fieldStyle: CSSProperties = { width: '100%', minHeight: 44, border: '1px solid #D8D5D0', borderRadius: 10, padding: '8px 10px', background: '#fff', color: '#27272A', fontSize: 14 }
 const cardStyle: CSSProperties = { background: '#fff', border: '1px solid #E9E8E7', borderRadius: 18, padding: 24 }
+const CONTENT_UNLOCKS = [
+  'Filter by format, language, theme, category and activity window',
+  'Sort by views, reactions, saves and share initiations',
+  'Metadata completeness and discovery suggestions per joke',
+  'CSV export of up to 1,000 matching jokes',
+  'Write access to your private Library',
+]
 const linkStyle: CSSProperties = { color: '#6A1CF6', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }
 
 function ContentCard({ row }: { row: CreatorContentRow }) {
@@ -73,7 +80,7 @@ export function CreatorContentPage() {
     let current = true
     if (download.error) {
       const fallback = contentStatus(download.error) === 403
-        ? 'CSV exports require a creator plan with exports enabled. Reading and basic insights remain free.'
+        ? 'CSV exports are part of Creator Pro. Reading and basic insights remain free.'
         : contentStatus(download.error) === 422
           ? 'Narrow the filters to export at most 1000 jokes.'
           : 'Could not export your content. Please try again.'
@@ -83,84 +90,73 @@ export function CreatorContentPage() {
   }, [download.error])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell>
-        <div style={{ maxWidth: 960, padding: '40px 0', margin: '0 auto' }}>
-          <nav aria-label="Creator navigation" style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 24 }}>
-            <Link to="/create" style={linkStyle}>Your jokes</Link>
-            <Link to="/create/insights" style={linkStyle}>Basic insights</Link>
-            <Link to="/create/library" style={linkStyle}>Working library</Link>
+    <CreatorStudioLayout
+      section="content"
+      title="Content"
+      subtitle="Explore your published jokes, compare recorded activity and find gaps in their discovery metadata."
+    >
+      {demo ? <div style={cardStyle}>Connect to JokesFor to view your creator content. Demo metrics are not available for this workbench.</div> : denied ? (
+        <CreatorProGate
+          feature="Content workbench"
+          description="Filter, sort and compare every joke you have published, and see which ones are missing the metadata readers use to find them."
+          unlocks={CONTENT_UNLOCKS}
+        />
+      ) : <>
+        <form onSubmit={apply} style={{ ...cardStyle, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
+            <label>Activity window<select aria-label="Activity window" style={fieldStyle} value={draft.period} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value as ContentPeriod, start: undefined, end: undefined }))}>
+              <option value="week">Last 7 days</option><option value="month">Last 30 days</option><option value="quarter">Last 90 days</option><option value="year">Last 365 days</option>
+            </select></label>
+            <label>From<input aria-label="From" style={fieldStyle} type="date" value={draft.start ?? ''} onChange={(e) => setField('start', e.target.value)} /></label>
+            <label>Through<input aria-label="Through" style={fieldStyle} type="date" value={draft.end ?? ''} onChange={(e) => setField('end', e.target.value)} /></label>
+            <label>Format<select aria-label="Format" style={fieldStyle} value={draft.joke_format ?? ''} onChange={(e) => setField('joke_format', e.target.value)}>
+              <option value="">All formats</option>{formats.data?.map((format) => <option key={format.slug} value={format.slug}>{format.name}</option>)}
+            </select></label>
+            <label>Language<select aria-label="Language" style={fieldStyle} value={draft.language ?? ''} onChange={(e) => setField('language', e.target.value)}>
+              <option value="">All languages</option>{languages.data?.map((language) => <option key={language.code} value={language.code}>{language.name}</option>)}
+            </select></label>
+            <label>Theme<select aria-label="Theme" style={fieldStyle} value={draft.theme ?? ''} onChange={(e) => setField('theme', e.target.value)}>
+              <option value="">All themes</option>{themes.data?.map((theme) => <option key={theme.slug} value={theme.slug}>{theme.name}</option>)}
+            </select></label>
+            <label>Category<select aria-label="Category" style={fieldStyle} value={draft.category ?? ''} onChange={(e) => setField('category', e.target.value)}>
+              <option value="">All categories</option>{categories.data?.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
+            </select></label>
+            <label>Sort by<select aria-label="Sort by" style={fieldStyle} value={draft.sort} onChange={(e) => setField('sort', e.target.value as ContentSort)}>
+              <option value="newest">Newest published</option><option value="oldest">Oldest published</option><option value="views">Most views</option><option value="reactions">Most reactions</option><option value="saves">Most saves</option><option value="shares">Most share initiations</option>
+            </select></label>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16, alignItems: 'end' }}>
+            <label style={{ flex: '1 1 240px' }}>Search content<input aria-label="Search content" style={fieldStyle} maxLength={200} value={draft.q ?? ''} placeholder="Search your text, setup or punchline" onChange={(e) => setField('q', e.target.value)} /></label>
+            <Button type="submit" style={{ minHeight: 44 }}><Search size={16} />Apply filters</Button>
+            <Button type="button" variant="outline" style={{ minHeight: 44 }} onClick={() => { setDraft(defaults); setFilters(defaults); setPage(1); download.reset(); setExportError('') }}>Reset filters</Button>
+          </div>
+          <p style={{ color: '#71717A', fontSize: 12, marginBottom: 0 }}>Dates use UTC and filter activity, not publication dates. Choose a window of up to 366 days.</p>
+        </form>
+        {query.isLoading && <p role="status">Loading your content…</p>}
+        {query.isError && <div role="alert" style={cardStyle}>
+          <p>{contentStatus(query.error) === 400 ? 'Check your filters. Use valid dates, ending no later than today, within a 366-day window.' : 'Could not load your content. Please try again.'}</p>
+          <Button variant="outline" onClick={() => { void query.refetch() }}>Retry</Button>
+        </div>}
+        {data && <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+            <div><strong>{data.count.toLocaleString()} {data.count === 1 ? 'joke' : 'jokes'}</strong><p style={{ color: '#71717A', fontSize: 13, margin: '4px 0' }}>{data.window.start} – {data.window.end} · {data.window.timezone}</p></div>
+            <Button variant="outline" disabled={download.isPending || data.count === 0} style={{ minHeight: 44 }} onClick={() => { setExportError(''); download.exportContent(filters) }}><Download size={16} />{download.isPending ? 'Exporting…' : 'Export CSV'}</Button>
+          </div>
+          {exportError && <p role="alert" style={{ color: '#9F1239' }}>{exportError} {contentStatus(download.error) === 403 && <Link to={CREATOR_PRO_BILLING_PATH} style={linkStyle}>See Creator Pro</Link>}</p>}
+          {download.isSuccess && <p role="status">Your CSV download is ready.</p>}
+          {data.results.length === 0 ? <section style={cardStyle}><h2>No content matches these filters</h2><p>Try a different search or taxonomy filter. Published content appears here after approval.</p><Link to="/create" style={linkStyle}>Go to Overview</Link></section> : <div style={{ display: 'grid', gap: 16 }}>{data.results.map((row) => <ContentCard key={row.id} row={row} />)}</div>}
+          <nav aria-label="Content pages" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, margin: '24px 0' }}>
+            <Button variant="outline" aria-label="Previous page" disabled={!data.previous || query.isFetching} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
+            <span>Page {page} of {Math.max(1, Math.ceil(data.count / 25))}</span>
+            <Button variant="outline" aria-label="Next page" disabled={!data.next || query.isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button>
           </nav>
-          <header style={{ marginBottom: 28 }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(2rem, 5vw, 2.75rem)', letterSpacing: '-0.02em', margin: '0 0 12px' }}>Content workbench</h1>
-            <p style={{ color: '#52525B', maxWidth: 680, lineHeight: 1.6 }}>Explore your published material, compare recorded activity, and find gaps in its discovery metadata.</p>
-          </header>
-
-          {demo ? <div style={cardStyle}>Connect to JokesFor to view your creator content. Demo metrics are not available for this workbench.</div> : denied ? (
-            <section style={cardStyle}>
-              <h2>Explore your content with creator tools</h2>
-              <p>Content filtering and exports are available with eligible creator plans.</p>
-              <p>Reading and basic creator insights remain free.</p>
-              <Link to="/settings/billing" style={linkStyle}>View creator plans</Link>
-            </section>
-          ) : <>
-            <form onSubmit={apply} style={{ ...cardStyle, marginBottom: 24 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
-                <label>Activity window<select aria-label="Activity window" style={fieldStyle} value={draft.period} onChange={(e) => setDraft((current) => ({ ...current, period: e.target.value as ContentPeriod, start: undefined, end: undefined }))}>
-                  <option value="week">Last 7 days</option><option value="month">Last 30 days</option><option value="quarter">Last 90 days</option><option value="year">Last 365 days</option>
-                </select></label>
-                <label>From<input aria-label="From" style={fieldStyle} type="date" value={draft.start ?? ''} onChange={(e) => setField('start', e.target.value)} /></label>
-                <label>Through<input aria-label="Through" style={fieldStyle} type="date" value={draft.end ?? ''} onChange={(e) => setField('end', e.target.value)} /></label>
-                <label>Format<select aria-label="Format" style={fieldStyle} value={draft.joke_format ?? ''} onChange={(e) => setField('joke_format', e.target.value)}>
-                  <option value="">All formats</option>{formats.data?.map((format) => <option key={format.slug} value={format.slug}>{format.name}</option>)}
-                </select></label>
-                <label>Language<select aria-label="Language" style={fieldStyle} value={draft.language ?? ''} onChange={(e) => setField('language', e.target.value)}>
-                  <option value="">All languages</option>{languages.data?.map((language) => <option key={language.code} value={language.code}>{language.name}</option>)}
-                </select></label>
-                <label>Theme<select aria-label="Theme" style={fieldStyle} value={draft.theme ?? ''} onChange={(e) => setField('theme', e.target.value)}>
-                  <option value="">All themes</option>{themes.data?.map((theme) => <option key={theme.slug} value={theme.slug}>{theme.name}</option>)}
-                </select></label>
-                <label>Category<select aria-label="Category" style={fieldStyle} value={draft.category ?? ''} onChange={(e) => setField('category', e.target.value)}>
-                  <option value="">All categories</option>{categories.data?.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
-                </select></label>
-                <label>Sort by<select aria-label="Sort by" style={fieldStyle} value={draft.sort} onChange={(e) => setField('sort', e.target.value as ContentSort)}>
-                  <option value="newest">Newest published</option><option value="oldest">Oldest published</option><option value="views">Most views</option><option value="reactions">Most reactions</option><option value="saves">Most saves</option><option value="shares">Most share initiations</option>
-                </select></label>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16, alignItems: 'end' }}>
-                <label style={{ flex: '1 1 240px' }}>Search content<input aria-label="Search content" style={fieldStyle} maxLength={200} value={draft.q ?? ''} placeholder="Search your text, setup or punchline" onChange={(e) => setField('q', e.target.value)} /></label>
-                <Button type="submit" style={{ minHeight: 44 }}><Search size={16} />Apply filters</Button>
-                <Button type="button" variant="outline" style={{ minHeight: 44 }} onClick={() => { setDraft(defaults); setFilters(defaults); setPage(1); download.reset(); setExportError('') }}>Reset filters</Button>
-              </div>
-              <p style={{ color: '#71717A', fontSize: 12, marginBottom: 0 }}>Dates use UTC and filter activity, not publication dates. Choose a window of up to 366 days.</p>
-            </form>
-            {query.isLoading && <p role="status">Loading your content…</p>}
-            {query.isError && <div role="alert" style={cardStyle}>
-              <p>{contentStatus(query.error) === 400 ? 'Check your filters. Use valid dates, ending no later than today, within a 366-day window.' : 'Could not load your content. Please try again.'}</p>
-              <Button variant="outline" onClick={() => { void query.refetch() }}>Retry</Button>
-            </div>}
-            {data && <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-                <div><strong>{data.count.toLocaleString()} {data.count === 1 ? 'joke' : 'jokes'}</strong><p style={{ color: '#71717A', fontSize: 13, margin: '4px 0' }}>{data.window.start} – {data.window.end} · {data.window.timezone}</p></div>
-                <Button variant="outline" disabled={download.isPending || data.count === 0} style={{ minHeight: 44 }} onClick={() => { setExportError(''); download.exportContent(filters) }}><Download size={16} />{download.isPending ? 'Exporting…' : 'Export CSV'}</Button>
-              </div>
-              {exportError && <p role="alert" style={{ color: '#9F1239' }}>{exportError} {contentStatus(download.error) === 403 && <Link to="/settings/billing" style={linkStyle}>View creator plans</Link>}</p>}
-              {download.isSuccess && <p role="status">Your CSV download is ready.</p>}
-              {data.results.length === 0 ? <section style={cardStyle}><h2>No content matches these filters</h2><p>Try a different search or taxonomy filter. Published content appears here after approval.</p><Link to="/create" style={linkStyle}>Go to your jokes</Link></section> : <div style={{ display: 'grid', gap: 16 }}>{data.results.map((row) => <ContentCard key={row.id} row={row} />)}</div>}
-              <nav aria-label="Content pages" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, margin: '24px 0' }}>
-                <Button variant="outline" aria-label="Previous page" disabled={!data.previous || query.isFetching} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
-                <span>Page {page} of {Math.max(1, Math.ceil(data.count / 25))}</span>
-                <Button variant="outline" aria-label="Next page" disabled={!data.next || query.isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button>
-              </nav>
-              <details style={{ ...cardStyle, fontSize: 13, color: '#52525B' }} open>
-                <summary style={{ cursor: 'pointer', fontWeight: 700 }}>How these numbers are measured</summary>
-                <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>{data.measurement_notes.map((note) => <li key={note}>{note}</li>)}</ul>
-                <p>Exports include up to 1,000 matching jokes. Apply narrower filters for larger libraries.</p>
-              </details>
-            </>}
-          </>}
-        </div>
-      </FlowAppShell>
-    </div>
+          <details style={{ ...cardStyle, fontSize: 13, color: '#52525B' }} open>
+            <summary style={{ cursor: 'pointer', fontWeight: 700 }}>How these numbers are measured</summary>
+            <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>{data.measurement_notes.map((note) => <li key={note}>{note}</li>)}</ul>
+            <p>Exports include up to 1,000 matching jokes. Apply narrower filters for larger libraries.</p>
+          </details>
+        </>}
+      </>}
+    </CreatorStudioLayout>
   )
 }

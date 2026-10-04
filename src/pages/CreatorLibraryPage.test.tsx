@@ -8,6 +8,7 @@ import { useAuthStore } from '@/features/auth/store'
 import { CreatorLibraryPage } from './CreatorLibraryPage'
 
 vi.mock('@/components/FlowAppShell', () => ({ FlowAppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }))
+vi.mock('@/features/creator-studio/useCreatorPlan', () => ({ useCreatorPlan: () => ({ isPro: false, features: { creator_content_explorer: false, creator_exports: false, creator_community_insights: false }, isLoading: false, isError: false }) }))
 vi.mock('@/features/create/queries', () => ({ useContextTags: () => ({ data: [{ slug: 'work', name: 'Work' }] }), useTones: () => ({ data: [{ slug: 'wordplay', name: 'Wordplay' }] }) }))
 const collection = { id: 7, name: 'Friday set', kind: 'set_list', description: 'Five-minute opener', joke_ids: [42, 43], items: [{ joke_id: 42, display_text: 'Coffee routine' }, { joke_id: 43, display_text: 'Morning commute' }], unavailable_count: 0, updated_at: '2026-09-27T10:00:00Z' }
 const page = <T,>(results: T[]) => ({ count: results.length, results, next: null, previous: null, unavailable_count: 0 })
@@ -51,6 +52,8 @@ it('preserves read and erase access after cancellation while disabling new write
   await screen.findByDisplayValue('Pause before the punchline')
   expect(screen.getByRole('button', { name: 'Save note' })).toBeDisabled()
   expect(screen.getByText(/existing private work remains available/i)).toBeInTheDocument()
+  expect(screen.getByTestId('creator-pro-gate')).toHaveAttribute('data-variant', 'compact')
+  expect(screen.getByRole('link', { name: 'See Creator Pro' })).toHaveAttribute('href', '/settings/billing')
   fireEvent.click(screen.getByRole('button', { name: 'Delete note' }))
   await waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: 'DELETE', url: '/creators/me/content/42/workspace/' })))
 })

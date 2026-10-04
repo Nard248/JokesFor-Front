@@ -25,6 +25,16 @@ const FEATURE_LABELS: Record<string, string> = {
   creator_analytics: 'Basic creator insights · Included',
   creator_content_explorer: 'Content workbench',
   creator_exports: 'Content CSV exports',
+  creator_community_insights: 'Community audience insights',
+}
+
+/** The paid creator plan's product name. The API owns display names, but the
+ *  `creator_pro` plan (or any plan whose name contains it) always reads
+ *  "Creator Pro" so it matches the Creator Studio badge and upgrade gates. */
+const CREATOR_PRO_NAME = 'Creator Pro'
+function planDisplayName(slug: string | null | undefined, name: string): string {
+  if (slug === 'creator_pro' || /creator\s*pro/i.test(name)) return CREATOR_PRO_NAME
+  return name
 }
 
 // Compatibility keys are not paid product benefits. Keep safety and service
@@ -93,7 +103,7 @@ export function BillingPage() {
       onSuccess: (data) => {
         if (USE_MOCKS) {
           setDemoMessage(
-            `(demo) Would redirect to Stripe Checkout for "${plan.name}" — URL: ${data.url}`,
+            `(demo) Would redirect to Stripe Checkout for "${planDisplayName(plan.slug, plan.name)}" — URL: ${data.url}`,
           )
         } else {
           window.location.href = data.url
@@ -336,7 +346,7 @@ export function BillingPage() {
               <CreditCard size={18} color="#6A1CF6" />
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>
-                  {sub?.plan_name ? `${sub.plan_name} subscription` : 'Manage your subscription'}
+                  {sub?.plan_name ? `${planDisplayName(sub.plan_slug, sub.plan_name)} subscription` : 'Manage your subscription'}
                 </div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
                   {subscriptionStatusLine ?? 'Update payment, view invoices, or cancel.'}
@@ -436,7 +446,7 @@ function PlanCard({
             letterSpacing: '-0.01em',
           }}
         >
-          {plan.name}
+          {planDisplayName(plan.slug, plan.name)}
         </div>
         <div style={{ fontSize: 13, color: '#52525B', marginTop: 4 }}>{plan.description}</div>
       </div>

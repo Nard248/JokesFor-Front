@@ -8,6 +8,8 @@ import { useAuthStore } from '@/features/auth/store'
 import { CreatorContentPage } from './CreatorContentPage'
 
 vi.mock('@/components/FlowAppShell', () => ({ FlowAppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }))
+const plan = { isPro: false, features: { creator_content_explorer: false, creator_exports: false, creator_community_insights: false }, isLoading: false, isError: false }
+vi.mock('@/features/creator-studio/useCreatorPlan', () => ({ useCreatorPlan: () => plan }))
 vi.mock('@/features/create/queries', () => ({
   useFormats: () => ({ data: [{ slug: 'oneliner', name: 'One-liner' }] }),
   useLanguages: () => ({ data: [{ code: 'en', name: 'English' }] }),
@@ -67,12 +69,14 @@ describe('Creator content workbench', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
     await waitFor(() => expect(get).toHaveBeenLastCalledWith('/creators/me/content/', expect.objectContaining({ params: expect.objectContaining({ page: 1, sort: 'saves' }) })))
   })
-  it('explains the paid creator tool on403 while keeping free audience access explicit', async () => {
+  it('shows the shared Creator Pro gate on 403 while keeping free access explicit', async () => {
     get.mockRejectedValue({ response: { status: 403 } })
     renderPage()
-    expect(await screen.findByText('Explore your content with creator tools')).toBeInTheDocument()
-    expect(screen.getByText(/Reading and basic creator insights remain free/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'View creator plans' })).toHaveAttribute('href', '/settings/billing')
+    expect(await screen.findByRole('heading', { name: 'Content workbench is part of Creator Pro' })).toBeInTheDocument()
+    expect(screen.getByText(/Reading, publishing and basic insights stay free/)).toBeInTheDocument()
+    expect(screen.getByText(/doesn't buy distribution or reach/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'See Creator Pro' })).toHaveAttribute('href', '/settings/billing')
+    expect(screen.getByTestId('studio-tab-insights')).toHaveAttribute('href', '/create/insights')
     expect(screen.queryByRole('button', { name: /Export CSV/ })).not.toBeInTheDocument()
   })
   it('shows an empty state and disables exporting empty results', async () => {
@@ -110,7 +114,7 @@ describe('Creator content workbench', () => {
     renderPage()
     await screen.findByText('Coffee for the compiler.')
     fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('CSV exports require a creator plan with exports enabled.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('CSV exports are part of Creator Pro.')
     expect(screen.queryByText(/creator_exports/)).not.toBeInTheDocument()
   })
   it('explains the1000-row export cap from a blob error response', async () => {

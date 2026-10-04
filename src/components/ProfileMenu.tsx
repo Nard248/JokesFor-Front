@@ -136,7 +136,7 @@ export function ProfileMenu({ onClose }: { onClose: () => void }) {
           Your library
         </MenuLink>
         <MenuLink to="/create" onClick={onClose} icon={<PenLine size={16} />}>
-          My submissions
+          Creator Studio
         </MenuLink>
         <MenuLink to="/settings" onClick={onClose} icon={<Settings size={16} />}>
           Settings

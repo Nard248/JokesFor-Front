@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { FlowAppShell } from '@/components/FlowAppShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useCreatorInsights } from '@/features/creator-insights'
+import { CreatorStudioLayout } from '@/features/creator-studio'
 import type {
   InsightsPeriod,
   CreatorInsights,
@@ -742,145 +742,130 @@ export function CreatorInsightsPage() {
   const navigate = useNavigate()
   const { isMobile } = useBreakpoint()
   const [period, setPeriod] = useState<InsightsPeriod>('month')
+  const periodLabelId = useId()
   const { data, isLoading, isError, error, refetch } = useCreatorInsights(period)
 
   const is403 = isError && (error as { response?: { status?: number } })?.response?.status === 403
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell>
-        <div style={{ padding: '40px 0', maxWidth: 860, margin: '0 auto' }}>
-          {/* Header */}
-          <div
+    <CreatorStudioLayout
+      section="insights"
+      title="Insights"
+      subtitle="How readers respond to your published jokes. Free on every plan."
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 28,
+        }}
+      >
+        <span className="eyebrow-mono" id={periodLabelId}>Period</span>
+        {/* Period selector */}
+        <div role="group" aria-labelledby={periodLabelId} style={{ display: 'flex', gap: 4 }}>
+          {PERIODS.map(({ id, label }) => (
+            <button
+              key={id}
+              aria-pressed={period === id}
+              onClick={() => setPeriod(id)}
+              style={{
+                padding: isMobile ? '6px 18px' : '6px 16px',
+                minHeight: isMobile ? 44 : undefined,
+                borderRadius: 9999,
+                border: period === id ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
+                background: period === id ? '#F7F0FF' : 'transparent',
+                color: period === id ? '#6A1CF6' : '#52525B',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: period === id ? 700 : 500,
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Loading */}
+      {isLoading && <LoadingSkeleton />}
+
+      {/* 403: not a creator yet */}
+      {is403 && (
+        <div
+          style={{
+            padding: '56px 32px',
+            border: '1px dashed #E9E8E7',
+            borderRadius: 18,
+            textAlign: 'center',
+            background: '#fff',
+          }}
+        >
+          <div style={{ fontSize: 40, marginBottom: 16 }}>📊</div>
+          <h2
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 16,
-              marginBottom: 28,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 22,
+              color: '#1A1A1A',
+              letterSpacing: '-0.01em',
+              marginBottom: 8,
             }}
           >
-            <h1
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 900,
-                fontSize: 'clamp(2rem, 5vw, 2.75rem)',
-                letterSpacing: '-0.02em',
-                color: '#1A1A1A',
-                lineHeight: 1.05,
-                margin: 0,
-              }}
-            >
-              Creator Insights
-            </h1>
-
-            <Button variant="outline" onClick={() => navigate('/create/content')} style={{ minHeight: 44 }}>Content workbench</Button>
-            <Button variant="outline" onClick={() => navigate('/create/library')} style={{ minHeight: 44 }}>Working library</Button>
-            {/* Period selector */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {PERIODS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  aria-pressed={period === id}
-                  onClick={() => setPeriod(id)}
-                  style={{
-                    padding: isMobile ? '6px 18px' : '6px 16px',
-                    minHeight: isMobile ? 44 : undefined,
-                    borderRadius: 9999,
-                    border: period === id ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
-                    background: period === id ? '#F7F0FF' : 'transparent',
-                    color: period === id ? '#6A1CF6' : '#52525B',
-                    fontFamily: 'var(--font-sans)',
-                    fontWeight: period === id ? 700 : 500,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s ease',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Loading */}
-          {isLoading && <LoadingSkeleton />}
-
-          {/* 403: not a creator yet */}
-          {is403 && (
-            <div
-              style={{
-                padding: '56px 32px',
-                border: '1px dashed #E9E8E7',
-                borderRadius: 18,
-                textAlign: 'center',
-                background: '#fff',
-              }}
-            >
-              <div style={{ fontSize: 40, marginBottom: 16 }}>📊</div>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: 22,
-                  color: '#1A1A1A',
-                  letterSpacing: '-0.01em',
-                  marginBottom: 8,
-                }}
-              >
-                Insights unlock when you publish
-              </h2>
-              <p style={{ fontSize: 15, color: '#52525B', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
-                Publish a joke to start seeing your reach, reactions, and audience data here.
-              </p>
-              <Button variant="pill" onClick={() => navigate('/create/new')}>
-                Publish a joke
-              </Button>
-            </div>
-          )}
-
-          {/* Generic error */}
-          {isError && !is403 && (
-            <div
-              style={{
-                padding: '32px',
-                borderRadius: 16,
-                background: '#FEF2F2',
-                border: '1px solid #FEE2E2',
-                textAlign: 'center',
-              }}
-            >
-              <p style={{ color: '#991B1B', fontWeight: 600, marginBottom: 12 }}>
-                Failed to load insights
-              </p>
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {/* Data or zero state — mutually exclusive */}
-          {!isLoading && !isError && data && (
-            data.overview.published_jokes === 0 ? (
-              <div
-                style={{
-                  marginTop: 32,
-                  padding: '40px 32px',
-                  border: '1px dashed #E9E8E7',
-                  borderRadius: 18,
-                  textAlign: 'center',
-                  background: '#fff',
-                }}
-              >
-                <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
-              </div>
-            ) : (
-              <InsightsDashboard data={data} />
-            )
-          )}
+            Insights unlock when you publish
+          </h2>
+          <p style={{ fontSize: 15, color: '#52525B', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
+            Publish a joke to start seeing your reach, reactions, and audience data here.
+          </p>
+          <Button variant="pill" onClick={() => navigate('/create/new')}>
+            Publish a joke
+          </Button>
         </div>
-      </FlowAppShell>
-    </div>
+      )}
+
+      {/* Generic error */}
+      {isError && !is403 && (
+        <div
+          style={{
+            padding: '32px',
+            borderRadius: 16,
+            background: '#FEF2F2',
+            border: '1px solid #FEE2E2',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ color: '#991B1B', fontWeight: 600, marginBottom: 12 }}>
+            Failed to load insights
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* Data or zero state — mutually exclusive */}
+      {!isLoading && !isError && data && (
+        data.overview.published_jokes === 0 ? (
+          <div
+            style={{
+              marginTop: 32,
+              padding: '40px 32px',
+              border: '1px dashed #E9E8E7',
+              borderRadius: 18,
+              textAlign: 'center',
+              background: '#fff',
+            }}
+          >
+            <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
+          </div>
+        ) : (
+          <InsightsDashboard data={data} />
+        )
+      )}
+    </CreatorStudioLayout>
   )
 }

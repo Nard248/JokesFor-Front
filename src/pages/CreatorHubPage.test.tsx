@@ -15,6 +15,16 @@ vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
 }))
 
+// ── Creator plan: Free by default (no network) ───────────────────────────────
+vi.mock('@/features/creator-studio/useCreatorPlan', () => ({
+  useCreatorPlan: () => ({
+    isPro: false,
+    features: { creator_content_explorer: false, creator_exports: false, creator_community_insights: false },
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 // ── Mock useDrafts so we can control data per test ───────────────────────────
 const mockUseDrafts = vi.fn()
 
@@ -101,12 +111,14 @@ describe('CreatorHubPage', () => {
     expect(screen.getByRole('tab', { name: /rejected/i })).toBeDefined()
   })
 
-  it('renders "Your jokes" heading and a "+ New" button', () => {
+  it('renders inside Creator Studio as "Overview" with a "New joke" action', () => {
     const Wrapper = makeWrapper()
     render(<CreatorHubPage />, { wrapper: Wrapper })
 
-    expect(screen.getByText('Your jokes')).toBeDefined()
-    expect(screen.getByRole('button', { name: /new/i })).toBeDefined()
+    expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeDefined()
+    expect(screen.getByText('Creator Studio')).toBeDefined()
+    expect(screen.getByRole('link', { name: /new joke/i }).getAttribute('href')).toBe('/create/new')
+    expect(screen.getByTestId('studio-tab-overview').getAttribute('aria-current')).toBe('page')
   })
 
   it('renders DraftCards for all seed drafts (3 status badges visible)', () => {
