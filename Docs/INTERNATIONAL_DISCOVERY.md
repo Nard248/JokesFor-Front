@@ -2,7 +2,7 @@
 
 Status: implemented locally, 2026-09-27. The application interface remains English; these controls select joke content.
 
-The canonical `FlowAppShell` exposes “Joke languages” on desktop, tablet and mobile. Regional collection buttons apply a complete language/country/culture combination; the three separate selectors allow independent choices and an All option for each. Native language names are used without flag icons. `/explore` is public. The picker is hidden on Creator Studio (`active="studio"`) and Communities (`active="communities"`): a creator's own work and the cross-language community map are not scoped by the selection, so showing it there would imply a filter that does not apply.
+The canonical `FlowAppShell` exposes “Joke languages” on desktop, tablet and mobile. Regional collection buttons apply a complete language/country/culture combination; the three separate selectors allow independent choices and an All option for each. Native language names are used without flag icons. `/explore` is public. The picker is shown only on the reading surfaces the selection scopes — Today, Explore (including Trending), Search and Daily — plus pack detail pages, which opt in with `showContentSelection`. Everywhere else it is hidden: Creator Studio and the creation flow (format picker, editor, submission view), Communities, Favorites, Library/Collections, Drafts, Submit, Profile, Settings, Billing and creator profiles. Those surfaces are not scoped by the selection, so showing it there would imply a filter that does not apply (and in the editor it would sit next to the draft's own "Joke language" field).
 
 ## State and URLs
 

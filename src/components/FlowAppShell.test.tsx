@@ -236,7 +236,7 @@ describe('FlowAppShell — responsive navigation', () => {
 })
 
 describe('FlowAppShell — joke-language picker placement', () => {
-  function renderActive(active: FlowNavKey) {
+  function renderActive(active: FlowNavKey | undefined, showContentSelection?: boolean) {
     mockUseAuth.mockReturnValue({
       user: { first_name: 'Test', username: 'testuser', email: 'test@example.com' },
       isAuthenticated: true,
@@ -244,7 +244,7 @@ describe('FlowAppShell — joke-language picker placement', () => {
     })
     return render(
       <MemoryRouter>
-        <FlowAppShell active={active}>
+        <FlowAppShell active={active} showContentSelection={showContentSelection}>
           <div>content</div>
         </FlowAppShell>
       </MemoryRouter>
@@ -257,8 +257,18 @@ describe('FlowAppShell — joke-language picker placement', () => {
     expect(picker()).toBeInTheDocument()
   })
 
-  it.each<FlowNavKey>(['studio', 'communities'])('hides the picker on the %s surface, whose content it does not scope', (active) => {
+  it.each<FlowNavKey>(['studio', 'communities', 'library', 'favorites'])('hides the picker on the %s surface, whose content it does not scope', (active) => {
     renderActive(active)
     expect(picker()).toBeNull()
+  })
+
+  it('hides the picker when no surface is active (editor, format picker, submission view)', () => {
+    renderActive(undefined)
+    expect(picker()).toBeNull()
+  })
+
+  it('shows the picker on an unscoped surface that opts in (pack detail)', () => {
+    renderActive('library', true)
+    expect(picker()).toBeInTheDocument()
   })
 })
