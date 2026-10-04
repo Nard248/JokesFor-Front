@@ -42,6 +42,8 @@ import { emptyEditorDraft, editorReducer } from '@/features/create'
 import type { EditorDraft, EditorAction, FormatSlug, SaveState } from '@/features/create'
 
 interface MockAutosaveState {
+  /** Re-renders the component using the hook (set on every hook call). */
+  rerender?: () => void
   draft: EditorDraft
   dispatch: (a: EditorAction) => void
   saveState: SaveState
@@ -66,7 +68,8 @@ function buildMockAutosave(formatSlug: FormatSlug, initial?: EditorDraft): MockA
     get draft() { return draft },
     dispatch: (action: EditorAction) => {
       draft = editorReducer(draft, action)
-      // Force a re-render by updating the mock state reference (tests use waitFor)
+      // Re-render the consumer so the UI reflects the new draft (tests use waitFor)
+      state.rerender?.()
     },
     saveState: 'idle',
     lastSavedAt: null,
@@ -84,9 +87,11 @@ vi.mock('@/features/create', async (importOriginal) => {
     ...original,
     useAutosave: (args: { draftId: number | null; formatSlug: FormatSlug; initial?: EditorDraft }) => {
       // Build a fresh mock state on each call (component remount)
+      const [, setTick] = React.useState(0)
       if (!mockAutosaveReturn) {
         mockAutosaveReturn = buildMockAutosave(args.formatSlug, args.initial)
       }
+      mockAutosaveReturn.rerender = () => setTick((t) => t + 1)
       return mockAutosaveReturn
     },
     useSubmitDraft: () => ({ mutate: mockSubmitMutate }),
@@ -95,6 +100,7 @@ vi.mock('@/features/create', async (importOriginal) => {
 })
 
 import { EditorPage } from './EditorPage'
+import { contentAdapter } from '@/features/create/adapter'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -128,6 +134,7 @@ beforeEach(() => {
   // Reset mock autosave state before each test
   mockAutosaveReturn = null
   mockSubmitMutate.mockReset()
+  vi.restoreAllMocks()
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -286,20 +293,55 @@ describe('EditorPage — ?theme= preselect ("Write a <Theme> joke")', () => {
     await waitFor(() => {
       expect(screen.getByTestId('editor-pane')).toBeDefined()
     })
-    expect(mockAutosaveReturn?.draft.themes).toEqual(['food'])
-    // Rendered as a selected chip in the Themes picker once the catalog loads.
+    // Added once the catalog loads, and rendered as a removable chip.
     expect(await screen.findByRole('button', { name: 'Remove Food' })).toBeDefined()
+    expect(mockAutosaveReturn?.draft.themes).toEqual(['food'])
   })
 
-  it('drops a preselected slug that is not a real theme once the catalog loads', async () => {
+  it('keeps the slug out of the draft until the catalog confirms it', async () => {
+    let resolveCatalog: (tags: Awaited<ReturnType<typeof contentAdapter.contextTags>>) => void = () => {}
+    const realTags = await contentAdapter.contextTags()
+    vi.spyOn(contentAdapter, 'contextTags').mockReturnValue(
+      new Promise((resolve) => {
+        resolveCatalog = resolve
+      }),
+    )
+    render(makeDataRouterWrapper('/create/new/oneliner?theme=food'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
+    })
+    // Catalog still loading: nothing an autosave PATCH could send yet.
+    expect(mockAutosaveReturn?.draft.themes).toEqual([])
+
+    resolveCatalog(realTags)
+    await waitFor(() => {
+      expect(mockAutosaveReturn?.draft.themes).toEqual(['food'])
+    })
+  })
+
+  it('never adds a slug that is not a real theme', async () => {
     render(makeDataRouterWrapper('/create/new/oneliner?theme=not-a-theme'))
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-pane')).toBeDefined()
     })
+    // Let the catalog load, then confirm the unknown slug never landed.
+    expect((await screen.findAllByRole('button', { name: 'Food' })).length).toBeGreaterThan(0)
+    expect(mockAutosaveReturn?.draft.themes).toEqual([])
+  })
+
+  it('never adds the slug when the catalog request fails', async () => {
+    const failed = vi.spyOn(contentAdapter, 'contextTags').mockRejectedValue(new Error('network'))
+    render(makeDataRouterWrapper('/create/new/oneliner?theme=food'))
+
     await waitFor(() => {
-      expect(mockAutosaveReturn?.draft.themes).toEqual([])
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
     })
+    await waitFor(() => {
+      expect(failed).toHaveBeenCalled()
+    })
+    expect(mockAutosaveReturn?.draft.themes).toEqual([])
   })
 
   it("never overrides an existing draft's themes", async () => {

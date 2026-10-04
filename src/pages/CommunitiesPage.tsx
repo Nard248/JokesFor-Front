@@ -111,8 +111,7 @@ function MethodologyDialog({ directory, onClose }: { directory: CommunityDirecto
         </div>
         <p className="mt-3 text-[15px] leading-relaxed text-[#3F3F46]">{m.description}</p>
         <p className="mt-3 rounded-2xl bg-[#F2E9FF] p-3 text-sm leading-relaxed text-[#4B327A]" data-testid="cm-privacy-note">
-          Counts are approximate (privacy-protected): they include a small amount of random noise, and only established
-          accounts count toward a community.
+          Counts are approximate (privacy-protected).
         </p>
         <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           {[

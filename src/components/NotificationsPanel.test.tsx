@@ -162,7 +162,7 @@ describe('NotificationsPanel', () => {
         },
       ]
       renderPanel()
-      expect(screen.getByText('🥁 A Puns community just formed. Your Puns jokes have a new audience.')).toBeTruthy()
+      expect(screen.getByText('🥁 The Puns community just formed. Your Puns jokes have a new audience.')).toBeTruthy()
       expect(screen.getByRole('link', { name: 'View community' }).getAttribute('href')).toBe('/communities/puns')
     })
 

@@ -20,9 +20,10 @@ const COMMUNITY_UNLOCKS = [
   'Approximate, privacy-protected counts; small ones are always withheld',
 ]
 
-/** Shown above the server's notes: counts carry noise and skip new accounts. */
-const PRIVACY_NOTE =
-  'Counts are approximate (privacy-protected): they include a small amount of random noise, and only established accounts count.'
+/** Shown above the server's notes, which describe exactly how counts are
+ * protected. Keep any stronger claim (noise, account-age rules) out of this
+ * string until the backend implements it and states it in its own notes. */
+const PRIVACY_NOTE = 'Counts are approximate (privacy-protected).'
 
 const STATUS_LABEL: Record<CommunityStatus, string> = { active: 'Active', forming: 'Forming', cooling: 'Cooling' }
 const STATUS_CLASS: Record<CommunityStatus, string> = {

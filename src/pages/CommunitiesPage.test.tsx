@@ -156,8 +156,9 @@ describe('CommunitiesPage', () => {
     expect(screen.getByText('Counts are approximate (privacy-protected).')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /How communities form/ }))
     const note = screen.getByTestId('cm-privacy-note')
-    expect(note).toHaveTextContent('small amount of random noise')
-    expect(note).toHaveTextContent('only established accounts count')
+    expect(note).toHaveTextContent('Counts are approximate (privacy-protected).')
+    // No claim the backend does not implement (no noise, no account-age rule).
+    expect(note).not.toHaveTextContent(/noise|established/i)
   })
 
   it('asks anonymous visitors to sign in instead of offering membership', () => {

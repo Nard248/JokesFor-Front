@@ -10,8 +10,16 @@ describe('communityFormedCopy', () => {
 
   it('creator copy', () => {
     expect(communityFormedCopy({ community: 'puns', name: 'Puns', emoji: '🥁', role: 'creator' })).toBe(
-      '🥁 A Puns community just formed. Your Puns jokes have a new audience.',
+      '🥁 The Puns community just formed. Your Puns jokes have a new audience.',
     )
+  })
+
+  it('creator copy never guesses an article from the name', () => {
+    for (const name of ['Unicorns', 'University Life', 'Hour Jokes', 'Apples']) {
+      expect(communityFormedCopy({ community: 'x', name, role: 'creator' })).toBe(
+        `The ${name} community just formed. Your ${name} jokes have a new audience.`,
+      )
+    }
   })
 
   it('an unknown role reads as a member', () => {
@@ -22,7 +30,7 @@ describe('communityFormedCopy', () => {
 
   it('degrades without name / emoji / slug', () => {
     expect(communityFormedCopy({ community: 'office-life', role: 'creator' })).toBe(
-      'An Office Life community just formed. Your Office Life jokes have a new audience.',
+      'The Office Life community just formed. Your Office Life jokes have a new audience.',
     )
     expect(communityFormedCopy({})).toBe('A new community just formed.')
   })
