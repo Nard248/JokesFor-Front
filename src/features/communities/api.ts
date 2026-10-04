@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { useAuth } from '@/features/auth'
 import type {
@@ -66,4 +66,12 @@ export function useCreatorCommunityReach(enabled = true) {
     enabled: enabled && account !== null,
     retry: false,
   })
+}
+
+/** Community aggregates refresh server-side at most every few seconds, so a
+ *  signal (laugh, save) refreshes community queries now and once more shortly
+ *  after — enough for a community that just formed to show it. */
+export function refreshCommunitiesAfterSignal(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: communityKeys.all })
+  setTimeout(() => queryClient.invalidateQueries({ queryKey: communityKeys.all }), 6000)
 }

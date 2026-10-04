@@ -1,3 +1,4 @@
+import { refreshCommunitiesAfterSignal } from '@/features/communities/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reactionsApi, type ReactionSlug } from '@/lib/api'
 
@@ -24,8 +25,8 @@ export function useReactToJoke(jokeId: number) {
       reactionsApi.react(jokeId, reaction).then((r) => r.data),
     onSuccess: (data) => {
       queryClient.setQueryData(reactionsKeys.joke(jokeId), data)
-      // A laugh is a community signal: refresh formation state and affinity.
-      queryClient.invalidateQueries({ queryKey: ['communities'] })
+      // A laugh or save is a community signal: refresh formation state and affinity.
+      refreshCommunitiesAfterSignal(queryClient)
     },
   })
 }
