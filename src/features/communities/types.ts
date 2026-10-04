@@ -50,6 +50,11 @@ export interface CommunityMethodology {
   window_days: number
   minimum_display: number
   description: string
+  /** Sybil resistance: only accounts this old with signals on this many jokes count. */
+  established_account_days?: number
+  established_min_jokes?: number
+  /** Per-count noise level (0 = off). Counts are day-stable, rounded to 5, hidden under 5. */
+  noise_epsilon?: number
 }
 
 export interface CommunityDirectory {
@@ -61,7 +66,9 @@ export interface CommunityDirectory {
     multi_community_members: number | null
     signals_7d: number
   }
-  viewer: { counted: boolean; communities: string[] } | null
+  viewer: { counted: boolean; shares_analytics?: boolean; communities: string[] } | null
+  /** UTC day the released counts come from (counts refresh daily). */
+  counts_date?: string
   communities: Community[]
   bridges: CommunityBridge[]
   methodology: CommunityMethodology

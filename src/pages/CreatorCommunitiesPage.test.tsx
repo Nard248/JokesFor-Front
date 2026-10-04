@@ -85,8 +85,9 @@ describe('Creator Studio · Communities', () => {
     renderPage()
     const note = await screen.findByTestId('community-privacy-note')
     expect(note).toHaveTextContent('Counts are approximate (privacy-protected)')
-    // No claim the backend does not implement (no noise, no account-age rule).
-    expect(note).not.toHaveTextContent(/noise|established/i)
+    // The backend (feat/communities-v2) adds day-stable noise and counts only established accounts.
+    expect(note).toHaveTextContent(/day-stable random adjustment/)
+    expect(note).toHaveTextContent(/only established accounts count/)
     expect(screen.getByText('Membership is inferred from signed-in reading activity.')).toBeInTheDocument()
   })
 
