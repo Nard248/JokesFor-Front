@@ -56,7 +56,7 @@ vi.mock('./NotificationsPanel', () => ({
   NotificationsPanel: () => <div data-testid="notifications-panel" />,
 }))
 
-import { FlowAppShell } from './FlowAppShell'
+import { FlowAppShell, type FlowNavKey } from './FlowAppShell'
 
 function renderShell(isAuthenticated: boolean) {
   mockUseAuth.mockReturnValue({
@@ -232,5 +232,33 @@ describe('FlowAppShell — responsive navigation', () => {
     renderAt(true)
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull()
+  })
+})
+
+describe('FlowAppShell — joke-language picker placement', () => {
+  function renderActive(active: FlowNavKey) {
+    mockUseAuth.mockReturnValue({
+      user: { first_name: 'Test', username: 'testuser', email: 'test@example.com' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    return render(
+      <MemoryRouter>
+        <FlowAppShell active={active}>
+          <div>content</div>
+        </FlowAppShell>
+      </MemoryRouter>
+    )
+  }
+  const picker = () => screen.queryByRole('button', { name: /joke languages/i })
+
+  it.each<FlowNavKey>(['today', 'explore', 'search', 'trending', 'daily'])('shows the picker on the %s surface', (active) => {
+    renderActive(active)
+    expect(picker()).toBeInTheDocument()
+  })
+
+  it.each<FlowNavKey>(['studio', 'communities'])('hides the picker on the %s surface, whose content it does not scope', (active) => {
+    renderActive(active)
+    expect(picker()).toBeNull()
   })
 })

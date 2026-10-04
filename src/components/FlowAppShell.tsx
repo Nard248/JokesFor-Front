@@ -1,3 +1,4 @@
+import { DiscoveryPicker } from '@/features/discovery/DiscoveryPicker'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Bell, Plus, Home, Compass, Search, Bookmark, User, LogIn, type LucideIcon } from 'lucide-react'
@@ -52,6 +53,10 @@ const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
 ]
 /** Creator Studio — shown to signed-in accounts (anyone can start creating). */
 const STUDIO_ITEM: readonly [FlowNavKey, string, string] = ['studio', 'Studio', '/create']
+
+/** Surfaces whose content the joke-language selection does not scope: a
+ *  creator's own Studio work and the cross-language community map. */
+const UNSCOPED_SURFACES: ReadonlySet<FlowNavKey> = new Set<FlowNavKey>(['studio', 'communities'])
 
 /** Mobile bottom tab bar — the five primary destinations. The last tab swaps
  *  to "Sign in" for anonymous users (mirrors the desktop header CTA). */
@@ -288,6 +293,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           )}
         </div>
       </header>
+      {!(active && UNSCOPED_SURFACES.has(active)) && <DiscoveryPicker />}
 
       <main
         key={pathname}

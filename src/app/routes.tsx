@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router'
 import type { RouteObject } from 'react-router'
+import { ContentSelectionBoundary } from '@/features/discovery/ContentSelectionBoundary'
 import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from './providers/ProtectedRoute'
 import { GuestOnlyRoute } from './providers/GuestOnlyRoute'
@@ -108,7 +109,7 @@ export const routes: RouteObject[] = [
   // Redesigned flow
   { path: '/flow', element: <ProtectedRoute><FlowPage /></ProtectedRoute> },
   { path: '/flow-canvas', element: <ProtectedRoute><FlowCanvasPage /></ProtectedRoute> },
-  { path: '/explore', element: <ProtectedRoute><ExplorePage /></ProtectedRoute> },
+  { path: '/explore', element: <ExplorePage /> },
 
   // Auth
   { path: '/login', element: <GuestOnlyRoute><LoginPage /></GuestOnlyRoute> },
@@ -156,7 +157,7 @@ export const routes: RouteObject[] = [
   { path: '*', element: <NotFoundPage /> },
 ]
 
-const router = createBrowserRouter(routes)
+const router = createBrowserRouter([{ element: <ContentSelectionBoundary />, children: routes }])
 
 function LegacyOutlet() {
   return <Outlet />
