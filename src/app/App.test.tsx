@@ -26,6 +26,8 @@ vi.mock('@/pages', () => ({
   CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
   CreatorContentPage: () => <div data-testid="page-creator-content" />,
   CreatorLibraryPage: () => <div data-testid="page-creator-library" />,
+  CreatorCommunitiesPage: () => <div data-testid="page-creator-communities" />,
+  CommunitiesPage: () => <div data-testid="page-communities" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,

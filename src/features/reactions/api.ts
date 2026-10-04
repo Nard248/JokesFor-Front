@@ -24,6 +24,8 @@ export function useReactToJoke(jokeId: number) {
       reactionsApi.react(jokeId, reaction).then((r) => r.data),
     onSuccess: (data) => {
       queryClient.setQueryData(reactionsKeys.joke(jokeId), data)
+      // A laugh is a community signal: refresh formation state and affinity.
+      queryClient.invalidateQueries({ queryKey: ['communities'] })
     },
   })
 }

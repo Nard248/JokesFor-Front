@@ -60,3 +60,7 @@ export { SubmitJokePageLegacy } from './SubmitJokePageLegacy'
 
 export { CreatorContentPage } from './CreatorContentPage'
 export { CreatorLibraryPage } from './CreatorLibraryPage'
+export { CreatorCommunitiesPage } from './CreatorCommunitiesPage'
+
+// Self-forming communities
+export { CommunitiesPage } from './CommunitiesPage'

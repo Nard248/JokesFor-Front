@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router'
-import { Search as SearchIcon, Dice5 } from 'lucide-react'
+import { Search as SearchIcon, Dice5, Users } from 'lucide-react'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -131,6 +131,25 @@ export function ExplorePage() {
               <span className="tag-flow">⌘K</span>
             </Link>
           </div>
+
+          {/* ── Communities entry: themes become audiences ── */}
+          <Link
+            to="/communities"
+            className="mt-6 flex items-center gap-3 rounded-2xl border border-[#E9E8E7] bg-white p-4 no-underline transition-colors hover:border-[#6A1CF6]"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F2E9FF] text-[#6A1CF6]">
+              <Users size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-display)' }}>
+                Communities
+              </span>
+              <span className="block text-xs text-[#6B7280]">
+                See the groups that form around each theme, and the ones you already belong to.
+              </span>
+            </span>
+            <span className="text-sm font-bold text-[#6A1CF6]">Open →</span>
+          </Link>
 
           {/* ── Three-axis chip rails ── */}
           <div

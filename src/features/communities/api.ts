@@ -1,61 +1,69 @@
-import type { Snapshot } from './types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/axios'
+import { useAuth } from '@/features/auth'
+import type {
+  Community,
+  CommunityDetail,
+  CommunityDirectory,
+  CreatorCommunityReach,
+} from './types'
 
-const base = '/api/v1/community-lab/'
+/** Every community read is keyed by the signed-in account, so personal
+ *  affinity never leaks across a logout/login in the same tab. */
+export const communityKeys = {
+  all: ['communities'] as const,
+  directory: (account: number | string | null) => ['communities', 'directory', account] as const,
+  detail: (slug: string, account: number | string | null) => ['communities', 'detail', slug, account] as const,
+  creatorReach: (account: number | string | null) => ['communities', 'creator-reach', account] as const,
+}
 
-export async function communityRequest(
-  endpoint: string,
-  body?: Record<string, unknown>,
-  signal?: AbortSignal,
-): Promise<Snapshot> {
-  const csrf = document.cookie
-    .split('; ')
-    .find((cookie) => cookie.startsWith('community_lab_csrf='))
-    ?.slice('community_lab_csrf='.length)
-  let response: Response
-  try {
-    response = await fetch(`${base}${endpoint}/`, {
-      method: body ? 'POST' : 'GET',
-      credentials: 'same-origin',
-      signal,
-      headers: body
-        ? {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrf ? decodeURIComponent(csrf) : '',
-          }
-        : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    })
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error
-    throw new Error(
-      'The community server could not be reached. Check the connection and try again.',
-    )
-  }
-  const payload: unknown = await response.json().catch(() => null)
-  if (!response.ok) {
-    const detail =
-      payload && typeof payload === 'object'
-        ? 'error' in payload
-          ? payload.error
-          : 'detail' in payload
-            ? payload.detail
-            : null
-        : null
-    throw new Error(
-      typeof detail === 'string'
-        ? detail
-        : `The server could not complete this action (${response.status}). Try again.`,
-    )
-  }
-  if (
-    !payload ||
-    typeof payload !== 'object' ||
-    !('subjects' in payload) ||
-    !('graph' in payload)
-  ) {
-    throw new Error(
-      'The server returned an unexpected response. Reload the community data to try again.',
-    )
-  }
-  return payload as Snapshot
+export const communitiesApi = {
+  directory: () => api.get<CommunityDirectory>('/communities/').then((r) => r.data),
+  detail: (slug: string) => api.get<CommunityDetail>(`/communities/${encodeURIComponent(slug)}/`).then((r) => r.data),
+  membership: (slug: string, action: 'join' | 'leave') =>
+    api.post<Community>(`/communities/${encodeURIComponent(slug)}/membership/`, { action }).then((r) => r.data),
+  creatorReach: () => api.get<CreatorCommunityReach>('/creators/me/communities/').then((r) => r.data),
+}
+
+function useAccountKey() {
+  const { user, isAuthenticated } = useAuth()
+  return isAuthenticated ? (user?.pk ?? 'me') : null
+}
+
+export function useCommunityDirectory() {
+  const account = useAccountKey()
+  return useQuery({
+    queryKey: communityKeys.directory(account),
+    queryFn: communitiesApi.directory,
+    staleTime: 30_000,
+  })
+}
+
+export function useCommunityDetail(slug: string | undefined) {
+  const account = useAccountKey()
+  return useQuery({
+    queryKey: communityKeys.detail(slug ?? '', account),
+    queryFn: () => communitiesApi.detail(slug as string),
+    enabled: !!slug,
+    staleTime: 30_000,
+  })
+}
+
+export function useCommunityMembership() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, action }: { slug: string; action: 'join' | 'leave' }) =>
+      communitiesApi.membership(slug, action),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: communityKeys.all }),
+  })
+}
+
+export function useCreatorCommunityReach(enabled = true) {
+  const account = useAccountKey()
+  return useQuery({
+    queryKey: communityKeys.creatorReach(account),
+    queryFn: communitiesApi.creatorReach,
+    enabled: enabled && account !== null,
+    retry: false,
+  })
 }

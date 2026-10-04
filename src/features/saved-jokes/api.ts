@@ -29,6 +29,7 @@ export function useSaveJoke() {
       queryClient.invalidateQueries({ queryKey: collectionKeys.all })
       queryClient.invalidateQueries({ queryKey: favoriteKeys.all })
       queryClient.invalidateQueries({ queryKey: profileKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['communities'] })
     },
   })
 }
@@ -60,6 +61,7 @@ export function useUnsaveJoke() {
       queryClient.invalidateQueries({ queryKey: savedJokeKeys.all })
       queryClient.invalidateQueries({ queryKey: collectionKeys.all })
       queryClient.invalidateQueries({ queryKey: profileKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['communities'] })
     },
   })
 }
