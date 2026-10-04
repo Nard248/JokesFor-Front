@@ -45,6 +45,10 @@ vi.mock('@/pages', () => ({
   ExplorePage: () => <div data-testid="page-explore" />,
   CreatorHubPage: () => <div data-testid="page-creator-hub" />,
   CreatorInsightsPage: () => <div data-testid="page-creator-insights" />,
+  CreatorContentPage: () => <div data-testid="page-creator-content" />,
+  CreatorLibraryPage: () => <div data-testid="page-creator-library" />,
+  CreatorCommunitiesPage: () => <div data-testid="page-creator-communities" />,
+  CommunitiesPage: () => <div data-testid="page-communities" />,
   FormatPickerPage: () => <div data-testid="page-format-picker" />,
   EditorPage: () => <div data-testid="page-editor" />,
   SubmissionDetailPage: () => <div data-testid="page-submission-detail" />,
@@ -112,6 +116,26 @@ describe('create routes', () => {
   it('/create/insights renders CreatorInsightsPage', async () => {
     renderAt('/create/insights')
     expect(await screen.findByTestId('page-creator-insights')).toBeInTheDocument()
+  })
+
+  it('/create/content renders CreatorContentPage before the draft wildcard', async () => {
+    renderAt('/create/content')
+    expect(await screen.findByTestId('page-creator-content')).toBeInTheDocument()
+  })
+
+  it('/create/library renders CreatorLibraryPage before the draft wildcard', async () => {
+    renderAt('/create/library')
+    expect(await screen.findByTestId('page-creator-library')).toBeInTheDocument()
+  })
+
+  it('/create/communities renders CreatorCommunitiesPage before the draft wildcard', async () => {
+    renderAt('/create/communities')
+    expect(await screen.findByTestId('page-creator-communities')).toBeInTheDocument()
+  })
+
+  it('/communities and /communities/:slug render CommunitiesPage', async () => {
+    renderAt('/communities/space')
+    expect(await screen.findByTestId('page-communities')).toBeInTheDocument()
   })
 
   it('/create/new renders FormatPickerPage', async () => {

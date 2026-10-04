@@ -31,7 +31,7 @@ export function siteJsonLd(): object[] {
  * `author` names the platform rather than an unverifiable individual.
  */
 export function jokeJsonLd(joke: Joke): object {
-  // Never publish a paywall-locked joke's payoff into crawlable JSON-LD. The
+  // Never publish a withheld joke's payoff into crawlable JSON-LD. The
   // server nulls `punchline` when a joke is locked but leaves `text` populated
   // for non-one-liner formats, so falling through to `joke.text` would re-leak
   // the withheld punchline into page source. Locked → the visible setup only.

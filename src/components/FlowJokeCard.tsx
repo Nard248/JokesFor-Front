@@ -1,14 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react'
 import { useReactToJoke, useReactions } from '@/features/reactions'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { useImpression, useDwell, recordShare } from '@/features/telemetry'
-import { useDailyReads, dailyReadsKeys } from '@/features/daily-reads'
 import { useAuth } from '@/features/auth'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
-import { revealApi, type Joke, type JokeMediaItem, type ReactionSlug } from '@/lib/api'
+import { type Joke, type JokeMediaItem, type ReactionSlug } from '@/lib/api'
 import { jokeShareUrl } from '@/lib/seo'
 import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, formatSlugToFlow, type FlowJokeFormat } from './JokeRenderer'
 
@@ -58,8 +55,8 @@ export interface FlowJokeData {
   // Story extras
   read?: string          // "2 min" / "30 sec"
 
-  /** Paywall: server-stripped payoff (`is_locked`). When true the card renders
-   * the locked state (blurred payoff + "Unlock with Supporter" CTA). */
+  /** Server-withheld payoff (`is_locked`). When true the card renders
+   * an unavailable state without exposing withheld content. */
   isLocked?: boolean
 }
 
@@ -77,26 +74,13 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   const skin = SKIN[joke.fmt] ?? SKIN.setup
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { isAuthenticated } = useAuth()
-  const { canReveal, registerReveal } = useDailyReads()
 
   const numericId = typeof joke.id === 'number' ? joke.id : undefined
   const telemetryId = source ? numericId : undefined
 
-  // Locked = server strip (hard boundary) OR client-side cap tightening: on a
-  // reveal-gated format (setup / knock / image / video / audio), once the user
-  // is over their free cap, a not-yet-revealed joke is blocked with the same
-  // CTA. Already-revealed and uncapped jokes stay open (canReveal handles
-  // both). Media formats (video/audio) join image in the gated set — without
-  // them, an over-cap reader could keep re-revealing an already-fetched
-  // video/audio joke for free, counting the cap asymmetrically.
-  const revealGated =
-    joke.fmt === 'setup' || joke.fmt === 'knock' || joke.fmt === 'image' || joke.fmt === 'video' || joke.fmt === 'audio'
-  const softLocked =
-    numericId !== undefined && revealGated && !joke.isLocked && !canReveal(numericId)
-  const locked = !!joke.isLocked || softLocked
+  // Respect server-withheld content; reading has no subscription quota.
+  const locked = !!joke.isLocked
   // Impression: fire once when ≥50% visible for ~1s (no-op without a real id
   // or telemetry source; gating lives in the telemetry client).
   const impressionRef = useImpression<HTMLElement>(telemetryId, source ?? 'other')
@@ -113,20 +97,8 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   }
 
   const handleReveal = () => {
-    // Never reached for a locked card (JokeRenderer short-circuits), but guard
-    // anyway so a genuine reveal is what decrements the cap.
     if (locked || numericId === undefined) return
-    registerReveal(numericId)
-    if (isAuthenticated) {
-      if (source) trackReveal(numericId, source)
-    } else {
-      // Anonymous reader: consume the soft daily-reveal cap server-side.
-      // Best-effort — a failure here never blocks the reveal the user just saw.
-      revealApi
-        .post(numericId)
-        .then(() => queryClient.invalidateQueries({ queryKey: dailyReadsKeys.all }))
-        .catch(() => { /* soft wall — best-effort */ })
-    }
+    if (isAuthenticated && source) trackReveal(numericId, source)
   }
 
   const handleShare = (e: React.MouseEvent) => {
@@ -198,8 +170,6 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
         read={joke.read}
         onReveal={handleReveal}
         locked={locked}
-        ctaLabel={isAuthenticated ? undefined : 'Sign up free'}
-        onUnlock={() => navigate(isAuthenticated ? '/settings/billing' : '/register')}
         watchMeta={telemetryId !== undefined && source ? { jokeId: telemetryId, source } : undefined}
       />
 

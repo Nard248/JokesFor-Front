@@ -11,11 +11,11 @@ const setupPayload: JokePayload = {
   media: null,
 }
 
-describe('JokeRenderer — locked payoff (paywall)', () => {
-  it('renders the "Unlock with Supporter" CTA and NOT the reveal affordance', () => {
-    render(<JokeRenderer payload={setupPayload} locked onUnlock={vi.fn()} onReveal={vi.fn()} />)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-    expect(screen.getByText(/unlock with supporter/i)).toBeInTheDocument()
+describe('JokeRenderer — unavailable content', () => {
+  it('keeps withheld content hidden without a payment CTA', () => {
+    render(<JokeRenderer payload={setupPayload} locked onReveal={vi.fn()} />)
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unlock|subscribe/i })).toBeNull()
     // The free teaser (setup) stays visible.
     expect(screen.getByText('Why did the scarecrow win an award?')).toBeInTheDocument()
     // The reveal affordance is gone and the real punchline is never rendered.
@@ -25,12 +25,10 @@ describe('JokeRenderer — locked payoff (paywall)', () => {
 
   it('does NOT fire onReveal for a locked card, even when the body is clicked', () => {
     const onReveal = vi.fn()
-    const onUnlock = vi.fn()
-    render(<JokeRenderer payload={setupPayload} locked onReveal={onReveal} onUnlock={onUnlock} />)
+    render(<JokeRenderer payload={setupPayload} locked onReveal={onReveal} />)
     fireEvent.click(screen.getByText('Why did the scarecrow win an award?'))
-    fireEvent.click(screen.getByTestId('unlock-supporter-cta'))
+    fireEvent.click(screen.getByText('This joke is unavailable.'))
     expect(onReveal).not.toHaveBeenCalled()
-    expect(onUnlock).toHaveBeenCalledTimes(1)
   })
 
   it('locks a text-only format (one-liner) with the CTA and no cleartext', () => {
@@ -38,10 +36,10 @@ describe('JokeRenderer — locked payoff (paywall)', () => {
       <JokeRenderer
         payload={{ format: 'oneliner', text: '', setup: 'A teaser', punchline: '', lines: null, media: null }}
         locked
-        onUnlock={vi.fn()}
+
       />,
     )
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
   })
 })
 

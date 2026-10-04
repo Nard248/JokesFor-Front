@@ -64,12 +64,12 @@ describe('image joke rendering', () => {
     const payload = imagePayload({ media: [{ kind: 'image', width: 800, height: 600 }] })
     render(<JokeRenderer payload={payload} locked />)
     expect(screen.queryAllByRole('img')).toHaveLength(0)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
     expect(screen.getByText('the caption')).toBeInTheDocument()
   })
 
-  it('locked CTA label is overridable (anon sign-up wall)', () => {
-    render(<JokeRenderer payload={imagePayload()} locked ctaLabel="Sign up free" />)
-    expect(screen.getByTestId('unlock-supporter-cta')).toHaveTextContent('Sign up free')
+  it('withheld image remains unavailable without a sign-up or payment wall', () => {
+    render(<JokeRenderer payload={imagePayload()} locked />)
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
   })
 })

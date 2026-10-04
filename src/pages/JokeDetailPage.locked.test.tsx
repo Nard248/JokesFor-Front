@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
@@ -96,7 +96,7 @@ describe('JokeDetailPage — locked joke', () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('detail-locked')).toBeInTheDocument())
     expect(screen.getByText('Why did the scarecrow win an award?')).toBeInTheDocument()
-    expect(screen.getByTestId('detail-unlock-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
   })
 
   it('does NOT fire a reveal for a locked joke', async () => {
@@ -105,10 +105,10 @@ describe('JokeDetailPage — locked joke', () => {
     expect(trackRevealSpy).not.toHaveBeenCalled()
   })
 
-  it('routes the Unlock CTA to the billing page', async () => {
+  it('does not offer a paid workaround for unavailable content', async () => {
     renderPage()
-    await waitFor(() => expect(screen.getByTestId('detail-unlock-cta')).toBeInTheDocument())
-    fireEvent.click(screen.getByTestId('detail-unlock-cta'))
-    expect(navigateSpy).toHaveBeenCalledWith('/settings/billing')
+    await screen.findByTestId('detail-locked')
+    expect(screen.queryByRole('button', { name: /unlock|supporter|subscribe/i })).toBeNull()
+    expect(navigateSpy).not.toHaveBeenCalled()
   })
 })

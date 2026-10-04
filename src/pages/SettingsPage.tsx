@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useConsent } from '@/features/consent/useConsent'
 import type { AxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router'
 import { User, Bell, Shield, Palette, AlertTriangle, LogOut, CreditCard, UserX, Download, KeyRound } from 'lucide-react'
@@ -42,6 +43,7 @@ export function SettingsPage() {
   const { user } = useAuth()
   const { data: prefs } = usePreferences()
   const updatePrefs = useUpdatePreferences()
+  const browserConsent = useConsent()
   const logout = useLogout()
   const passwordChange = usePasswordChange()
   const deleteAccount = useDeleteAccount()
@@ -132,7 +134,7 @@ export function SettingsPage() {
     if (!prefs) return
     updatePrefs.mutate({
       privacy: { ...prefs.privacy, [key]: value },
-    })
+    }, { onError: () => toast({ message: 'Could not save your privacy setting. Please try again.', variant: 'error' }) })
   }
 
   const updateTheme = (next: 'light' | 'dark' | 'system') => {
@@ -208,12 +210,12 @@ export function SettingsPage() {
           </SettingsSection>
 
           {/* Billing */}
-          <SettingsSection icon={<CreditCard size={18} />} title="Billing &amp; Plans" subtitle="Manage your subscription and entitlements.">
+          <SettingsSection icon={<CreditCard size={18} />} title="Billing &amp; Plans" subtitle="Manage creator tools and existing subscriptions.">
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>Subscription</div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                  View plans, upgrade, or manage your billing.
+                  Reading and basic creator tools are free. Manage an existing subscription here.
                 </div>
               </div>
               <Link
@@ -269,10 +271,17 @@ export function SettingsPage() {
               onChange={(v) => updatePrivacy('showActivity', v)}
             />
             <Toggle
-              label="Share analytics"
-              description="Help us improve recommendations with anonymous usage data."
+              label="Audience analytics"
+              description="Allow your eligible reading activity to contribute to aggregate creator insights. For adults only; also requires analytics consent in this browser."
               checked={prefs?.privacy?.shareAnalytics ?? false}
               onChange={(v) => updatePrivacy('shareAnalytics', v)}
+              disabled={!prefs || updatePrefs.isPending}
+            />
+            <Toggle
+              label="Analytics in this browser"
+              description="Allow analytics on this device. Audience measurement also requires the account setting above. You can turn either setting off at any time."
+              checked={browserConsent.consent?.analytics === true}
+              onChange={(value) => value ? browserConsent.accept() : browserConsent.reject()}
             />
           </SettingsSection>
 
@@ -679,7 +688,7 @@ function Field({ label, value }: { label: string; value: string }) {
 // Toggle switch
 // ──────────────────────────────────────────────────────────────────────────
 
-function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ label, description, checked, onChange, disabled = false }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <label
       style={{
@@ -698,6 +707,8 @@ function Toggle({ label, description, checked, onChange }: { label: string; desc
       <button
         type="button"
         onClick={() => onChange(!checked)}
+        disabled={disabled}
+        aria-label={label}
         aria-pressed={checked}
         style={{
           width: 44,

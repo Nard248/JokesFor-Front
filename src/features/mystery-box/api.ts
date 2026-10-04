@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { mysteryBoxApi } from '@/lib/api'
+import { mysteryBoxApi, type MysteryBoxStatus } from '@/lib/api'
 
 export const mysteryBoxKeys = {
   all: ['mystery-box'] as const,
@@ -15,17 +15,18 @@ export function useMysteryBoxStatus() {
   })
 }
 
-/** POST /mystery-box/roll/ — get a random joke. 429 on cap reached. */
+/** POST /mystery-box/roll/ — get a random eligible joke. Ordinary abuse throttles still apply. */
 export function useRollMysteryBox() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => mysteryBoxApi.roll().then((r) => r.data),
     onSuccess: (data) => {
-      queryClient.setQueryData(mysteryBoxKeys.status(), {
-        rolls_used_today: 3 - data.rolls_remaining_today,
+      queryClient.setQueryData<MysteryBoxStatus>(mysteryBoxKeys.status(), (previous) => ({
+        rolls_used_today: (previous?.rolls_used_today ?? 0) + 1,
         rolls_remaining_today: data.rolls_remaining_today,
-        max_per_day: 3,
-      })
+        max_per_day: data.rolls_remaining_today === null ? null : previous?.max_per_day ?? null,
+      }))
+      void queryClient.invalidateQueries({ queryKey: mysteryBoxKeys.status() })
     },
   })
 }

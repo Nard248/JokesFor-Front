@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { readConsent, writeConsent, type ConsentRecord } from './storage'
+import { useEffect, useState } from 'react'
+import { readConsent, writeConsent, subscribeConsent, type ConsentRecord } from './storage'
 import { isAdult } from './age'
 import { initAnalytics } from '@/lib/firebase'
 import { useAuthStore } from '@/features/auth/store'
@@ -13,6 +13,8 @@ interface ConsentState {
 
 export function useConsent(): ConsentState {
   const [consent, setConsent] = useState<ConsentRecord | null>(() => readConsent())
+
+  useEffect(() => subscribeConsent(() => setConsent(readConsent())), [])
 
   const decided = consent !== null
 

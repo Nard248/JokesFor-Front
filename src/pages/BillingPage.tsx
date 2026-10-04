@@ -22,17 +22,25 @@ const USE_MOCKS =
 // Feature label map — friendlier names for the raw keys
 // ────────────────────────────────────────────────────────────────────────────
 const FEATURE_LABELS: Record<string, string> = {
-  creator_analytics: 'Creator analytics',
-  daily_joke_preview: 'Daily joke preview',
-  mature_content_addon: 'Mature content',
+  creator_analytics: 'Basic creator insights · Included',
+  creator_content_explorer: 'Content workbench',
+  creator_exports: 'Content CSV exports',
+  creator_community_insights: 'Community audience insights',
 }
 
-const LIMIT_LABELS: Record<string, string> = {
-  mystery_box_rolls_per_day: 'Mystery box rolls / day',
-  submissions_per_day: 'Submissions / day',
-  daily_jokes_per_day: 'Daily jokes / day',
-  daily_joke_history_days: 'Joke history (days)',
+/** The paid creator plan's product name. The API owns display names, but the
+ *  `creator_pro` plan (or any plan whose name contains it) always reads
+ *  "Creator Pro" so it matches the Creator Studio badge and upgrade gates. */
+const CREATOR_PRO_NAME = 'Creator Pro'
+function planDisplayName(slug: string | null | undefined, name: string): string {
+  if (slug === 'creator_pro' || /creator\s*pro/i.test(name)) return CREATOR_PRO_NAME
+  return name
 }
+
+// Compatibility keys are not paid product benefits. Keep safety and service
+// rate limits separate from the creator-tool subscription catalog.
+const INCLUDED_FEATURES = new Set(['daily_joke_preview', 'mature_content_addon'])
+const SERVICE_LIMITS = new Set(['free_joke_reads_per_day', 'mystery_box_rolls_per_day', 'submissions_per_day', 'daily_jokes_per_day', 'daily_joke_history_days'])
 
 /** Render an ISO date/datetime as a short readable date; falls back to raw on parse failure. */
 function formatDate(iso: string): string {
@@ -69,14 +77,15 @@ export function BillingPage() {
   // changes must route through the Customer Portal instead of a new Subscribe.
   const LIVE_PAID_STATUSES = ['active', 'trialing', 'past_due']
   const hasLiveSubscription = sub ? LIVE_PAID_STATUSES.includes(sub.status) : false
-  const isSubscribed = hasLiveSubscription
+  const canManageBilling = hasLiveSubscription || !!sub?.stripe_customer_id
+  const availablePlans = (plansQuery.data ?? []).filter((plan) => plan.slug !== 'supporter')
 
   // Human-friendly line describing the subscription's renewal / cancellation state.
   const subscriptionStatusLine = (() => {
     if (!sub) return null
     const end = sub.current_period_end ? formatDate(sub.current_period_end) : null
     if (sub.cancel_at_period_end) {
-      return end ? `Cancels on ${end} — access continues until then.` : 'Set to cancel at period end.'
+      return end ? `Cancels on ${end} — your subscription ends then. Reading stays free.` : 'Set to cancel at period end.'
     }
     if (sub.status === 'past_due') {
       return 'Payment past due — update your card to keep your plan.'
@@ -89,11 +98,12 @@ export function BillingPage() {
   })()
 
   function handleSubscribe(plan: BillingPlan) {
+    if (plan.slug === 'supporter' || (plan.slug !== 'free' && plan.purchase_available !== true)) return
     checkoutMutation.mutate(plan.slug, {
       onSuccess: (data) => {
         if (USE_MOCKS) {
           setDemoMessage(
-            `(demo) Would redirect to Stripe Checkout for "${plan.name}" — URL: ${data.url}`,
+            `(demo) Would redirect to Stripe Checkout for "${planDisplayName(plan.slug, plan.name)}" — URL: ${data.url}`,
           )
         } else {
           window.location.href = data.url
@@ -167,7 +177,7 @@ export function BillingPage() {
               Pick your <em className="wink">plan.</em>
             </h2>
             <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
-              Unlock more jokes, more laughs, more everything.
+              Reading, publishing, and basic creator insights are free. Subscriptions are for additional creator tools.
             </p>
           </div>
 
@@ -200,8 +210,7 @@ export function BillingPage() {
                   Billing isn't enabled yet
                 </div>
                 <p style={{ marginTop: 4, fontSize: 13, color: '#B45309' }}>
-                  Stripe hasn't been configured on this server. Paid plans aren't available right
-                  now — check back soon or contact support.
+                  Paid creator tools aren't available right now. You can keep reading, publishing, and using basic insights for free.
                 </p>
               </div>
             </div>
@@ -293,14 +302,14 @@ export function BillingPage() {
               </div>
             ) : plansQuery.isError ? (
               <ErrorCard message="Could not load plans. Please try again." />
-            ) : (plansQuery.data ?? []).length === 0 ? (
+            ) : availablePlans.length === 0 ? (
               <NoPlansCard />
             ) : (
               <div
                 data-testid="plans-grid"
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}
               >
-                {(plansQuery.data ?? [])
+                {availablePlans
                   .slice()
                   .sort((a, b) => a.sort_order - b.sort_order)
                   .map((plan) => (
@@ -320,7 +329,7 @@ export function BillingPage() {
           </section>
 
           {/* Manage billing */}
-          {isSubscribed && !isLoading && (
+          {canManageBilling && !isLoading && (
             <div
               style={{
                 marginTop: 24,
@@ -337,7 +346,7 @@ export function BillingPage() {
               <CreditCard size={18} color="#6A1CF6" />
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>
-                  Manage your subscription
+                  {sub?.plan_name ? `${planDisplayName(sub.plan_slug, sub.plan_name)} subscription` : 'Manage your subscription'}
                 </div>
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
                   {subscriptionStatusLine ?? 'Update payment, view invoices, or cancel.'}
@@ -437,7 +446,7 @@ function PlanCard({
             letterSpacing: '-0.01em',
           }}
         >
-          {plan.name}
+          {planDisplayName(plan.slug, plan.name)}
         </div>
         <div style={{ fontSize: 13, color: '#52525B', marginTop: 4 }}>{plan.description}</div>
       </div>
@@ -456,7 +465,7 @@ function PlanCard({
 
       {/* Feature list */}
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {Object.entries(plan.features).map(([key, enabled]) => (
+        {Object.entries({ ...plan.features, creator_analytics: true }).filter(([key]) => !INCLUDED_FEATURES.has(key)).map(([key, enabled]) => (
           <li key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#1A1A1A' }}>
             {enabled ? (
               <CheckCircle2 size={15} color="#16A34A" />
@@ -470,9 +479,9 @@ function PlanCard({
 
       {/* Limit list */}
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {Object.entries(plan.limits).map(([key, val]) => (
+        {Object.entries(plan.limits).filter(([key]) => !SERVICE_LIMITS.has(key)).map(([key, val]) => (
           <li key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#52525B' }}>
-            <span>{LIMIT_LABELS[key] ?? key}</span>
+            <span>{key.replaceAll('_', ' ')}</span>
             <span style={{ fontWeight: 700, color: '#1A1A1A' }}>
               {val === null ? <InfinityIcon size={13} /> : val}
             </span>
@@ -507,6 +516,11 @@ function PlanCard({
         >
           {isManaging ? 'Opening…' : 'Manage subscription'}
         </button>
+      ) : !isFree && plan.purchase_available !== true ? (
+        <div>
+          <button type="button" disabled className="btn-flow-ghost" style={{ width: '100%', minHeight: 44 }}>Purchases unavailable</button>
+          <p style={{ fontSize: 12, color: '#71717A', marginBottom: 0 }}>New subscriptions are not available right now. Reading and basic creator insights remain free.</p>
+        </div>
       ) : (
         <button
           type="button"
@@ -566,10 +580,10 @@ function EntitlementsPanel({ entitlements }: { entitlements: BillingEntitlements
               lineHeight: 1.1,
             }}
           >
-            Your current entitlements
+            Your creator tools
           </h3>
           <p style={{ marginTop: 2, fontSize: 13, color: '#6B7280' }}>
-            What your <strong>{entitlements.plan}</strong> plan gives you right now.
+            Reading, available history, mystery discovery, publishing, and basic insights are included. Account and safety rules still apply.
           </p>
         </div>
       </div>
@@ -581,7 +595,7 @@ function EntitlementsPanel({ entitlements }: { entitlements: BillingEntitlements
             Features
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {Object.entries(entitlements.features).map(([key, enabled]) => (
+            {Object.entries({ ...entitlements.features, creator_analytics: true }).filter(([key]) => !INCLUDED_FEATURES.has(key)).map(([key, enabled]) => (
               <li
                 key={key}
                 data-testid={`entitlement-feature-${key}`}
@@ -598,26 +612,26 @@ function EntitlementsPanel({ entitlements }: { entitlements: BillingEntitlements
           </ul>
         </div>
 
-        {/* Limits */}
-        <div>
+        {/* Paid tool limits, when the server defines any. */}
+        {Object.keys(entitlements.limits).some((key) => !SERVICE_LIMITS.has(key)) && <div>
           <div className="eyebrow-mono" style={{ marginBottom: 10 }}>
-            Limits
+            Additional tool limits
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {Object.entries(entitlements.limits).map(([key, val]) => (
+            {Object.entries(entitlements.limits).filter(([key]) => !SERVICE_LIMITS.has(key)).map(([key, val]) => (
               <li
                 key={key}
                 data-testid={`entitlement-limit-${key}`}
                 style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#52525B' }}
               >
-                <span>{LIMIT_LABELS[key] ?? key}</span>
+                <span>{key.replaceAll('_', ' ')}</span>
                 <span style={{ fontWeight: 700, color: '#1A1A1A' }}>
                   {val === null ? '∞' : val}
                 </span>
               </li>
             ))}
           </ul>
-        </div>
+        </div>}
       </div>
     </section>
   )
@@ -669,11 +683,10 @@ function NoPlansCard() {
           marginBottom: 8,
         }}
       >
-        Paid plans are coming soon
+        Create and read for free
       </h3>
       <p style={{ fontSize: 14, color: '#52525B', maxWidth: 420, margin: '0 auto' }}>
-        You're on the free plan with everything you need to get started. We'll add upgrade
-        options here when they're ready.
+        Explore jokes, publish your own, and use basic creator insights. Additional creator tools will be listed here when available.
       </p>
     </div>
   )

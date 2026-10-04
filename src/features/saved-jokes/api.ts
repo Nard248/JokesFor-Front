@@ -1,3 +1,4 @@
+import { refreshCommunitiesAfterSignal } from '@/features/communities/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { savedJokesAdapter } from '@/lib/api-adapter'
 import type { PaginatedResponse, SavedJoke } from '@/lib/api'
@@ -29,6 +30,8 @@ export function useSaveJoke() {
       queryClient.invalidateQueries({ queryKey: collectionKeys.all })
       queryClient.invalidateQueries({ queryKey: favoriteKeys.all })
       queryClient.invalidateQueries({ queryKey: profileKeys.all })
+      // A laugh or save is a community signal: refresh formation state and affinity.
+      refreshCommunitiesAfterSignal(queryClient)
     },
   })
 }
@@ -60,6 +63,8 @@ export function useUnsaveJoke() {
       queryClient.invalidateQueries({ queryKey: savedJokeKeys.all })
       queryClient.invalidateQueries({ queryKey: collectionKeys.all })
       queryClient.invalidateQueries({ queryKey: profileKeys.all })
+      // A laugh or save is a community signal: refresh formation state and affinity.
+      refreshCommunitiesAfterSignal(queryClient)
     },
   })
 }

@@ -5,7 +5,6 @@ import { useAuth } from '@/features/auth'
 import { useStreak } from '@/features/streak'
 import { useUnseenSubmissionChange } from '@/features/create/store'
 import { useUnreadCount } from '@/features/notifications'
-import { DailyReadsNudge } from '@/features/daily-reads'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { ProfileMenu } from './ProfileMenu'
 import { NotificationsPanel } from './NotificationsPanel'
@@ -30,7 +29,8 @@ import { NotificationsPanel } from './NotificationsPanel'
  *
  * Falls back gracefully for anonymous users: default avatar, no streak shown.
  */
-export type FlowNavKey = 'today' | 'explore' | 'search' | 'trending' | 'daily' | 'favorites' | 'library'
+export type FlowNavKey =
+  | 'today' | 'explore' | 'communities' | 'search' | 'trending' | 'daily' | 'favorites' | 'library' | 'studio'
 
 interface FlowAppShellProps {
   active?: FlowNavKey
@@ -43,12 +43,15 @@ interface FlowAppShellProps {
 const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
   ['today', 'Today', '/flow-canvas'],
   ['explore', 'Explore', '/explore'],
+  ['communities', 'Communities', '/communities'],
   ['search', 'Search', '/search'],
   ['trending', 'Trending', '/trending'],
   ['daily', 'Daily', '/daily'],
   ['favorites', 'Favorites', '/favorites'],
   ['library', 'Library', '/library'],
 ]
+/** Creator Studio — shown to signed-in accounts (anyone can start creating). */
+const STUDIO_ITEM: readonly [FlowNavKey, string, string] = ['studio', 'Studio', '/create']
 
 /** Mobile bottom tab bar — the five primary destinations. The last tab swaps
  *  to "Sign in" for anonymous users (mirrors the desktop header CTA). */
@@ -141,7 +144,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
               aria-label="Main"
               style={{ display: 'flex', alignItems: 'center', gap: isTablet ? 2 : 4, flexWrap: 'wrap' }}
             >
-              {NAV_ITEMS.map(([key, label, to]) => (
+              {(isAuthenticated ? [...NAV_ITEMS, STUDIO_ITEM] : NAV_ITEMS).map(([key, label, to]) => (
                 <Link
                   key={key}
                   to={to}
@@ -326,10 +329,6 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           })}
         </nav>
       )}
-
-      {/* One-time freemium nudge — shown once the first moment the user crosses
-          the free daily-reads cap. Silent (and network-free) when uncapped. */}
-      {isAuthenticated && <DailyReadsNudge />}
 
       {/* Local button styles — duplicated across Flow* pages, kept here so
           the shell renders cleanly even if a page forgot to inline them. */}

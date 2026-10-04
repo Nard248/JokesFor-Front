@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { FlowAppShell } from '@/components/FlowAppShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useCreatorInsights } from '@/features/creator-insights'
+import { CreatorStudioLayout } from '@/features/creator-studio'
 import type {
   InsightsPeriod,
   CreatorInsights,
@@ -236,6 +236,7 @@ function SuggestionCard({ s }: { s: CreatorSuggestion }) {
         {s.title}
       </div>
       <div style={{ fontSize: 13, color: '#52525B', lineHeight: 1.5 }}>{s.detail}</div>
+      {typeof s.data.sample_size === 'number' && <p style={{ color: '#71717A', fontSize: 12, marginBottom: 0 }}>{s.data.status === 'insufficient_data' ? 'Insufficient data' : 'Observed activity'} · Sample: {s.data.sample_size.toLocaleString()}</p>}
     </div>
   )
 }
@@ -382,6 +383,15 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+      <section style={{ background: '#fff', border: '1px solid #E9E8E7', borderRadius: 16, padding: 20, fontSize: 13, color: '#52525B' }}>
+        <p style={{ marginTop: 0 }}>Metrics describe recorded activity, not audience enjoyment.</p>
+        {data.sample_coverage && <p>{data.sample_coverage.eligible_viewers.toLocaleString()} eligible readers · {data.sample_coverage.impression_viewers.toLocaleString()} readers with impressions · {data.sample_coverage.dwell_samples.toLocaleString()} dwell samples</p>}
+        {data.measurement_notes && <details open>
+          <summary style={{ fontWeight: 700, cursor: 'pointer' }}>How these numbers are measured</summary>
+          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>{Object.entries(data.measurement_notes).map(([key, note]) => <li key={key}>{note}</li>)}</ul>
+        </details>}
+        {audience.suppressed && <p>Audience groups need at least {audience.minimum_sample_size ?? data.sample_coverage?.audience_minimum ?? 20} eligible readers. Smaller groups are hidden to protect reader privacy.</p>}
+      </section>
       {/* KPI row — 2-up on phones, auto-fitting columns above. */}
       <section>
         <div
@@ -393,13 +403,13 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
             gap: 12,
           }}
         >
-          <KpiCard label="Payoff Rate" value={pct(overview.payoff_rate)} hero />
+          <KpiCard label="Open rate" value={pct(overview.payoff_rate)} hero />
           <KpiCard label="Reach" value={fmt(overview.reach)} />
           <KpiCard label="Views" value={fmt(overview.views)} />
           <KpiCard label="Reactions" value={fmt(overview.reactions)} />
           <KpiCard label="Favorites" value={fmt(overview.favorites)} />
           <KpiCard label="Saves" value={fmt(overview.saves)} />
-          <KpiCard label="Shares" value={fmt(overview.shares)} />
+          <KpiCard label="Share initiations" value={fmt(overview.shares)} />
           <KpiCard label="Followers" value={fmt(overview.followers)} />
           {overview.peak_read_hour !== null && (
             <KpiCard label="Peak Hour" value={`${overview.peak_read_hour}:00`} />
@@ -423,7 +433,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           Attention
         </h2>
         <p style={{ fontSize: 13, color: '#71717A', margin: '0 0 12px', fontFamily: 'var(--font-sans)' }}>
-          How much your jokes actually get read.
+          Visible reading samples and scroll depth from eligible readers. These are activity signals, not proof that a joke was read or enjoyed.
         </p>
         <div
           style={{
@@ -433,19 +443,19 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
           }}
         >
           <AttentionStat
-            label="Avg read time"
+            label="Avg visible sample"
             value={secs(overview.avg_read_seconds)}
-            hint="Time spent reading, per view"
+            hint="Visible time per recorded dwell sample"
           />
           <AttentionStat
-            label="Read-through rate"
+            label="Dwell rate"
             value={pct(overview.read_rate)}
-            hint="Impressions that became a real read"
+            hint="Measured impressions with a matching dwell sample"
           />
           <AttentionStat
             label="Completion (story)"
             value={pct(overview.completion_rate)}
-            hint="Story reads scrolled to the end"
+            hint="Measured story samples scrolled near the end"
           />
         </div>
       </section>
@@ -517,7 +527,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
               letterSpacing: '-0.01em',
             }}
           >
-            Reactions &amp; Shares
+            Reactions &amp; share initiations
           </h2>
           <div
             style={{
@@ -530,7 +540,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
               <BreakdownPanel title="Reactions" rows={reactionRows} />
             )}
             {shareRows.length > 0 && (
-              <BreakdownPanel title="Shares by platform" rows={shareRows} />
+              <BreakdownPanel title="Share initiations by platform" rows={shareRows} />
             )}
           </div>
         </section>
@@ -593,27 +603,27 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
                       WebkitBoxOrient: 'vertical',
                     }}
                   >
-                    {joke.text}
+                    {joke.content_available === false ? 'Content unavailable with current safety settings.' : joke.text}
                   </div>
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                     {[
                       { label: 'Views', val: fmt(joke.views) },
                       { label: 'Reactions', val: fmt(joke.reactions) },
                       { label: 'Saves', val: fmt(joke.saves) },
-                      { label: 'Shares', val: fmt(joke.shares) },
-                      { label: 'Payoff', val: pct(joke.payoff_rate) },
-                      { label: 'Avg read', val: secs(joke.avg_read_seconds) },
-                      { label: 'Read rate', val: pct(joke.read_rate) },
+                      { label: 'Share initiations', val: fmt(joke.shares) },
+                      { label: 'Open rate', val: pct(joke.payoff_rate) },
+                      { label: 'Avg visible sample', val: secs(joke.avg_read_seconds) },
+                      { label: 'Dwell rate', val: pct(joke.read_rate) },
                       // Wave-2 watch-time telemetry (media jokes only). The backend
                       // always emits these keys (null for text/image jokes), but
                       // current prod omits them entirely — so absence and null are
                       // handled identically: the chip simply isn't rendered, rather
                       // than falling back to the "—" placeholder the other stats use.
                       ...(joke.avg_watch_seconds != null
-                        ? [{ label: 'Avg watch', val: watchDuration(joke.avg_watch_seconds)! }]
+                        ? [{ label: 'Avg playback sample', val: watchDuration(joke.avg_watch_seconds)! }]
                         : []),
                       ...(joke.watch_completion_rate != null
-                        ? [{ label: 'watched to end', val: pct(joke.watch_completion_rate) }]
+                        ? [{ label: 'measured completion', val: pct(joke.watch_completion_rate) }]
                         : []),
                     ].map(({ label, val }) => (
                       <span key={label} style={{ fontSize: 12, color: '#71717A', fontFamily: 'var(--font-sans)' }}>
@@ -709,7 +719,7 @@ function InsightsDashboard({ data }: { data: CreatorInsights }) {
               letterSpacing: '-0.01em',
             }}
           >
-            Growth Suggestions
+            Observed patterns
           </h2>
           <div
             style={{
@@ -732,143 +742,130 @@ export function CreatorInsightsPage() {
   const navigate = useNavigate()
   const { isMobile } = useBreakpoint()
   const [period, setPeriod] = useState<InsightsPeriod>('month')
+  const periodLabelId = useId()
   const { data, isLoading, isError, error, refetch } = useCreatorInsights(period)
 
   const is403 = isError && (error as { response?: { status?: number } })?.response?.status === 403
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <FlowAppShell>
-        <div style={{ padding: '40px 0', maxWidth: 860, margin: '0 auto' }}>
-          {/* Header */}
-          <div
+    <CreatorStudioLayout
+      section="insights"
+      title="Insights"
+      subtitle="How readers respond to your published jokes. Free on every plan."
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 28,
+        }}
+      >
+        <span className="eyebrow-mono" id={periodLabelId}>Period</span>
+        {/* Period selector */}
+        <div role="group" aria-labelledby={periodLabelId} style={{ display: 'flex', gap: 4 }}>
+          {PERIODS.map(({ id, label }) => (
+            <button
+              key={id}
+              aria-pressed={period === id}
+              onClick={() => setPeriod(id)}
+              style={{
+                padding: isMobile ? '6px 18px' : '6px 16px',
+                minHeight: isMobile ? 44 : undefined,
+                borderRadius: 9999,
+                border: period === id ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
+                background: period === id ? '#F7F0FF' : 'transparent',
+                color: period === id ? '#6A1CF6' : '#52525B',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: period === id ? 700 : 500,
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Loading */}
+      {isLoading && <LoadingSkeleton />}
+
+      {/* 403: not a creator yet */}
+      {is403 && (
+        <div
+          style={{
+            padding: '56px 32px',
+            border: '1px dashed #E9E8E7',
+            borderRadius: 18,
+            textAlign: 'center',
+            background: '#fff',
+          }}
+        >
+          <div style={{ fontSize: 40, marginBottom: 16 }}>📊</div>
+          <h2
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 16,
-              marginBottom: 28,
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 22,
+              color: '#1A1A1A',
+              letterSpacing: '-0.01em',
+              marginBottom: 8,
             }}
           >
-            <h1
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 900,
-                fontSize: 'clamp(2rem, 5vw, 2.75rem)',
-                letterSpacing: '-0.02em',
-                color: '#1A1A1A',
-                lineHeight: 1.05,
-                margin: 0,
-              }}
-            >
-              Creator Insights
-            </h1>
-
-            {/* Period selector */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {PERIODS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  aria-pressed={period === id}
-                  onClick={() => setPeriod(id)}
-                  style={{
-                    padding: isMobile ? '6px 18px' : '6px 16px',
-                    minHeight: isMobile ? 44 : undefined,
-                    borderRadius: 9999,
-                    border: period === id ? '1px solid #AC8EFF' : '1px solid #E9E8E7',
-                    background: period === id ? '#F7F0FF' : 'transparent',
-                    color: period === id ? '#6A1CF6' : '#52525B',
-                    fontFamily: 'var(--font-sans)',
-                    fontWeight: period === id ? 700 : 500,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s ease',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Loading */}
-          {isLoading && <LoadingSkeleton />}
-
-          {/* 403: not a creator yet */}
-          {is403 && (
-            <div
-              style={{
-                padding: '56px 32px',
-                border: '1px dashed #E9E8E7',
-                borderRadius: 18,
-                textAlign: 'center',
-                background: '#fff',
-              }}
-            >
-              <div style={{ fontSize: 40, marginBottom: 16 }}>📊</div>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: 22,
-                  color: '#1A1A1A',
-                  letterSpacing: '-0.01em',
-                  marginBottom: 8,
-                }}
-              >
-                Insights unlock when you publish
-              </h2>
-              <p style={{ fontSize: 15, color: '#52525B', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
-                Publish a joke to start seeing your reach, reactions, and audience data here.
-              </p>
-              <Button variant="pill" onClick={() => navigate('/create/new')}>
-                Publish a joke
-              </Button>
-            </div>
-          )}
-
-          {/* Generic error */}
-          {isError && !is403 && (
-            <div
-              style={{
-                padding: '32px',
-                borderRadius: 16,
-                background: '#FEF2F2',
-                border: '1px solid #FEE2E2',
-                textAlign: 'center',
-              }}
-            >
-              <p style={{ color: '#991B1B', fontWeight: 600, marginBottom: 12 }}>
-                Failed to load insights
-              </p>
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {/* Data or zero state — mutually exclusive */}
-          {!isLoading && !isError && data && (
-            data.overview.published_jokes === 0 ? (
-              <div
-                style={{
-                  marginTop: 32,
-                  padding: '40px 32px',
-                  border: '1px dashed #E9E8E7',
-                  borderRadius: 18,
-                  textAlign: 'center',
-                  background: '#fff',
-                }}
-              >
-                <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
-              </div>
-            ) : (
-              <InsightsDashboard data={data} />
-            )
-          )}
+            Insights unlock when you publish
+          </h2>
+          <p style={{ fontSize: 15, color: '#52525B', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
+            Publish a joke to start seeing your reach, reactions, and audience data here.
+          </p>
+          <Button variant="pill" onClick={() => navigate('/create/new')}>
+            Publish a joke
+          </Button>
         </div>
-      </FlowAppShell>
-    </div>
+      )}
+
+      {/* Generic error */}
+      {isError && !is403 && (
+        <div
+          style={{
+            padding: '32px',
+            borderRadius: 16,
+            background: '#FEF2F2',
+            border: '1px solid #FEE2E2',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ color: '#991B1B', fontWeight: 600, marginBottom: 12 }}>
+            Failed to load insights
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* Data or zero state — mutually exclusive */}
+      {!isLoading && !isError && data && (
+        data.overview.published_jokes === 0 ? (
+          <div
+            style={{
+              marginTop: 32,
+              padding: '40px 32px',
+              border: '1px dashed #E9E8E7',
+              borderRadius: 18,
+              textAlign: 'center',
+              background: '#fff',
+            }}
+          >
+            <p style={{ fontSize: 15, color: '#52525B' }}>No data yet for this period.</p>
+          </div>
+        ) : (
+          <InsightsDashboard data={data} />
+        )
+      )}
+    </CreatorStudioLayout>
   )
 }

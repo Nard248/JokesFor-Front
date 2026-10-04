@@ -25,7 +25,7 @@ export function Sidebar() {
           <p className="font-display font-bold text-sm text-[#2E2F2F] truncate">
             {mockUser.first_name} {mockUser.last_name}
           </p>
-          <p className="text-xs text-[#6B7280]">Premium Member</p>
+          <p className="text-xs text-[#6B7280]">Community member</p>
         </div>
       </div>
 

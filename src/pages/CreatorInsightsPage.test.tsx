@@ -9,6 +9,15 @@ vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
 }))
 
+vi.mock('@/features/creator-studio/useCreatorPlan', () => ({
+  useCreatorPlan: () => ({
+    isPro: false,
+    features: { creator_content_explorer: false, creator_exports: false, creator_community_insights: false },
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 const mockUseCreatorInsights = vi.fn()
 
 vi.mock('@/features/creator-insights', async (importOriginal) => {
@@ -80,9 +89,11 @@ beforeEach(() => {
 })
 
 describe('CreatorInsightsPage', () => {
-  it('renders "Creator Insights" heading', () => {
+  it('renders inside Creator Studio with the "Insights" heading and tab marked current', () => {
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.getByText(/creator insights/i)).toBeDefined()
+    expect(screen.getByRole('heading', { level: 1, name: 'Insights' })).toBeDefined()
+    expect(screen.getByText('Creator Studio')).toBeDefined()
+    expect(screen.getByTestId('studio-tab-insights').getAttribute('aria-current')).toBe('page')
   })
 
   it('renders KPI values: reach, views, payoff rate', () => {
@@ -135,6 +146,9 @@ describe('CreatorInsightsPage', () => {
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
     expect(screen.getAllByText(/publish a joke/i).length).toBeGreaterThanOrEqual(1)
+    // Basic insights are free: the 403 means "not a creator yet", never a paywall.
+    expect(screen.getByRole('heading', { level: 1, name: 'Insights' })).toBeDefined()
+    expect(screen.queryByTestId('creator-pro-gate')).toBeNull()
   })
 
   it('renders audience taste labels', () => {
@@ -182,7 +196,7 @@ describe('CreatorInsightsPage', () => {
 
   it('renders the reactions & shares breakdown section with friendly labels', () => {
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.getByText(/reactions & shares/i)).toBeDefined()
+    expect(screen.getByText(/reactions & share initiations/i)).toBeDefined()
     // 'lol' -> '😂 LOL', 'whatsapp' -> 'WhatsApp'
     expect(screen.getByText(/LOL/)).toBeDefined()
     expect(screen.getByText('WhatsApp')).toBeDefined()
@@ -206,8 +220,8 @@ describe('CreatorInsightsPage', () => {
   it('renders the Attention read-time metrics (avg read time, read-through, completion)', () => {
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
     expect(screen.getByText('Attention')).toBeDefined()
-    expect(screen.getByText('Avg read time')).toBeDefined()
-    expect(screen.getByText('Read-through rate')).toBeDefined()
+    expect(screen.getAllByText('Avg visible sample').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Dwell rate').length).toBeGreaterThan(0)
     expect(screen.getByText(/completion \(story\)/i)).toBeDefined()
     // avg_read_seconds: 14 → "14s"; read_rate 0.58 → "58%"; completion 0.41 → "41%"
     expect(screen.getByText('14s')).toBeDefined()
@@ -248,7 +262,7 @@ describe('CreatorInsightsPage', () => {
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
     // The Attention section still renders, with em-dashes for the null stats.
-    expect(screen.getByText('Avg read time')).toBeDefined()
+    expect(screen.getAllByText('Avg visible sample').length).toBeGreaterThan(0)
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   })
 
@@ -257,8 +271,8 @@ describe('CreatorInsightsPage', () => {
     // First top joke: avg_read_seconds 18 → "18s", read_rate 0.64 → "64%"
     expect(screen.getByText('18s')).toBeDefined()
     expect(screen.getByText('64%')).toBeDefined()
-    expect(screen.getAllByText('Avg read').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Read rate').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Avg visible sample').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Dwell rate').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders an em-dash for a null payoff_rate instead of crashing', () => {
@@ -273,7 +287,7 @@ describe('CreatorInsightsPage', () => {
       refetch: vi.fn(),
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.getByText('Payoff Rate')).toBeDefined()
+    expect(screen.getAllByText('Open rate').length).toBeGreaterThan(0)
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
   })
 
@@ -299,8 +313,8 @@ describe('CreatorInsightsPage', () => {
     // avg_watch_seconds 12 -> "0:12"; watch_completion_rate 0.74 -> "74%"
     expect(screen.getByText('0:12')).toBeDefined()
     expect(screen.getByText('74%')).toBeDefined()
-    expect(screen.getByText('Avg watch')).toBeDefined()
-    expect(screen.getByText('watched to end')).toBeDefined()
+    expect(screen.getByText('Avg playback sample')).toBeDefined()
+    expect(screen.getByText('measured completion')).toBeDefined()
   })
 
   it('formats avg watch seconds over a minute as "m:ss"', () => {
@@ -324,8 +338,8 @@ describe('CreatorInsightsPage', () => {
     // MOCK_DATA.top_jokes entries carry no avg_watch_seconds/watch_completion_rate
     // keys at all — mirrors current prod's absent-key contract.
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.queryByText('Avg watch')).toBeNull()
-    expect(screen.queryByText('watched to end')).toBeNull()
+    expect(screen.queryByText('Avg playback sample')).toBeNull()
+    expect(screen.queryByText('measured completion')).toBeNull()
   })
 
   it('omits both watch-time chips on a top joke when the fields are explicitly null', () => {
@@ -346,8 +360,8 @@ describe('CreatorInsightsPage', () => {
       refetch: vi.fn(),
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.queryByText('Avg watch')).toBeNull()
-    expect(screen.queryByText('watched to end')).toBeNull()
+    expect(screen.queryByText('Avg playback sample')).toBeNull()
+    expect(screen.queryByText('measured completion')).toBeNull()
   })
 
   it('renders one watch chip independently when only one of the two fields is present', () => {
@@ -368,8 +382,36 @@ describe('CreatorInsightsPage', () => {
       refetch: vi.fn(),
     })
     render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
-    expect(screen.getByText('Avg watch')).toBeDefined()
+    expect(screen.getByText('Avg playback sample')).toBeDefined()
     expect(screen.getByText('0:05')).toBeDefined()
-    expect(screen.queryByText('watched to end')).toBeNull()
+    expect(screen.queryByText('measured completion')).toBeNull()
   })
+})
+
+describe('Creator insight measurement definitions', () => {
+  it('shows server measurement notes, sample coverage and privacy suppression', () => {
+    mockUseCreatorInsights.mockReturnValue({
+      data: { ...MOCK_DATA,
+        sample_coverage: { eligible_viewers: 8, impression_viewers: 5, dwell_samples: 9, audience_minimum: 20 },
+        measurement_notes: { population: 'Signed-in consenting adults, excluding the creator.', attention: 'Time averages describe samples and segments.' },
+        audience: { top_themes: [], top_categories: [], top_formats: [], sample_size: 8, minimum_sample_size: 20, suppressed: true },
+      }, isLoading: false, isError: false, error: null, refetch: vi.fn(),
+    })
+    render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+    expect(screen.getByText('Signed-in consenting adults, excluding the creator.')).toBeInTheDocument()
+    expect(screen.getByText('Time averages describe samples and segments.')).toBeInTheDocument()
+    expect(screen.getByText(/Audience groups need at least 20 eligible readers/)).toBeInTheDocument()
+    expect(screen.getByTestId('studio-tab-content')).toHaveAttribute('href', '/create/content')
+  })
+})
+
+it('withholds unavailable content text without presenting a purchase gate', () => {
+  mockUseCreatorInsights.mockReturnValue({
+    data: { ...MOCK_DATA, top_jokes: [{ ...MOCK_DATA.top_jokes[0], text: 'Withheld private content', content_available: false }] },
+    isLoading: false, isError: false, error: null, refetch: vi.fn(),
+  })
+  render(<CreatorInsightsPage />, { wrapper: makeWrapper() })
+  expect(screen.queryByText('Withheld private content')).not.toBeInTheDocument()
+  expect(screen.getByText('Content unavailable with current safety settings.')).toBeInTheDocument()
+  expect(screen.queryByText(/subscribe to unlock/i)).not.toBeInTheDocument()
 })

@@ -7,14 +7,13 @@ import { FlowAppShell } from '@/components/FlowAppShell'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useTodayAugmented, useTomorrowTeaser, useTasteProfile } from '@/features/insights'
 import { useStreak } from '@/features/streak'
-import { useMysteryBoxStatus, useRollMysteryBox } from '@/features/mystery-box'
+import { useRollMysteryBox } from '@/features/mystery-box'
 import { useFeaturedPack, usePacksInProgress } from '@/features/packs'
 import { useJokeSearch } from '@/features/jokes'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { useDailyJokeHistory } from '@/features/daily-joke'
 import { useTopJokesters } from '@/features/trending'
 import { recordShare, useDwell } from '@/features/telemetry'
-import { useDailyReads } from '@/features/daily-reads'
 import { trackReveal } from '@/lib/telemetry'
 import { timeUntilDailyReset, dailyResetLocalLabel } from '@/lib/dailyReset'
 import { jokeShareUrl } from '@/lib/seo'
@@ -29,7 +28,7 @@ import type { JokeMediaItem } from '@/lib/api'
  *   ✓ Hero strip (greeting + Yesterday/Mystery box quick actions)
  *   ✓ JOTD hero card with reveal-punchline interaction
  *   ✓ Streak rail (lime card, 14-day visualization)
- *   ✓ Mystery box (amber card, "3 left today")
+ *   ✓ Mystery box (free random discovery)
  *   ✓ Tomorrow teaser (dark card, blurred preview)
  *   ✓ "You stopped mid-sip" — continue yesterday's set
  *   ✓ "Three you'll probably save" — 3-up format-aware cards
@@ -53,15 +52,12 @@ export function FlowCanvasPage() {
   // Real-API data sources for the Today hub.
   const { data: today } = useTodayAugmented()
   const { data: streak } = useStreak()
-  const { data: mysteryStatus } = useMysteryBoxStatus()
   const { data: tomorrow } = useTomorrowTeaser()
   const { data: featuredPack } = useFeaturedPack()
   const { data: inProgressPacks } = usePacksInProgress()
   const { data: tasteProfile } = useTasteProfile('month')
   const { data: history } = useDailyJokeHistory()
   const { data: jokesters } = useTopJokesters(5)
-  // The daily joke rotates at MIDNIGHT UTC; prefer the server's reset_at.
-  const { resetAt } = useDailyReads()
   // "Three you'll probably save" — filter by user's top vibe; fall back to recent.
   const topVibe = tasteProfile?.top_vibe?.slug
   const { data: forYouJokes } = useJokeSearch(topVibe ? { vibe: topVibe, page_size: 3 } : { page_size: 3, ordering: '-created_at' })
@@ -95,7 +91,7 @@ export function FlowCanvasPage() {
                 Good {greetingTime()}, <em className="wink">{firstName}.</em>
               </h2>
               <p style={{ marginTop: 6, fontSize: 18, color: '#52525B' }}>
-                One joke today. Two if you finish yesterday's saved set.
+                Your daily joke, plus more to explore whenever you like.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -105,7 +101,7 @@ export function FlowCanvasPage() {
               <button type="button" className="btn-flow-ghost" style={{ height: isMobile ? 44 : undefined }}>
                 <Dice5 size={14} /> Mystery box{' '}
                 <span className="tag-flow lime" style={{ marginLeft: 6 }}>
-                  {(mysteryStatus?.rolls_remaining_today ?? 3)} LEFT
+                  FREE
                 </span>
               </button>
             </div>
@@ -216,8 +212,8 @@ export function FlowCanvasPage() {
             {/* Right rail: streak + mystery box + tomorrow teaser */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <StreakRail days={streak?.current_count ?? 0} streakState={streak} />
-              <MysteryBox status={mysteryStatus} />
-              <TomorrowTeaser tomorrow={tomorrow} resetAt={resetAt} />
+              <MysteryBox />
+              <TomorrowTeaser tomorrow={tomorrow} />
             </div>
           </div>
 
@@ -281,7 +277,7 @@ export function FlowCanvasPage() {
           <StatsRow tasteProfile={tasteProfile} />
 
           {/* ── Brand pull-quote footer ─────────────────────────── */}
-          <BrandQuoteFooter issueLabel={today?.issue_label} resetAt={resetAt} isMobile={isMobile} />
+          <BrandQuoteFooter issueLabel={today?.issue_label} isMobile={isMobile} />
         </div>
       </FlowAppShell>
     </div>
@@ -398,7 +394,7 @@ function JotdBody({ joke, revealed, onReveal }: JotdBodyProps) {
   }
 
   // Image — blurred media box, reveal via the same onReveal as setup→punchline.
-  // Daily joke is paywall-exempt, so there's no locked state to branch on here.
+  // The daily response contains content already filtered for this reader.
   const hasMedia = (joke.media?.length ?? 0) > 0
   if (hasMedia && joke.setup) {
     const first = joke.media![0]
@@ -649,13 +645,11 @@ function StreakRail({ days, streakState }: { days: number; streakState: ReturnTy
   )
 }
 
-function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>['data'] }) {
+function MysteryBox() {
   const roll = useRollMysteryBox()
-  const left = status?.rolls_remaining_today ?? 0
-  const exhausted = left === 0
 
   const handleRoll = () => {
-    if (exhausted || roll.isPending) return
+    if (roll.isPending) return
     roll.mutate(undefined, {
       onSuccess: (data) => {
         // For now, just navigate to the joke detail. Phase 7 introduces a modal.
@@ -667,7 +661,7 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#FFC965', color: '#5F4200', position: 'relative', overflow: 'hidden' }}>
       <span className="eyebrow-mono" style={{ color: '#5F4200' }}>
-        Mystery box · {left} left today
+        Mystery box · Free discovery
       </span>
       <h3
         style={{
@@ -683,12 +677,12 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
         Roll for a <em className="wink" style={{ color: '#5F4200' }}>random</em> joke.
       </h3>
       <p style={{ fontSize: 13, marginTop: 6, marginBottom: 14, color: '#5F4200', opacity: 0.8 }}>
-        Pulled from your vibes. Capped daily — that's the point.
+        Find another joke from your vibes.
       </p>
       <button
         type="button"
         onClick={handleRoll}
-        disabled={exhausted || roll.isPending}
+        disabled={roll.isPending}
         style={{
           background: '#5F4200',
           color: '#FFC965',
@@ -699,14 +693,14 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
           fontFamily: 'var(--font-sans)',
           fontWeight: 700,
           fontSize: 14,
-          cursor: exhausted ? 'not-allowed' : 'pointer',
-          opacity: exhausted ? 0.5 : 1,
+          cursor: roll.isPending ? 'wait' : 'pointer',
+          opacity: roll.isPending ? 0.5 : 1,
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
         }}
       >
-        <Dice5 size={14} /> {roll.isPending ? 'Rolling…' : exhausted ? 'No rolls left' : 'Roll'}
+        <Dice5 size={14} /> {roll.isPending ? 'Rolling…' : 'Roll'}
       </button>
     </div>
   )
@@ -714,15 +708,13 @@ function MysteryBox({ status }: { status: ReturnType<typeof useMysteryBoxStatus>
 
 function TomorrowTeaser({
   tomorrow,
-  resetAt,
 }: {
   tomorrow: ReturnType<typeof useTomorrowTeaser>['data']
-  resetAt?: string | null
 }) {
   const previewText = tomorrow?.preview ?? "Tomorrow's joke is brewing…"
   const formatName = tomorrow?.format ? formatLabel(tomorrow.format) : 'TBD'
   // Next joke drops at midnight UTC — shown in the reader's local time.
-  const resetLocal = dailyResetLocalLabel(resetAt)
+  const resetLocal = dailyResetLocalLabel()
   return (
     <div style={{ padding: 24, borderRadius: 18, background: '#0F0E12', color: '#fff' }}>
       <span className="eyebrow-mono" style={{ color: 'rgba(255,255,255,0.6)' }}>
@@ -1369,7 +1361,7 @@ function StatsRow({
             const fg = isBig ? fgPalette[colorIndex] : '#1A1A1A'
             return (
               <span
-                key={p.t}
+                key={`${p.t}-${i}`}
                 style={{
                   height: isBig ? 38 : 30,
                   fontSize: isBig ? 14 : 12,
@@ -1422,11 +1414,10 @@ function StatCell({ value, label, valueColor }: { value: string; label: string; 
   )
 }
 
-function BrandQuoteFooter({ issueLabel, resetAt, isMobile }: { issueLabel?: string; resetAt?: string | null; isMobile?: boolean }) {
-  // Count down to the real rotation instant: MIDNIGHT UTC (or the server's
-  // reset_at), NOT 9 AM local. Display stays in the reader's local time.
-  const countdown = timeUntilDailyReset(resetAt)
-  const resetLocal = dailyResetLocalLabel(resetAt)
+function BrandQuoteFooter({ issueLabel, isMobile }: { issueLabel?: string; isMobile?: boolean }) {
+  // Daily jokes rotate at midnight UTC; display the time in the reader's locale.
+  const countdown = timeUntilDailyReset()
+  const resetLocal = dailyResetLocalLabel()
   return (
     <div
       style={{

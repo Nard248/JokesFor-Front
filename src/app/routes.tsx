@@ -34,6 +34,10 @@ import {
   // Content creation (Phase 5)
   CreatorHubPage,
   CreatorInsightsPage,
+  CreatorContentPage,
+  CreatorLibraryPage,
+  CreatorCommunitiesPage,
+  CommunitiesPage,
   FormatPickerPage,
   EditorPage,
   SubmissionDetailPage,
@@ -72,6 +76,9 @@ export const routes: RouteObject[] = [
   { path: '/daily', element: <DailyJokePage /> },
   { path: '/library', element: <LibraryPage /> },
   { path: '/trending', element: <TrendingPage /> },
+  // Self-forming communities — public; personal affinity when signed in.
+  { path: '/communities', element: <CommunitiesPage /> },
+  { path: '/communities/:slug', element: <CommunitiesPage /> },
 
   // Authenticated
   { path: '/favorites', element: <ProtectedRoute><FavoritesPage /></ProtectedRoute> },
@@ -86,6 +93,9 @@ export const routes: RouteObject[] = [
   // Content creation — /create/* (specific paths before :draftId wildcard)
   { path: '/create', element: <ProtectedRoute><CreatorHubPage /></ProtectedRoute> },
   { path: '/create/insights', element: <ProtectedRoute><CreatorInsightsPage /></ProtectedRoute> },
+  { path: '/create/content', element: <ProtectedRoute><CreatorContentPage /></ProtectedRoute> },
+  { path: '/create/library', element: <ProtectedRoute><CreatorLibraryPage /></ProtectedRoute> },
+  { path: '/create/communities', element: <ProtectedRoute><CreatorCommunitiesPage /></ProtectedRoute> },
   { path: '/create/new', element: <ProtectedRoute><FormatPickerPage /></ProtectedRoute> },
   { path: '/create/new/:formatSlug', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },
   { path: '/create/:draftId', element: <ProtectedRoute><EditorPage /></ProtectedRoute> },

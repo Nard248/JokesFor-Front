@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 const trackImpression = vi.fn()
+let eligible = true
+const listeners = new Set<() => void>()
+vi.mock('./session', () => ({
+  getTelemetrySession: () => ({ eligible }),
+  subscribeTelemetrySession: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
+}))
 vi.mock('@/lib/telemetry', () => ({
   trackImpression: (...args: unknown[]) => trackImpression(...args),
 }))
@@ -37,6 +43,7 @@ function Card({ id, source = 'feed' as const }: { id?: number; source?: 'feed' }
 }
 
 beforeEach(() => {
+  eligible = true
   vi.useFakeTimers()
   trackImpression.mockClear()
   observe.mockClear()
@@ -79,6 +86,35 @@ describe('useImpression', () => {
     emit(0.9)
     vi.advanceTimersByTime(1000)
     expect(trackImpression).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts a fresh visible interval when analytics is enabled or the account changes', () => {
+    eligible = false
+    render(<Card id={42} />)
+    emit(0.8)
+    vi.advanceTimersByTime(5000)
+    expect(trackImpression).not.toHaveBeenCalled()
+    eligible = true
+    listeners.forEach((cb) => cb())
+    vi.advanceTimersByTime(500)
+    listeners.forEach((cb) => cb())
+    vi.advanceTimersByTime(500)
+    expect(trackImpression).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(500)
+    expect(trackImpression).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not count a hidden tab as an impression', () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    render(<Card id={42} />)
+    emit(0.8)
+    vi.advanceTimersByTime(5000)
+    expect(trackImpression).not.toHaveBeenCalled()
+    visibility.mockReturnValue('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    vi.advanceTimersByTime(1000)
+    expect(trackImpression).toHaveBeenCalledTimes(1)
+    visibility.mockRestore()
   })
 
   it('is a no-op without a valid joke id', () => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5, Lock } from 'lucide-react'
+import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { jokeDetailApi, type JokeSource, type Joke } from '@/lib/api'
@@ -16,7 +16,6 @@ import { useRollMysteryBox } from '@/features/mystery-box'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
 import { dailyResetLocalLabel } from '@/lib/dailyReset'
-import { useAuth } from '@/features/auth'
 import type { ReactionSlug } from '@/lib/api'
 import { Seo, jokeJsonLd, jokeShareUrl, truncate } from '@/lib/seo'
 
@@ -165,8 +164,6 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
   const { toast } = useToast()
-  const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
   // Read-time: dwell on the joke content with scroll depth (strongest signal).
   // Media jokes render a FlowJokeCard that runs its own dwell/impression on the
   // same joke+source (dwell is deliberately not deduped), so the hero-level
@@ -196,7 +193,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
 
   const handleCopy = () => {
     // A locked joke's `text` still carries the withheld punchline for non-one-liner
-    // formats — copy only the visible setup so Copy can't bypass the paywall.
+    // formats — copy only the visible setup so Copy can't expose withheld content.
     const text = locked
       ? joke.setup || ''
       : joke.setup && joke.punchline
@@ -306,17 +303,8 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
               ████ ███████ ██ ████
             </div>
             <p style={{ marginTop: 18, fontSize: 15, color: '#52525B', maxWidth: 460 }}>
-              You've hit your free daily jokes. Go unlimited with Supporter to reveal every punchline.
+              This joke is unavailable.
             </p>
-            <button
-              type="button"
-              data-testid="detail-unlock-cta"
-              onClick={() => navigate(isAuthenticated ? '/settings/billing' : '/register')}
-              className="btn-flow-reward"
-              style={{ marginTop: 16 }}
-            >
-              <Lock size={16} /> {isAuthenticated ? 'Unlock with Supporter' : 'Sign up free'}
-            </button>
           </div>
           )
         ) : (joke.media?.length ?? 0) > 0 ? (

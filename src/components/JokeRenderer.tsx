@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Sparkles, Lock, Music } from 'lucide-react'
+import { Sparkles, Music } from 'lucide-react'
 import type { JokeMediaItem } from '@/lib/api'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useWatchTracking } from '@/features/telemetry/useWatchTracking'
@@ -136,17 +136,8 @@ interface JokeRendererProps {
   /** Fired once when the user reveals the payoff (setup→punchline tap, or the
    * knock-knock chain reaching its final line). Used for real reveal telemetry. */
   onReveal?: () => void
-  /**
-   * Paywall: when true the payoff is LOCKED — the blur is forced on over a
-   * redacted placeholder, the reveal affordance is replaced by an "Unlock with
-   * Supporter" CTA, and `onReveal` is NEVER fired (there's nothing to reveal).
-   * The `setup` teaser (when present) still shows as the free hook.
-   */
+  /** Withheld content is never rendered or revealed. Reading itself is free. */
   locked?: boolean
-  /** Invoked when the user taps the locked CTA (parent routes to billing). */
-  onUnlock?: () => void
-  /** Overrides the locked CTA's label (e.g. 'Sign up free' for anonymous readers). */
-  ctaLabel?: string
   /**
    * Wave-2: real watch-time telemetry for the video/audio branches, via
    * `useWatchTracking`. Only `FlowJokeCard` supplies this (it already knows
@@ -201,7 +192,7 @@ function DurationChip({ label }: { label: string }) {
  */
 export function JokeRenderer({
   payload, big = false, revealed: revealedProp, interactive = true, read, className, onReveal,
-  locked = false, onUnlock, ctaLabel, watchMeta,
+  locked = false, watchMeta,
 }: JokeRendererProps) {
   const { format: fmt } = payload
   const skin = SKIN[fmt] ?? SKIN.setup
@@ -237,7 +228,7 @@ export function JokeRenderer({
   // Paywall: a locked payoff short-circuits every format's interactive path, so
   // the reveal handlers (and onReveal telemetry) can never fire for it.
   if (locked) {
-    return <LockedBody payload={payload} skin={skin} big={big} className={className} onUnlock={onUnlock} ctaLabel={ctaLabel} />
+    return <LockedBody payload={payload} skin={skin} big={big} className={className} />
   }
 
   const lines = payload.lines ?? []
@@ -509,17 +500,15 @@ export function JokeRenderer({
 /**
  * Locked payoff — shared by every format. Shows the free `setup` teaser (when
  * present), forces the `.punch-blur` ON over a redacted placeholder, and swaps
- * the reveal affordance for the "Unlock with Supporter" CTA. No reveal fires.
+ * the reveal affordance for an unavailable notice. No reveal fires.
  */
 function LockedBody({
-  payload, skin, big, className, onUnlock, ctaLabel,
+  payload, skin, big, className,
 }: {
   payload: JokePayload
   skin: SkinSpec
   big?: boolean
   className?: string
-  onUnlock?: () => void
-  ctaLabel?: string
 }) {
   const hasTeaser = !!payload.setup
   const titleSize = big ? 24 : 16
@@ -573,48 +562,7 @@ function LockedBody({
           {LOCKED_FILL}
         </div>
       )}
-      <UnlockCta skin={skin} onUnlock={onUnlock} label={ctaLabel} />
+      <p role="status" style={{ marginTop: 16, fontSize: 13, color: skin.fg }}>This joke is unavailable.</p>
     </div>
-  )
-}
-
-/**
- * "Unlock with Supporter" CTA. A plain button (not a Link) so JokeRenderer stays
- * router-free and testable; the parent wires `onUnlock` to navigation
- * (/settings/billing). Stops propagation so a card wrapped in a detail <Link>
- * doesn't also navigate to the joke.
- */
-function UnlockCta({ skin, onUnlock, label }: { skin: SkinSpec; onUnlock?: () => void; label?: string }) {
-  return (
-    <button
-      type="button"
-      data-testid="unlock-supporter-cta"
-      onClick={(e) => {
-        e.stopPropagation()
-        e.preventDefault()
-        onUnlock?.()
-      }}
-      // 40px pill, 44px hit area on touch devices (see .tap44 in index.css).
-      // This is the conversion CTA — it should not be the hardest thing to tap.
-      className="tap44"
-      style={{
-        marginTop: 16,
-        height: 40,
-        padding: '0 18px',
-        borderRadius: 9999,
-        border: 0,
-        background: skin.fg,
-        color: skin.bg,
-        fontFamily: 'var(--font-sans)',
-        fontWeight: 700,
-        fontSize: 13,
-        cursor: 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <Lock size={14} /> {label ?? 'Unlock with Supporter'}
-    </button>
   )
 }

@@ -11,28 +11,10 @@ vi.mock('react-router', async (orig) => ({
 }))
 
 // ── Auth: this suite exercises the AUTHENTICATED reveal/unlock path. The anon
-// path (revealApi consumption + 'Sign up free' → /register) is covered in
+// path (no quota consumption and no registration wall) is covered in
 // FlowJokeCard.anon.test.tsx. ─────────────────────────────────────────────────
 vi.mock('@/features/auth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { pk: 1 } }),
-}))
-
-// ── Daily-reads enforcement (controlled per test) ─────────────────────────────
-const canRevealMock = vi.fn<(id: number) => boolean>(() => true)
-const registerRevealMock = vi.fn()
-vi.mock('@/features/daily-reads', () => ({
-  useDailyReads: () => ({
-    canReveal: canRevealMock,
-    registerReveal: registerRevealMock,
-    hasRevealed: () => false,
-    over: false,
-    active: true,
-    remaining: 0,
-    limit: 10,
-    used: 10,
-    resetAt: null,
-  }),
-  dailyReadsKeys: { all: ['daily-reads'] },
 }))
 
 // ── Reveal telemetry ──────────────────────────────────────────────────────────
@@ -64,6 +46,7 @@ const setupJoke: FlowJokeData = {
 
 function renderCard(joke: FlowJokeData) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  qc.setQueryData(['daily-reads'], { limit: 10, used: 10, remaining: 0, over: true })
   return render(
     <QueryClientProvider client={qc}>
       <FlowJokeCard joke={joke} source="feed" />
@@ -73,34 +56,31 @@ function renderCard(joke: FlowJokeData) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  canRevealMock.mockReturnValue(true)
 })
 
-describe('FlowJokeCard — paywall', () => {
-  it('server-locked joke (is_locked) renders the CTA and never tracks a reveal', () => {
+describe('FlowJokeCard — free reading and unavailable content', () => {
+  it('withheld content stays hidden without offering a subscription', () => {
     renderCard({ ...setupJoke, isLocked: true })
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
     expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('unlock-supporter-cta'))
-    expect(navigateSpy).toHaveBeenCalledWith('/settings/billing')
+    expect(screen.queryByRole('button', { name: /unlock|subscribe/i })).toBeNull()
+    expect(navigateSpy).not.toHaveBeenCalled()
     expect(trackRevealSpy).not.toHaveBeenCalled()
-    expect(registerRevealMock).not.toHaveBeenCalled()
   })
 
   it('unlocked card reveals on tap and records the reveal', () => {
     renderCard(setupJoke)
     expect(screen.getByText(/tap to reveal punchline/i)).toBeInTheDocument()
     fireEvent.click(screen.getByText('Why did the scarecrow win an award?'))
-    expect(registerRevealMock).toHaveBeenCalledWith(42)
     expect(trackRevealSpy).toHaveBeenCalledWith(42, 'feed')
     expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
   })
 
-  it('over-cap (canReveal=false) soft-locks a fresh reveal-gated joke with the CTA', () => {
-    canRevealMock.mockReturnValue(false) // user is over their free cap
+  it('stale reader quota cannot prevent a new joke from revealing', () => {
     renderCard(setupJoke)
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
-    expect(screen.queryByText(/tap to reveal/i)).not.toBeInTheDocument()
-    expect(trackRevealSpy).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Why did the scarecrow win an award?'))
+    expect(screen.getByText('He was outstanding in his field.')).toBeInTheDocument()
+    expect(screen.queryByText(/unlock with supporter/i)).toBeNull()
+    expect(trackRevealSpy).toHaveBeenCalledWith(42, 'feed')
   })
 })

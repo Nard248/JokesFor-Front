@@ -146,7 +146,7 @@ export function SettingsPageLegacy() {
             {([
               { key: 'publicProfile' as const, label: 'Public Profile', desc: 'Let others see your profile and saved jokes' },
               { key: 'showActivity' as const, label: 'Show Activity', desc: 'Display your recent activity on profile' },
-              { key: 'shareAnalytics' as const, label: 'Share Analytics', desc: 'Help us improve with anonymous usage data' },
+              { key: 'shareAnalytics' as const, label: 'Audience analytics', desc: 'Allow eligible adult reading activity to contribute to aggregate creator insights; also requires browser analytics consent' },
             ]).map((item) => (
               <div key={item.key} className="flex items-center justify-between">
                 <div>

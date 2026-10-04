@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 const trackDwell = vi.fn()
+const flush = vi.fn()
+let eligible = true
+const listeners = new Set<() => void>()
+vi.mock('./session', () => ({
+  getTelemetrySession: () => ({ eligible }),
+  subscribeTelemetrySession: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
+}))
 vi.mock('@/lib/telemetry', () => ({
+  flush: () => flush(),
   trackDwell: (...args: unknown[]) => trackDwell(...args),
 }))
 
@@ -41,6 +49,8 @@ let nowMs = 0
 
 beforeEach(() => {
   trackDwell.mockClear()
+  flush.mockClear()
+  eligible = true
   observe.mockClear()
   disconnect.mockClear()
   lastCallback = null
@@ -94,7 +104,7 @@ describe('useDwell', () => {
     nowMs = 5_500 // +500ms visible
 
     emit(0) // leave viewport → flush. Total visible = 1000 + 500 = 1500ms.
-    expect(trackDwell).toHaveBeenCalledWith(7, 'feed', 1_500, undefined)
+    expect(trackDwell.mock.calls.map((call) => call[2])).toEqual([1000, 500])
   })
 
   it('flushes accumulated time on unmount', () => {
@@ -103,6 +113,30 @@ describe('useDwell', () => {
     nowMs = 2_500
     unmount()
     expect(trackDwell).toHaveBeenCalledWith(9, 'feed', 2_500, undefined)
+  })
+
+  it('flushes the final dwell after it is enqueued on pagehide', () => {
+    const { unmount } = render(<Card id={7} />)
+    emit(0.7)
+    nowMs = 2000
+    window.dispatchEvent(new Event('pagehide'))
+    unmount()
+    expect(trackDwell).toHaveBeenCalledTimes(1)
+    expect(flush.mock.invocationCallOrder[0]).toBeGreaterThan(trackDwell.mock.invocationCallOrder[0])
+  })
+
+  it('drops dwell across consent and account transitions without retroactive collection', () => {
+    eligible = false
+    render(<Card id={7} />)
+    emit(0.7)
+    nowMs = 5000
+    eligible = true
+    listeners.forEach((cb) => cb())
+    nowMs = 6000
+    listeners.forEach((cb) => cb())
+    nowMs = 8000
+    emit(0)
+    expect(trackDwell).toHaveBeenCalledWith(7, 'feed', 2000, undefined)
   })
 
   it('is a no-op without a valid joke id', () => {

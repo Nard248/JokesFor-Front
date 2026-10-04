@@ -47,9 +47,9 @@ beforeEach(() => {
 })
 
 describe('ProfileMenu', () => {
-  it('renders a "My submissions" link pointing to /create', () => {
+  it('renders a "Creator Studio" link pointing to /create', () => {
     renderMenu()
-    const link = screen.getByRole('menuitem', { name: /my submissions/i })
+    const link = screen.getByRole('menuitem', { name: /creator studio/i })
     expect(link).toBeInTheDocument()
     expect(link.getAttribute('href')).toBe('/create')
   })

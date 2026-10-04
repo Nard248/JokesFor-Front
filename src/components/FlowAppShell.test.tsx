@@ -39,9 +39,7 @@ vi.mock('@/features/notifications', () => ({
 }))
 
 // ── Stub the freemium nudge (its useDailyReads/useQuery would need a provider) ──
-vi.mock('@/features/daily-reads', () => ({
-  DailyReadsNudge: () => null,
-}))
+
 
 // ── Mock useUnseenSubmissionChange ────────────────────────────────────────────
 const mockUseUnseenSubmissionChange = vi.fn(() => false)

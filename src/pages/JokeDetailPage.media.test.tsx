@@ -111,7 +111,7 @@ describe('JokeDetailPage — media joke', () => {
     getJokeMock.mockResolvedValue({ data: LOCKED_MEDIA_JOKE })
     renderPage()
 
-    await waitFor(() => expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument())
     expect(screen.queryAllByRole('img')).toHaveLength(0)
     // The bespoke text-locked CTA belongs to the text path only.
     expect(screen.queryByTestId('detail-unlock-cta')).not.toBeInTheDocument()
@@ -121,7 +121,7 @@ describe('JokeDetailPage — media joke', () => {
     getJokeMock.mockResolvedValue({ data: LOCKED_MEDIA_JOKE })
     renderPage()
 
-    await waitFor(() => expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument())
     expect(trackRevealSpy).not.toHaveBeenCalled()
   })
 })

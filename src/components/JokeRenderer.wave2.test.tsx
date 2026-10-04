@@ -17,6 +17,11 @@ vi.mock('@/lib/telemetry', () => ({
   flush: vi.fn(),
 }))
 
+vi.mock('@/features/telemetry/session', () => ({
+  getTelemetrySession: () => ({ eligible: true }),
+  subscribeTelemetrySession: () => () => {},
+}))
+
 import { JokeRenderer, type JokePayload } from './JokeRenderer'
 
 function setReducedMotion(reduced: boolean) {
@@ -126,7 +131,7 @@ describe('video joke rendering', () => {
     render(<JokeRenderer payload={payload} locked />)
     expect(screen.queryAllByRole('img')).toHaveLength(0)
     expect(screen.queryByTestId('video-player')).not.toBeInTheDocument()
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
     expect(screen.getByText('the caption')).toBeInTheDocument()
   })
 })
@@ -162,7 +167,7 @@ describe('audio joke rendering', () => {
     const placeholder = screen.getByTestId('locked-media-placeholder')
     expect(placeholder.style.height).toBe('88px')
     expect(screen.queryByTestId('audio-player')).not.toBeInTheDocument()
-    expect(screen.getByTestId('unlock-supporter-cta')).toBeInTheDocument()
+    expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument()
   })
 })
 
@@ -177,13 +182,13 @@ describe('watch telemetry wiring (watchMeta)', () => {
     fireEvent.click(screen.getByTestId('media-punchline')) // reveal → player mounts
 
     const video = screen.getByTestId('video-player') as HTMLVideoElement
-    Object.defineProperty(video, 'currentTime', { value: 5, configurable: true })
-    Object.defineProperty(video, 'duration', { value: 60, configurable: true })
-    fireEvent.timeUpdate(video)
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(0)
+    fireEvent.playing(video)
+    clock.mockReturnValue(5000)
     fireEvent.pause(video)
 
     expect(trackWatch).toHaveBeenCalledTimes(1)
-    expect(trackWatch).toHaveBeenCalledWith(1, 'feed', 5_000, 8)
+    expect(trackWatch).toHaveBeenCalledWith(1, 'feed', 5_000)
   })
 
   it('without watchMeta (PreviewPane/detail paths) playback never reports watch telemetry', () => {
