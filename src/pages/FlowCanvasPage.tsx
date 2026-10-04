@@ -1361,7 +1361,7 @@ function StatsRow({
             const fg = isBig ? fgPalette[colorIndex] : '#1A1A1A'
             return (
               <span
-                key={p.t}
+                key={`${p.t}-${i}`}
                 style={{
                   height: isBig ? 38 : 30,
                   fontSize: isBig ? 14 : 12,
