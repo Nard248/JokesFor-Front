@@ -1,3 +1,4 @@
+import { useDiscoveryCatalog } from '@/features/discovery/api'
 /**
  * EditorPage — the integration hub for content creation.
  *
@@ -59,6 +60,7 @@ function toEditorDraft(d: ContentDraft): EditorDraft {
     themes: d.themes,
     categories: d.categories,
     cultures: d.cultures,
+    countries: d.countries ?? [],
     ageRating: d.ageRating,
     language: d.language,
     source: d.source,
@@ -100,7 +102,8 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const { data: tones = [] } = useTones()
   const { data: cultureTags = [] } = useCultureTags()
   const { data: ageRatings = [] } = useAgeRatings()
-  useLanguages() // pre-fetch for potential future use
+  const { data: languages = [] } = useLanguages()
+  const { data: discovery } = useDiscoveryCatalog()
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const deleteDraft = useDeleteDraft()
@@ -253,6 +256,13 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
               <Editor draft={draft} dispatch={dispatch} errors={errors} />
             </Suspense>
 
+            <label style={{ display: 'grid', gap: 6, marginTop: 24, fontSize: 14, fontWeight: 600 }}>Joke language
+              <select value={draft.language} onChange={(event) => dispatch({ type: 'setMeta', field: 'language', value: event.target.value })} style={{ minHeight: 44, padding: '8px 12px', border: '1px solid #D4D4D8', borderRadius: 10, background: '#fff', font: 'inherit' }}>
+                {!languages.some((item) => item.code === draft.language) && <option value={draft.language}>{draft.language}</option>}
+                {languages.map((item) => <option key={item.code} value={item.code} lang={item.code}>{discovery?.languages.find((language) => language.code === item.code)?.native_name || item.native_name || item.name}</option>)}
+              </select>
+            </label>
+
             {/* Tag section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 24 }}>
               <TagPicker
@@ -273,6 +283,12 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
                 selected={draft.cultures}
                 onChange={(v) => dispatch({ type: 'setTags', field: 'cultures', value: v })}
               />
+              {discovery && <TagPicker
+                label="Countries"
+                options={discovery.countries.map((country, index) => ({ id: index, slug: country.code, name: country.native_name || country.name }))}
+                selected={draft.countries ?? []}
+                onChange={(value) => dispatch({ type: 'setTags', field: 'countries', value })}
+              />}
               <AgeRatingRadio
                 options={ageRatings}
                 value={draft.ageRating}

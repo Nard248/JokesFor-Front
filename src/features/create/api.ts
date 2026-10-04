@@ -67,6 +67,7 @@ export function fromDTO(d: ContentDraftDTO): ContentDraft {
     themes: d.themes ?? d.context_tags ?? [],
     categories: d.categories ?? d.tones ?? [],
     cultures: d.culture_tags ?? [],
+    countries: d.countries ?? [],
     ageRating: d.age_rating ?? null,
     language: d.language ?? 'en',
     source: d.source ?? 'original',
@@ -102,6 +103,7 @@ export function toPatchBody(p: Partial<ContentDraft>): PatchDraftBody {
   if (p.categories !== undefined) body.tones = p.categories
   // cultures → culture_tags
   if (p.cultures !== undefined) body.culture_tags = p.cultures
+  if (p.countries !== undefined) body.countries = p.countries
   // ageRating → age_rating
   if (p.ageRating !== undefined) body.age_rating = p.ageRating
   if (p.language !== undefined) body.language = p.language

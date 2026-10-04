@@ -26,6 +26,10 @@ import { MemoryRouter, Route, Routes, createMemoryRouter, RouterProvider } from 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@/components/ui/toast'
 
+vi.mock('@/features/discovery/api', () => ({
+  useDiscoveryCatalog: () => ({ data: { languages: [], countries: [{ code: 'ES', name: 'Spain', native_name: 'España', language_codes: ['es'] }] } }),
+}))
+
 // ── Passthrough mock for FlowAppShell ────────────────────────────────────────
 vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => (
@@ -276,5 +280,17 @@ describe('EditorPage — submit path', () => {
     await waitFor(() => {
       expect(mockSubmitMutate).toHaveBeenCalledWith(99, expect.any(Object))
     })
+  })
+})
+
+
+describe('EditorPage — language and country metadata', () => {
+  it('saves the selected language and country through the editor reducer', async () => {
+    render(makeDataRouterWrapper('/create/new/oneliner'))
+    await screen.findByRole('option', { name: 'Spanish' })
+    fireEvent.change(screen.getByLabelText('Joke language'), { target: { value: 'es' } })
+    expect(mockAutosaveReturn?.draft.language).toBe('es')
+    fireEvent.click(screen.getByRole('button', { name: 'España' }))
+    expect(mockAutosaveReturn?.draft.countries).toEqual(['ES'])
   })
 })

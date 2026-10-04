@@ -11,6 +11,7 @@ export interface EditorDraft {
   themes: string[]
   categories: string[]
   cultures: string[]
+  countries?: string[]
   ageRating: string | null
   language: string
   source: string
@@ -21,7 +22,7 @@ export type EditorAction =
   | { type: 'hydrate'; draft: EditorDraft }
   | { type: 'setField'; field: 'text' | 'setup' | 'punchline'; value: string }
   | { type: 'setLines'; lines: string[] }
-  | { type: 'setTags'; field: 'themes' | 'categories' | 'cultures'; value: string[] }
+  | { type: 'setTags'; field: 'themes' | 'categories' | 'cultures' | 'countries'; value: string[] }
   | { type: 'setMeta'; field: 'ageRating' | 'language' | 'source'; value: string | null }
   | { type: 'changeFormat'; format: FormatSlug }
   | { type: 'setMedia'; media: MediaAssetDTO[] }
