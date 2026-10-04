@@ -1,8 +1,10 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import type { Joke, JokeSearchParams, PaginatedResponse } from '@/lib/api'
+import { EMPTY_SELECTION } from '@/features/discovery/selection'
+import { useDiscoveryStore } from '@/features/discovery/store'
 
 vi.mock('@/components/FlowAppShell', () => ({
   FlowAppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="shell">{children}</div>,
@@ -47,10 +49,15 @@ function page(jokes: Joke[]): PaginatedResponse<Joke> {
   return { count: jokes.length, next: null, previous: null, results: jokes }
 }
 
-function renderPage() {
+function LocationState() {
+  return <output data-testid="explore-url">{useLocation().search}</output>
+}
+
+function renderPage(path = '/explore') {
   return render(
-    <MemoryRouter initialEntries={['/explore']}>
+    <MemoryRouter initialEntries={[path]}>
       <ExplorePage />
+      <LocationState />
     </MemoryRouter>,
   )
 }
@@ -62,6 +69,7 @@ function lastParams(): JokeSearchParams {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  useDiscoveryStore.getState().setSelection(EMPTY_SELECTION)
   mockUseJokeSearch.mockReturnValue({
     data: page([makeJoke(11), makeJoke(12)]),
     isLoading: false,
@@ -115,6 +123,12 @@ describe('ExplorePage — real backend search', () => {
     expect(p.tones).toBe('dad')
   })
 
+  it('filters the international puns category using the canonical backend slug', () => {
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /^Puns$/ }))
+    expect(lastParams().tones).toBe('puns')
+  })
+
   it('sends the REAL tone slug for remapped Category chips (office-proper / kid-safe)', () => {
     renderPage()
     // These chips used to send `office` / `kid`, which return 0 rows.
@@ -134,6 +148,34 @@ describe('ExplorePage — real backend search', () => {
     mockUseJokeSearch.mockReturnValue({ data: page([]), isLoading: false, isError: false })
     renderPage()
     expect(screen.getByText(/No jokes match/)).toBeDefined()
+  })
+
+  it.each(['Clear all', 'Clear filters'])('%s clears locale and category filters, including URL and saved preferences', (action) => {
+    const selection = { language: 'es', country: 'FR', culture_tags: 'spain-everyday' }
+    useDiscoveryStore.getState().setSelection(selection)
+    const empty = { data: page([]), isLoading: false, isError: false }
+    const unfiltered = { data: page([makeJoke(11)]), isLoading: false, isError: false }
+    mockUseJokeSearch.mockImplementation((params: JokeSearchParams) =>
+      params.language || params.country || params.culture_tags || params.tones ? empty : unfiltered)
+
+    renderPage('/explore?language=es&country=FR&culture_tags=spain-everyday')
+    expect(screen.getByText(/3 filters on/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Dad' }))
+    expect(screen.getByText(/4 filters on/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: action }))
+
+    expect(lastParams().language).toBeUndefined()
+    expect(lastParams().country).toBeUndefined()
+    expect(lastParams().culture_tags).toBeUndefined()
+    expect(lastParams().tones).toBeUndefined()
+    expect(lastParams().page).toBe(1)
+    expect(useDiscoveryStore.getState().selection).toEqual(EMPTY_SELECTION)
+    const params = new URLSearchParams(screen.getByTestId('explore-url').textContent ?? '')
+    expect(params.get('language')).toBe('')
+    expect(params.get('country')).toBe('')
+    expect(params.get('culture_tags')).toBe('')
+    expect(screen.getByText('joke-11')).toBeInTheDocument()
+    expect(screen.getByText(/no filters/)).toBeInTheDocument()
   })
 
   it('does NOT interleave the fabricated "Curator note" editorial tile', () => {
@@ -176,5 +218,27 @@ describe('ExplorePage — real backend search', () => {
     expect(lastParams().page).toBe(2)
     expect(screen.getByText('joke-11')).toBeDefined()
     expect(screen.getByText('joke-13')).toBeDefined()
+  })
+
+  it('keeps the loaded jokes and count on screen while page 2 is still loading', () => {
+    const p1 = {
+      data: { count: 3, next: 'x', previous: null, results: [makeJoke(11), makeJoke(12)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    // Page 2's own query has no data yet: exactly what TanStack reports for a
+    // fresh key with no placeholder.
+    const pending = { data: undefined, isLoading: true, isError: false, isFetching: true }
+    mockUseJokeSearch.mockImplementation((p: JokeSearchParams) => ((p.page ?? 1) >= 2 ? pending : p1))
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }))
+
+    expect(lastParams().page).toBe(2)
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
+    expect(screen.getByText('joke-11')).toBeDefined()
+    expect(screen.getByText('joke-12')).toBeDefined()
+    expect(screen.getByText(/Explore · 3 jokes loaded/)).toBeDefined()
+    const button = screen.getByRole('button', { name: /loading/i })
+    expect((button as HTMLButtonElement).disabled).toBe(true)
   })
 })

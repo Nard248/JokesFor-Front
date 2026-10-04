@@ -128,3 +128,14 @@ describe('toPatchBody', () => {
     expect(body.lines).toBeNull()
   })
 })
+
+
+describe('country metadata round-trip', () => {
+  test('maps independent language and country metadata from the server', () => {
+    const draft = fromDTO({ ...baseDTO, language: 'es', countries: ['ES', 'FR'] })
+    expect(draft.language).toBe('es')
+    expect(draft.countries).toEqual(['ES', 'FR'])
+    expect(toPatchBody({ language: draft.language, countries: draft.countries })).toEqual({ language: 'es', countries: ['ES', 'FR'] })
+    expect(toPatchBody({ countries: [] })).toEqual({ countries: [] })
+  })
+})

@@ -45,12 +45,16 @@ import type { JokeMediaItem } from '@/lib/api'
 export function FlowCanvasPage() {
   const { user } = useAuth()
   const { isMobile } = useBreakpoint()
-  const [revealed, setRevealed] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [revealedJokeId, setRevealedJokeId] = useState<number | null>(null)
+  const [savedJokeId, setSavedJokeId] = useState<number | null>(null)
   const saveJoke = useSaveJoke()
 
   // Real-API data sources for the Today hub.
-  const { data: today } = useTodayAugmented()
+  const { data: today, isLoading: loadingToday, isError: todayError, error: todayErrorDetail } = useTodayAugmented()
+  // Only a 404 means the selection matched nothing; anything else is a load failure.
+  const todayUnmatched = (todayErrorDetail as { response?: { status?: number } } | null)?.response?.status === 404
+  const revealed = !!today?.joke?.id && revealedJokeId === today.joke.id
+  const saved = !!today?.joke?.id && savedJokeId === today.joke.id
   const { data: streak } = useStreak()
   const { data: tomorrow } = useTomorrowTeaser()
   const { data: featuredPack } = useFeaturedPack()
@@ -112,6 +116,7 @@ export function FlowCanvasPage() {
             {/* JOTD hero */}
             <article
               ref={heroDwellRef}
+              lang={today?.joke?.language?.code}
               style={{
                 background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
                 border: '1px solid #E9E8E7',
@@ -133,7 +138,7 @@ export function FlowCanvasPage() {
                   background: 'radial-gradient(circle, #F2E9FF, transparent 70%)',
                 }}
               />
-              <header
+              <header lang="en"
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -144,7 +149,7 @@ export function FlowCanvasPage() {
                 }}
               >
                 <span className="tag-flow">
-                  Joke of the day · {today?.joke?.format?.name ?? 'Loading…'}
+                  Joke of the day · {today?.joke?.format?.name ?? (loadingToday ? 'Loading…' : 'Unavailable')}
                 </span>
                 <span className="eyebrow-mono">
                   {(today?.joke?.themes?.[0]?.name ?? today?.joke?.context_tags?.[0]?.name) || ' '}
@@ -152,15 +157,18 @@ export function FlowCanvasPage() {
                   {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) || ''}
                 </span>
               </header>
-              <JotdBody
+              {todayError && (todayUnmatched
+                ? <p role="status" style={{ marginTop: 24 }}>No daily joke is available for this selection. Adjust the joke languages above or <Link to="/explore">explore the collection</Link>.</p>
+                : <p role="status" style={{ marginTop: 24 }}>Today's joke could not be loaded. Try again later or <Link to="/explore">explore the collection</Link>.</p>)}
+              {!todayError && <JotdBody
                 joke={today?.joke}
                 revealed={revealed}
                 onReveal={() => {
-                  setRevealed(true)
+                  setRevealedJokeId(today?.joke?.id ?? null)
                   if (today?.joke?.id) trackReveal(today.joke.id, 'daily')
                 }}
-              />
-              <footer
+              />}
+              <footer lang="en"
                 style={{
                   marginTop: 32,
                   paddingTop: 24,
@@ -181,8 +189,8 @@ export function FlowCanvasPage() {
                     onClick={() => {
                       const id = today?.joke?.id
                       if (saved || !id) return
-                      setSaved(true)
-                      saveJoke.mutate({ jokeId: id }, { onError: () => setSaved(false) })
+                      setSavedJokeId(id)
+                      saveJoke.mutate({ jokeId: id }, { onError: () => setSavedJokeId((current) => current === id ? null : current) })
                     }}
                     aria-pressed={saved}
                     className={saved ? 'btn-flow-reward' : 'btn-flow-ghost'}
@@ -268,7 +276,7 @@ export function FlowCanvasPage() {
           </div>
 
           {/* ── 7-day archive · newspaper strip ────────────────── */}
-          <SevenDayArchive history={history?.results} isMobile={isMobile} />
+          <SevenDayArchive history={history} isMobile={isMobile} />
 
           {/* ── Top jokesters + Weekly special ─────────────────── */}
           <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} isMobile={isMobile} />

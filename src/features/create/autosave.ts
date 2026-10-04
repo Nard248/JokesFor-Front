@@ -115,6 +115,7 @@ export function useAutosave(args: {
         themes: current.themes,
         categories: current.categories,
         cultures: current.cultures,
+        countries: current.countries,
         ageRating: current.ageRating,
         language: current.language,
         source: current.source,

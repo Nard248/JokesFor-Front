@@ -1,3 +1,5 @@
+import { useContentSelection } from '@/features/discovery/context'
+import { selectionParams } from '@/features/discovery/selection'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { packsApi } from '@/lib/api'
 
@@ -10,35 +12,39 @@ export const packsKeys = {
 }
 
 export function usePacks() {
+  const params = selectionParams(useContentSelection())
   return useQuery({
-    queryKey: packsKeys.list(),
-    queryFn: () => packsApi.list().then((r) => r.data),
+    queryKey: [...packsKeys.list(), params],
+    queryFn: () => packsApi.list(params).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
   })
 }
 
 export function usePack(slug: string | undefined) {
+  const params = selectionParams(useContentSelection())
   return useQuery({
-    queryKey: packsKeys.one(slug ?? ''),
-    queryFn: () => packsApi.get(slug!).then((r) => r.data),
+    queryKey: [...packsKeys.one(slug ?? ''), params],
+    queryFn: () => packsApi.get(slug!, params).then((r) => r.data),
     enabled: !!slug,
     staleTime: 1000 * 60 * 5,
   })
 }
 
 export function useFeaturedPack() {
+  const params = selectionParams(useContentSelection())
   return useQuery({
-    queryKey: packsKeys.featured(),
-    queryFn: () => packsApi.featured().then((r) => r.data),
+    queryKey: [...packsKeys.featured(), params],
+    queryFn: () => packsApi.featured(params).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
     retry: false, // 404 if none featured — don't retry
   })
 }
 
 export function usePacksInProgress() {
+  const params = selectionParams(useContentSelection())
   return useQuery({
-    queryKey: packsKeys.inProgress(),
-    queryFn: () => packsApi.inProgress().then((r) => r.data),
+    queryKey: [...packsKeys.inProgress(), params],
+    queryFn: () => packsApi.inProgress(params).then((r) => r.data),
     staleTime: 1000 * 60,
   })
 }

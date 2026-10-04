@@ -348,6 +348,7 @@ export const mockContentApi = {
       ...(body.tones !== undefined && { tones: body.tones }),
       ...(body.context_tags !== undefined && { context_tags: body.context_tags }),
       ...(body.culture_tags !== undefined && { culture_tags: body.culture_tags }),
+      ...(body.countries !== undefined && { countries: body.countries }),
       ...(body.age_rating !== undefined && { age_rating: body.age_rating }),
       ...(body.language !== undefined && { language: body.language }),
       ...(body.source !== undefined && { source: body.source }),

@@ -136,6 +136,11 @@ export function JokeDetailPage() {
           {/* Hero */}
           <JokeHero joke={joke} source={telemetrySourceFor(source)} />
 
+          {joke.cultural_note && <aside aria-label="Cultural context" style={{ marginTop: 16, padding: 18, border: '1px solid #E9E8E7', borderRadius: 14, fontSize: 14, color: '#52525B', lineHeight: 1.6 }}>
+            <strong style={{ display: 'block', color: '#1A1A1A', marginBottom: 4 }}>Cultural context</strong>
+            {joke.cultural_note}
+          </aside>}
+
           {/* Reactions breakdown */}
           <ReactionsBreakdown jokeId={joke.id} />
 
@@ -218,7 +223,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   }
 
   return (
-    <article
+    <article lang={joke.language?.code}
       ref={dwellRef}
       style={{
         background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
@@ -361,7 +366,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
         )}
 
         {/* Action row */}
-        <footer
+        <footer lang="en"
           style={{
             marginTop: 40,
             paddingTop: 24,
@@ -589,7 +594,9 @@ function StreakSavedRail() {
 
 function MoreLikeThis({ joke }: { joke: Joke }) {
   const themeSlug = (joke.themes ?? joke.context_tags)?.[0]?.slug
-  const { data: searchData } = useJokeSearch(themeSlug ? { context_tags: themeSlug } : {})
+  // Without a theme there is nothing to be "like": an unfiltered page would
+  // present unrelated jokes as recommendations, so the section stays hidden.
+  const { data: searchData } = useJokeSearch({ context_tags: themeSlug }, { enabled: !!themeSlug })
   const more = searchData?.results.filter((j) => j.id !== joke.id).slice(0, 3) ?? []
 
   if (more.length === 0) return null

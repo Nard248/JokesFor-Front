@@ -25,6 +25,7 @@ export interface Language {
   id: number
   code: string
   name: string
+  native_name?: string
 }
 
 export interface FormatRule {
@@ -80,6 +81,7 @@ export interface ContentDraft extends Omit<JokePayload, 'media'> {
   themes: string[]      // slugs (API: context_tags / themes)
   categories: string[]  // slugs (API: tones / categories)
   cultures: string[]    // slugs (API: culture_tags)
+  countries?: string[]  // ISO country codes, independently tagged
   ageRating: string | null
   language: string
   source: string
@@ -104,6 +106,7 @@ export interface ContentDraftDTO {
   context_tags: string[]
   themes?: string[]
   culture_tags: string[]
+  countries?: string[]
   age_rating: string | null
   language?: string
   source?: string
@@ -130,6 +133,7 @@ export interface PatchDraftBody {
   tones?: string[]
   context_tags?: string[]
   culture_tags?: string[]
+  countries?: string[]
   age_rating?: string | null
   language?: string
   source?: string

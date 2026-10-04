@@ -1,3 +1,5 @@
+import { matchesContentSelection } from '@/features/discovery/matches'
+import type { ContentSelection } from '@/features/discovery/selection'
 import type { Joke, JokeTaxon, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, TrendingJokeDTO, TrendingTagDTO, RisingTagDTO, TopJokesterDTO, FavoriteJokeDTO, FollowStatus, CreatorProfile } from './api'
 import type {
   TrendingJoke,
@@ -35,20 +37,20 @@ const USE_MOCKS =
 
 // ── Jokes Adapter ──
 export const jokesAdapter = {
-  search: (params: JokeSearchParams): Promise<PaginatedResponse<Joke>> =>
+  search: (params: JokeSearchParams, signal?: AbortSignal): Promise<PaginatedResponse<Joke>> =>
     USE_MOCKS
-      ? mockJokesApi.search(params)
-      : jokesApi.search(params).then((r) => r.data),
+      ? mockJokesApi.search(params, signal)
+      : jokesApi.search(params, signal).then((r) => r.data),
 
   getById: (id: number): Promise<Joke> =>
     USE_MOCKS
       ? mockJokesApi.getById(id)
       : jokesApi.getById(id).then((r) => r.data),
 
-  getRandom: (): Promise<Joke> =>
+  getRandom: (params?: Partial<ContentSelection>): Promise<Joke> =>
     USE_MOCKS
-      ? mockJokesApi.getRandom()
-      : jokesApi.getRandom().then((r) => r.data),
+      ? mockJokesApi.getRandom(params)
+      : jokesApi.getRandom(params).then((r) => r.data),
 
   rate: (jokeId: number, rating: 1 | -1): Promise<void> =>
     USE_MOCKS
@@ -65,15 +67,16 @@ export const jokesAdapter = {
 export const dailyJokeAdapter = {
   // `issue_label` is optional so the mock (which omits it) stays assignable; the
   // real backend response includes it and the daily hero renders it when present.
-  getToday: (): Promise<{ joke: Joke; date: string; issue_label?: string }> =>
+  getToday: (params?: Partial<ContentSelection>): Promise<{ joke: Joke; date: string; issue_label?: string }> =>
     USE_MOCKS
-      ? mockDailyJokeApi.getToday()
-      : dailyJokeApi.getToday().then((r) => r.data),
+      ? mockDailyJokeApi.getToday(params)
+      : dailyJokeApi.getToday(params).then((r) => r.data),
 
-  getHistory: (): Promise<PaginatedResponse<{ joke: Joke; date: string }>> =>
+  /** `/daily-jokes/history/` is a bare list; tolerate a paginated envelope too. */
+  getHistory: (params?: Partial<ContentSelection>): Promise<Array<{ joke: Joke; date: string }>> =>
     USE_MOCKS
-      ? mockDailyJokeApi.getHistory()
-      : dailyJokeApi.getHistory().then((r) => r.data),
+      ? mockDailyJokeApi.getHistory(params)
+      : dailyJokeApi.getHistory(params).then((r) => Array.isArray(r.data) ? r.data : r.data?.results ?? []),
 }
 
 // ── Collections Adapter ──
@@ -152,10 +155,10 @@ const topJokesterFromDTO = (d: TopJokesterDTO): TopJokester => ({
 
 // ── Trending Adapter ──
 export const trendingAdapter = {
-  getJokes: (period?: string): Promise<TrendingJoke[]> =>
+  getJokes: (period?: string, params?: Partial<ContentSelection>): Promise<TrendingJoke[]> =>
     USE_MOCKS
-      ? mockTrendingApi.getJokes(period)
-      : trendingApi.jokes(period).then((r) => r.data.results.map(trendingJokeFromDTO)),
+      ? mockTrendingApi.getJokes(period).then((jokes) => jokes.filter((entry) => matchesContentSelection(entry.joke, params)))
+      : (params ? trendingApi.jokes(period, params) : trendingApi.jokes(period)).then((r) => r.data.results.map(trendingJokeFromDTO)),
 
   getTags: (): Promise<TrendingTag[]> =>
     USE_MOCKS

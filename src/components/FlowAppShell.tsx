@@ -1,3 +1,4 @@
+import { DiscoveryPicker } from '@/features/discovery/DiscoveryPicker'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Bell, Plus, Home, Compass, Search, Bookmark, User, LogIn, type LucideIcon } from 'lucide-react'
@@ -37,6 +38,10 @@ interface FlowAppShellProps {
   children: React.ReactNode
   /** Hide the streak chip (e.g. for pages where it's irrelevant) */
   hideStreak?: boolean
+  /** Show the "Joke languages" picker. Defaults to true only on the reading
+   *  surfaces the selection scopes (see SCOPED_SURFACES); a page outside them
+   *  whose content is scoped (e.g. a pack) opts in explicitly. */
+  showContentSelection?: boolean
 }
 
 /** Desktop / tablet top nav. */
@@ -52,6 +57,12 @@ const NAV_ITEMS: ReadonlyArray<readonly [FlowNavKey, string, string]> = [
 ]
 /** Creator Studio — shown to signed-in accounts (anyone can start creating). */
 const STUDIO_ITEM: readonly [FlowNavKey, string, string] = ['studio', 'Studio', '/create']
+
+/** Reading surfaces whose content the joke-language selection scopes. Every
+ *  other surface (Studio and the editor, Communities, Favorites, Library,
+ *  account pages) hides the picker so it never implies a filter that does not
+ *  apply. */
+const SCOPED_SURFACES: ReadonlySet<FlowNavKey> = new Set<FlowNavKey>(['today', 'explore', 'search', 'trending', 'daily'])
 
 /** Mobile bottom tab bar — the five primary destinations. The last tab swaps
  *  to "Sign in" for anonymous users (mirrors the desktop header CTA). */
@@ -78,7 +89,8 @@ const MOBILE_BOTTOM_CLEARANCE = 'calc(64px + env(safe-area-inset-bottom))'
 
 type OpenMenu = 'profile' | 'notifications' | null
 
-export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps) {
+export function FlowAppShell({ active, children, hideStreak, showContentSelection }: FlowAppShellProps) {
+  const showPicker = showContentSelection ?? (active !== undefined && SCOPED_SURFACES.has(active))
   const { user, isAuthenticated } = useAuth()
   const { isMobile, isTablet, isDesktop } = useBreakpoint()
   // Real streak data — only fetched if authenticated (hook handles unauth gracefully).
@@ -288,6 +300,7 @@ export function FlowAppShell({ active, children, hideStreak }: FlowAppShellProps
           )}
         </div>
       </header>
+      {showPicker && <DiscoveryPicker />}
 
       <main
         key={pathname}
