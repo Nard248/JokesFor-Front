@@ -11,13 +11,19 @@ import {
   type CreatorOpportunity,
 } from '@/features/communities'
 import { CreatorProGate, CreatorStudioLayout, useCreatorPlan } from '@/features/creator-studio'
+import { newJokeHref } from '@/features/create/theme-param'
 
 const COMMUNITY_UNLOCKS = [
   'Which self-forming communities your readers belong to',
   'How much of each community your jokes already reach',
   'Strongholds, untapped and emerging communities worth writing for',
-  'Counts below the privacy minimum are always withheld, never estimated',
+  'Approximate, privacy-protected counts; small ones are always withheld',
 ]
+
+/** Shown above the server's notes, which describe exactly how counts are
+ * protected. Keep any stronger claim (noise, account-age rules) out of this
+ * string until the backend implements it and states it in its own notes. */
+const PRIVACY_NOTE = 'Counts are approximate (privacy-protected).'
 
 const STATUS_LABEL: Record<CommunityStatus, string> = { active: 'Active', forming: 'Forming', cooling: 'Cooling' }
 const STATUS_CLASS: Record<CommunityStatus, string> = {
@@ -126,7 +132,7 @@ function OpportunityCard({ item }: { item: CreatorOpportunity }) {
         </Link>
         {canWriteFor && (
           <Link
-            to="/create/new"
+            to={newJokeHref(item.slug)}
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-[#6A1CF6] underline underline-offset-4"
           >
             <PenLine size={14} aria-hidden="true" />
@@ -266,14 +272,13 @@ function CommunitiesBody() {
         )}
       </section>
 
-      {data.measurement_notes.length > 0 && (
-        <section aria-labelledby="community-notes" className="text-xs leading-relaxed text-text-muted">
-          <h2 id="community-notes" className="m-0 mb-2 text-xs font-bold uppercase tracking-[0.06em] text-text-muted">How this is measured</h2>
-          <ul className="m-0 list-disc space-y-1 pl-5">
-            {data.measurement_notes.map((note) => <li key={note}>{note}</li>)}
-          </ul>
-        </section>
-      )}
+      <section aria-labelledby="community-notes" className="text-xs leading-relaxed text-text-muted">
+        <h2 id="community-notes" className="m-0 mb-2 text-xs font-bold uppercase tracking-[0.06em] text-text-muted">How this is measured</h2>
+        <ul className="m-0 list-disc space-y-1 pl-5">
+          <li data-testid="community-privacy-note">{PRIVACY_NOTE}</li>
+          {data.measurement_notes.map((note) => <li key={note}>{note}</li>)}
+        </ul>
+      </section>
     </>
   )
 }

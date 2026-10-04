@@ -7,7 +7,7 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { FormatRule } from '@/features/create'
 
@@ -138,6 +138,33 @@ describe('FormatPickerPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('editor-page')).toBeDefined()
+    })
+  })
+
+  it('carries ?theme= from a "Write a <Theme> joke" link through to the editor URL', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    function EditorProbe() {
+      const location = useLocation()
+      return <div data-testid="editor-page">{location.pathname + location.search}</div>
+    }
+
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/create/new?theme=puns']}>
+          <Routes>
+            <Route path="/create/new" element={<FormatPickerPage />} />
+            <Route path="/create/new/:slug" element={<EditorProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const tiles = screen.getAllByRole('button').filter((b) => b.getAttribute('tabindex') === '0')
+    tiles[0].click()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-page').textContent).toBe('/create/new/oneliner?theme=puns')
     })
   })
 })

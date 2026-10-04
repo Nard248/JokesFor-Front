@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate, useSearchParams, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useFormats, FormatTile, FORMAT_EXAMPLE } from '@/features/create'
+import { useFormats, FormatTile, FORMAT_EXAMPLE, newJokeHref, readThemeParam } from '@/features/create'
 import { FORMAT_SLUGS } from '@/features/create/types'
 import type { FormatRule } from '@/features/create'
 import { track } from '@/features/create/analytics'
@@ -39,6 +39,9 @@ export function FormatPickerPage() {
   const navigate = useNavigate()
   const { isMobile } = useBreakpoint()
   const { data, isLoading, isError } = useFormats()
+  // "Write a <Theme> joke" entry points arrive with ?theme=<slug>; carry it on.
+  const [searchParams] = useSearchParams()
+  const theme = readThemeParam(searchParams)
 
   // Single column on phones; auto-fitting tiles above. `minmax(0, …)` prevents
   // a tile's intrinsic width from forcing horizontal overflow.
@@ -125,7 +128,7 @@ export function FormatPickerPage() {
                   example={FORMAT_EXAMPLE[format.slug] ?? ''}
                   onClick={() => {
                     track('format_selected', { format: format.slug })
-                    navigate(`/create/new/${format.slug}`)
+                    navigate(newJokeHref(theme, format.slug))
                   }}
                 />
               ))}

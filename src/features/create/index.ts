@@ -22,6 +22,7 @@ export { emptyEditorDraft, editorReducer, toJokePayload } from './editor-state'
 export type { EditorDraft, EditorAction } from './editor-state'
 export { useAutosave } from './autosave'
 export type { SaveState, UseAutosave } from './autosave'
+export { readThemeParam, newJokeHref } from './theme-param'
 
 // Phase 3: Components
 export { SaveIndicator } from './components/SaveIndicator'

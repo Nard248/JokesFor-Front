@@ -479,6 +479,11 @@ let mockNotifications: NotificationDTO[] = [
     actor: null, joke: { id: 43, preview: 'A removed joke about...' },
     data: { outcome: 'reversed' },
   },
+  {
+    id: 6, verb: 'community_formed', read: false, created_at: '2026-06-14T08:00:00Z',
+    actor: null, joke: null,
+    data: { community: 'space', name: 'Space', emoji: '🚀', role: 'member' },
+  },
 ]
 
 export const notificationsAdapter = {

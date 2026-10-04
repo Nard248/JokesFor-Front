@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Info, Search as SearchIcon, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Info, PenLine, Search as SearchIcon, Sparkles, X } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { useAuth } from '@/features/auth'
@@ -13,6 +13,7 @@ import {
   type CommunityStatus,
 } from '@/features/communities'
 import { CommunityMap } from '@/features/communities/CommunityMap'
+import { newJokeHref } from '@/features/create/theme-param'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
@@ -109,6 +110,9 @@ function MethodologyDialog({ directory, onClose }: { directory: CommunityDirecto
           </button>
         </div>
         <p className="mt-3 text-[15px] leading-relaxed text-[#3F3F46]">{m.description}</p>
+        <p className="mt-3 rounded-2xl bg-[#F2E9FF] p-3 text-sm leading-relaxed text-[#4B327A]" data-testid="cm-privacy-note">
+          Counts are approximate (privacy-protected).
+        </p>
         <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           {[
             ['Signal half-life', `${m.half_life_days} days`],
@@ -259,6 +263,15 @@ function CommunityInspector({ slug, onBack }: { slug: string; onBack?: () => voi
             >
               {membership.isPending ? 'Saving…' : isMember ? 'Leave community' : 'Join community'}
             </button>
+          )}
+          {isAuthenticated && (
+            <Link
+              to={newJokeHref(community.slug)}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#E9E8E7] bg-white px-5 text-sm font-bold text-[#1A1A1A] hover:border-[#6A1CF6]"
+            >
+              <PenLine size={14} aria-hidden="true" />
+              Write a {community.name} joke
+            </Link>
           )}
           {membership.isError && (
             <span role="alert" className="self-center text-sm text-[#B42318]">
@@ -463,6 +476,7 @@ export function CommunitiesPage() {
                   }
                   label="In two or more"
                 />
+                <p className="col-span-2 text-xs text-[#6B7280]">Counts are approximate (privacy-protected).</p>
               </div>
             )}
           </header>
