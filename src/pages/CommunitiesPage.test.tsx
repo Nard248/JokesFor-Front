@@ -146,12 +146,27 @@ describe('CommunitiesPage', () => {
     expect(items.some((text) => text.includes('Space'))).toBe(false)
   })
 
+  it('offers signed-in viewers a "Write a <Theme> joke" CTA that carries the theme', () => {
+    renderAt('/communities/space')
+    expect(screen.getByRole('link', { name: 'Write a Space joke' })).toHaveAttribute('href', '/create/new?theme=space')
+  })
+
+  it('explains in the methodology dialog that counts are approximate and privacy-protected', () => {
+    renderAt('/communities')
+    expect(screen.getByText('Counts are approximate (privacy-protected).')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /How communities form/ }))
+    const note = screen.getByTestId('cm-privacy-note')
+    expect(note).toHaveTextContent('small amount of random noise')
+    expect(note).toHaveTextContent('only established accounts count')
+  })
+
   it('asks anonymous visitors to sign in instead of offering membership', () => {
     auth.isAuthenticated = false
     directoryState.data = directory([community({ viewer: null })])
     renderAt('/communities/work')
     expect(screen.getByText(/Sign in to see which communities/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sign in to join' })).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('link', { name: /Write a .* joke/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Yours' })).not.toBeInTheDocument()
   })
 

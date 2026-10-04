@@ -77,7 +77,17 @@ describe('Creator Studio · Communities', () => {
     const untapped = screen.getByTestId('opportunity-dad-jokes')
     expect(within(untapped).getByText('Untapped')).toBeInTheDocument()
     expect(within(untapped).getByText('Try a pun aimed at parents.')).toBeInTheDocument()
-    expect(within(untapped).getByRole('link', { name: 'Write a Dad jokes joke' })).toHaveAttribute('href', '/create/new')
+    // Carries the community's theme so the editor preselects it.
+    expect(within(untapped).getByRole('link', { name: 'Write a Dad jokes joke' })).toHaveAttribute('href', '/create/new?theme=dad-jokes')
+  })
+
+  it('says counts are approximate and privacy-protected, above the server notes', async () => {
+    renderPage()
+    const note = await screen.findByTestId('community-privacy-note')
+    expect(note).toHaveTextContent('Counts are approximate (privacy-protected)')
+    expect(note).toHaveTextContent('small amount of random noise')
+    expect(note).toHaveTextContent('only established accounts count')
+    expect(screen.getByText('Membership is inferred from signed-in reading activity.')).toBeInTheDocument()
   })
 
   it('renders suppressed counts as "<5" and never as 0', async () => {

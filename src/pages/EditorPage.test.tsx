@@ -278,3 +278,37 @@ describe('EditorPage — submit path', () => {
     })
   })
 })
+
+describe('EditorPage — ?theme= preselect ("Write a <Theme> joke")', () => {
+  it('preselects the theme in a brand-new draft', async () => {
+    render(makeDataRouterWrapper('/create/new/oneliner?theme=food'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
+    })
+    expect(mockAutosaveReturn?.draft.themes).toEqual(['food'])
+    // Rendered as a selected chip in the Themes picker once the catalog loads.
+    expect(await screen.findByRole('button', { name: 'Remove Food' })).toBeDefined()
+  })
+
+  it('drops a preselected slug that is not a real theme once the catalog loads', async () => {
+    render(makeDataRouterWrapper('/create/new/oneliner?theme=not-a-theme'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
+    })
+    await waitFor(() => {
+      expect(mockAutosaveReturn?.draft.themes).toEqual([])
+    })
+  })
+
+  it("never overrides an existing draft's themes", async () => {
+    // Mock-adapter seed draft 1 is a `setup` draft tagged ['science'].
+    render(makeDataRouterWrapper('/create/1?theme=food'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-pane')).toBeDefined()
+    })
+    expect(mockAutosaveReturn?.draft.themes).toEqual(['science'])
+  })
+})

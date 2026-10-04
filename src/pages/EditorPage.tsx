@@ -3,6 +3,7 @@
  *
  * Two modes:
  *  - New mode:      /create/new/:formatSlug   → no draftId yet, creates on first keystroke
+ *                   (optional ?theme=<slug> preselects that theme in the new draft)
  *  - Existing mode: /create/:draftId           → loads existing draft, then enters editor
  *
  * Architecture (hook-safe):
@@ -13,7 +14,7 @@
  *  EditorInner is keyed by `draftId ?? formatSlug` so it remounts cleanly on navigation.
  */
 import React, { Suspense, useEffect, useState } from 'react'
-import { useParams, useNavigate, Link, useBlocker } from 'react-router'
+import { useParams, useNavigate, useSearchParams, Link, useBlocker } from 'react-router'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -42,6 +43,8 @@ import {
   SubmitConfirmModal,
   ChangeFormatModal,
   DeleteDraftModal,
+  emptyEditorDraft,
+  readThemeParam,
 } from '@/features/create'
 import type { FormatSlug, ContentDraft, EditorDraft } from '@/features/create'
 import { track } from '@/features/create/analytics'
@@ -101,6 +104,15 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const { data: cultureTags = [] } = useCultureTags()
   const { data: ageRatings = [] } = useAgeRatings()
   useLanguages() // pre-fetch for potential future use
+
+  // ── Preselected theme guard (new drafts only) ───────────────────────────────
+  // A ?theme= preselection is only a suggestion: once the catalog loads, drop
+  // any slug that is not a real theme so autosave never PATCHes an unknown one.
+  useEffect(() => {
+    if (draftId !== null || contextTags.length === 0) return
+    const known = draft.themes.filter((slug) => contextTags.some((tag) => tag.slug === slug))
+    if (known.length !== draft.themes.length) dispatch({ type: 'setTags', field: 'themes', value: known })
+  }, [draftId, contextTags, draft.themes, dispatch])
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const deleteDraft = useDeleteDraft()
@@ -312,7 +324,13 @@ interface NewEditorProps {
 }
 
 function NewEditor({ formatSlug }: NewEditorProps) {
-  return <EditorInner key={formatSlug} draftId={null} formatSlug={formatSlug} />
+  // "Write a <Theme> joke" carries ?theme=<slug> (a community slug is its
+  // theme slug). Seed it into the new draft's Themes; existing drafts never
+  // read the param, so their themes are never overridden.
+  const [searchParams] = useSearchParams()
+  const theme = readThemeParam(searchParams)
+  const initial = theme ? { ...emptyEditorDraft(formatSlug), themes: [theme] } : undefined
+  return <EditorInner key={formatSlug} draftId={null} formatSlug={formatSlug} initial={initial} />
 }
 
 // ── ExistingEditor ────────────────────────────────────────────────────────────

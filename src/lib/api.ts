@@ -1030,6 +1030,9 @@ export type NotificationVerb =
   | 'joke_removed'
   | 'joke_rejected'
   | 'appeal_resolved'
+  /** A theme community activated. `actor`/`joke` are null; `data` carries
+   * `{community: slug, name, emoji, role: 'member' | 'creator'}`. */
+  | 'community_formed'
 
 export interface NotificationActor {
   id: number
