@@ -4,6 +4,9 @@ export interface ContentSelection {
   culture_tags: string
 }
 
+/** Explicit "every language". An empty language lets the server apply the viewer's default. */
+export const ALL_LANGUAGES = 'all'
+
 export const EMPTY_SELECTION: ContentSelection = { language: '', country: '', culture_tags: '' }
 export const SELECTION_KEYS = ['language', 'country', 'culture_tags'] as const
 
