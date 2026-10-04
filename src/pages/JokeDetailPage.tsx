@@ -594,7 +594,9 @@ function StreakSavedRail() {
 
 function MoreLikeThis({ joke }: { joke: Joke }) {
   const themeSlug = (joke.themes ?? joke.context_tags)?.[0]?.slug
-  const { data: searchData } = useJokeSearch(themeSlug ? { context_tags: themeSlug } : {})
+  // Without a theme there is nothing to be "like": an unfiltered page would
+  // present unrelated jokes as recommendations, so the section stays hidden.
+  const { data: searchData } = useJokeSearch({ context_tags: themeSlug }, { enabled: !!themeSlug })
   const more = searchData?.results.filter((j) => j.id !== joke.id).slice(0, 3) ?? []
 
   if (more.length === 0) return null

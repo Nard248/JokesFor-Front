@@ -42,7 +42,8 @@ vi.mock('@/features/reactions', () => ({
 vi.mock('@/features/streak', () => ({ useStreak: () => ({ data: undefined }) }))
 vi.mock('@/features/insights', () => ({ useTasteProfile: () => ({ data: undefined }) }))
 vi.mock('@/features/saved-jokes', () => ({ useSaveJoke: () => ({ mutate: vi.fn() }) }))
-vi.mock('@/features/jokes', () => ({ useJokeSearch: () => ({ data: undefined }) }))
+const jokeSearchSpy = vi.fn((..._args: unknown[]) => ({ data: undefined }))
+vi.mock('@/features/jokes', () => ({ useJokeSearch: (...args: unknown[]) => jokeSearchSpy(...args) }))
 vi.mock('@/features/mystery-box', () => ({ useRollMysteryBox: () => ({ mutate: vi.fn(), isPending: false }) }))
 vi.mock('@/features/telemetry', () => ({
   recordShare: vi.fn(),
@@ -123,5 +124,21 @@ describe('JokeDetailPage — media joke', () => {
 
     await waitFor(() => expect(screen.getByText('This joke is unavailable.')).toBeInTheDocument())
     expect(trackRevealSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('JokeDetailPage — more like this', () => {
+  it('does not fetch recommendations for a joke with no theme', async () => {
+    getJokeMock.mockResolvedValue({ data: BASE_MEDIA_JOKE })
+    renderPage()
+    await waitFor(() => expect(jokeSearchSpy).toHaveBeenCalled())
+    for (const [, options] of jokeSearchSpy.mock.calls) expect(options).toEqual({ enabled: false })
+  })
+
+  it('fetches recommendations filtered by the joke theme', async () => {
+    const themed = { ...BASE_MEDIA_JOKE, themes: [{ id: 3, name: 'Space', slug: 'space' }] }
+    getJokeMock.mockResolvedValue({ data: themed })
+    renderPage()
+    await waitFor(() => expect(jokeSearchSpy).toHaveBeenCalledWith({ context_tags: 'space' }, { enabled: true }))
   })
 })

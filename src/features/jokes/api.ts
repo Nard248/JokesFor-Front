@@ -13,12 +13,15 @@ export const jokeKeys = {
   random: (params?: Partial<ContentSelection>) => [...jokeKeys.all, 'random', params] as const,
 }
 
-export function useJokeSearch(params: JokeSearchParams) {
+/** Searches are enabled by default (an empty filter set is a valid "latest"
+ *  feed); callers whose request is meaningless without a filter opt out. */
+export function useJokeSearch(params: JokeSearchParams, options: { enabled?: boolean } = {}) {
   const selection = useContentSelection()
   const effective = { ...selectionParams(selection), ...params }
   return useQuery({
     queryKey: jokeKeys.search(effective),
     queryFn: ({ signal }) => jokesAdapter.search(effective, signal),
+    enabled: options.enabled ?? true,
     staleTime: 1000 * 60 * 5,
   })
 }
