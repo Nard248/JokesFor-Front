@@ -28,4 +28,42 @@ describe('discovery pagination isolation', () => {
     expect(result.current.page).toBe(1)
     await waitFor(() => expect(result.current.jokes.map((joke) => joke.id)).toEqual([1, 2]))
   })
+
+  it('keeps the accumulated jokes and count while a later page is pending', async () => {
+    const first = { data: { count: 3, results: [{ id: 1 }, { id: 2 }] as Joke[] }, isLoading: false, isFetching: false }
+    const pending = { data: undefined, isLoading: true, isFetching: true }
+    search.mockImplementation((params: JokeSearchParams) => params.page === 2 ? pending : first)
+    const { result } = renderHook(() => usePagedJokes({ language: 'es' }))
+    await waitFor(() => expect(result.current.jokes.map((joke) => joke.id)).toEqual([1, 2]))
+    act(() => result.current.loadMore())
+    expect(result.current.page).toBe(2)
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isFetching).toBe(true)
+    expect(result.current.data?.count).toBe(3)
+    expect(result.current.jokes.map((joke) => joke.id)).toEqual([1, 2])
+  })
+
+  it('keeps the list when a later page fails and retries that page on load more', async () => {
+    const first = { data: { count: 3, results: [{ id: 1 }, { id: 2 }] as Joke[] }, isLoading: false, isError: false }
+    const refetch = vi.fn()
+    const failed = { data: undefined, isLoading: false, isError: true, refetch }
+    search.mockImplementation((params: JokeSearchParams) => params.page === 2 ? failed : first)
+    const { result } = renderHook(() => usePagedJokes({ language: 'es' }))
+    await waitFor(() => expect(result.current.jokes).toHaveLength(2))
+    act(() => result.current.loadMore())
+    expect(result.current.isError).toBe(false)
+    expect(result.current.jokes).toHaveLength(2)
+    act(() => result.current.loadMore())
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(result.current.page).toBe(2)
+  })
+
+  it('reports loading and errors normally for the first page of a scope', () => {
+    search.mockReturnValue({ data: undefined, isLoading: true })
+    const { result, rerender } = renderHook(() => usePagedJokes({ language: 'fr' }))
+    expect(result.current.isLoading).toBe(true)
+    search.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+    rerender()
+    expect(result.current.isError).toBe(true)
+  })
 })

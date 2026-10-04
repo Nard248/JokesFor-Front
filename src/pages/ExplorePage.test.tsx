@@ -219,4 +219,26 @@ describe('ExplorePage — real backend search', () => {
     expect(screen.getByText('joke-11')).toBeDefined()
     expect(screen.getByText('joke-13')).toBeDefined()
   })
+
+  it('keeps the loaded jokes and count on screen while page 2 is still loading', () => {
+    const p1 = {
+      data: { count: 3, next: 'x', previous: null, results: [makeJoke(11), makeJoke(12)] },
+      isLoading: false, isError: false, isFetching: false,
+    }
+    // Page 2's own query has no data yet: exactly what TanStack reports for a
+    // fresh key with no placeholder.
+    const pending = { data: undefined, isLoading: true, isError: false, isFetching: true }
+    mockUseJokeSearch.mockImplementation((p: JokeSearchParams) => ((p.page ?? 1) >= 2 ? pending : p1))
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }))
+
+    expect(lastParams().page).toBe(2)
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
+    expect(screen.getByText('joke-11')).toBeDefined()
+    expect(screen.getByText('joke-12')).toBeDefined()
+    expect(screen.getByText(/Explore · 3 jokes loaded/)).toBeDefined()
+    const button = screen.getByRole('button', { name: /loading/i })
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+  })
 })
