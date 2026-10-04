@@ -1,621 +1,207 @@
-import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react'
-import { useSearchParams, Link } from 'react-router'
-import { Search as SearchIcon, Dice5 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router'
+import { Search as SearchIcon, X } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
-import { type FlowJokeFormat, FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
-import { useJokeSearch, type JokeSearchParams, type Joke } from '@/features/jokes'
+import { FLOW_FORMAT_TO_BACKEND_SLUG } from '@/components/JokeRenderer'
+import { useInfiniteJokeSearch, type JokeSearchParams } from '@/features/jokes'
+import { useFormats, useTones, useContextTags } from '@/features/create/queries'
+import { useBrowseSelection } from '@/features/discovery/context'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { Seo } from '@/lib/seo'
+import './search.css'
 
-/**
- * SearchPage — Sentence Builder redesign per
- * Docs/JokesFor/parts/flow-screens.jsx::SearchScreen.
- *
- * Pattern: "Show me [Format] jokes about [Theme] that feel [Category]."
- * Each bracket is a clickable inline pill that opens a multi-select panel.
- * Optional keyword refine input below.
- *
- * Iteration 2 wires to mock data (same shape as /explore). When the
- * /jokes/?q=&joke_format=&tones=&… endpoint grows the format/theme/category
- * dimensions, swap the filter to TanStack Query against api-adapter.jokes.search.
- */
+const FILTER_KEYS = ['joke_format', 'categories', 'themes'] as const
+type FilterKey = typeof FILTER_KEYS[number]
+const splitSlugs = (value: string | null) => [...new Set((value ?? '').split(',').map((slug) => slug.trim()).filter(Boolean))].sort()
+
+function searchError(error: unknown): string {
+  const response = (error as { response?: { status?: number; data?: { q?: unknown; detail?: unknown } } } | null)?.response
+  const validation = response?.data?.q
+  if (typeof validation === 'string') return validation
+  if (Array.isArray(validation) && validation.every((value) => typeof value === 'string')) return validation.join(' ')
+  if (response?.status === 429) return 'Too many searches at once. Wait a moment, then try again.'
+  return 'We could not load these jokes. Check your connection and try again.'
+}
+
+/** The URL owns the committed search; Query owns the result pages. */
 export function SearchPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const selection = useBrowseSelection()
   const { isMobile, isTablet } = useBreakpoint()
-  const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
-  const [searchParams] = useSearchParams()
-  const initialQuery = searchParams.get('q') || ''
+  const columns = isMobile ? 1 : isTablet ? 2 : 3
+  const committedQuery = (searchParams.get('q') ?? '').trim()
+  // Keep raw typing through our own URL commits. A genuine navigation restores
+  // the committed query and discards the previous entry's unfinished draft.
+  const [draft, setDraft] = useState<{ key: string; value: string; pendingSearch: string | null }>({
+    key: location.key, value: committedQuery, pendingSearch: null,
+  })
+  const input = draft.key === location.key || draft.pendingSearch === searchParams.toString()
+    ? draft.value
+    : committedQuery
+  if (draft.key !== location.key) setDraft({ key: location.key, value: input, pendingSearch: null })
+  const filters = {
+    joke_format: splitSlugs(searchParams.get('joke_format')),
+    categories: splitSlugs(searchParams.get('categories') ?? searchParams.get('tones')),
+    themes: splitSlugs(searchParams.get('themes') ?? searchParams.get('context_tags')),
+  }
+  const activeFilters = FILTER_KEYS.reduce((count, key) => count + filters[key].length, 0)
+  const updateSearchUrl = useCallback((next: URLSearchParams, value: string, replace = false) => {
+    setDraft({ key: location.key, value, pendingSearch: next.toString() })
+    setSearchParams(next, { replace, preventScrollReset: true })
+  }, [location.key, setSearchParams])
+  const commitQuery = useCallback((value: string, replace: boolean) => {
+    const next = new URLSearchParams(searchParams)
+    const query = value.trim()
+    if (query) next.set('q', query)
+    else next.delete('q')
+    next.delete('page')
+    updateSearchUrl(next, value, replace)
+  }, [searchParams, updateSearchUrl])
 
-  const [q, setQ] = useState(initialQuery)
-  const [fmts, setFmts] = useState<Set<FlowJokeFormat>>(new Set())
-  const [themes, setThemes] = useState<Set<string>>(new Set())
-  const [cats, setCats] = useState<Set<string>>(new Set())
-  const [openPanel, setOpenPanel] = useState<'fmt' | 'theme' | 'cat' | null>(null)
-
-  // Debounce the free-text keyword so we don't fire a request per keystroke.
-  const [debouncedQ, setDebouncedQ] = useState(initialQuery)
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q.trim()), 300)
-    return () => clearTimeout(t)
-  }, [q])
+    if (input.trim() === committedQuery) return
+    const timer = window.setTimeout(() => commitQuery(input, true), 300)
+    return () => window.clearTimeout(timer)
+  }, [input, committedQuery, commitQuery, location.key])
 
-  // Current page — bumped by "Load more". Reset to 1 whenever the query or any
-  // filter axis changes so a new sentence starts a fresh paginated listing.
-  const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [debouncedQ, fmts, themes, cats])
-
-  // Compose the sentence-builder + keyword into a real /jokes/ query.
-  //   keyword input → q (full-text)
-  //   Format pills  → joke_format (backend format slug)
-  //   Theme pills   → context_tags (comma slugs)
-  //   Category pills→ tones (comma slugs)
-  // `page` keeps the query enabled so the default listing shows real jokes.
-  const params = useMemo<JokeSearchParams>(() => {
-    const p: JokeSearchParams = { page, page_size: 30 }
-    if (debouncedQ) p.q = debouncedQ
-    if (fmts.size > 0) {
-      p.joke_format = Array.from(fmts).map((f) => FLOW_FORMAT_TO_BACKEND_SLUG[f]).join(',')
-    }
-    if (themes.size > 0) p.context_tags = Array.from(themes).join(',')
-    if (cats.size > 0) p.tones = Array.from(cats).join(',')
-    if (!p.q) p.ordering = '-created_at'
-    return p
-  }, [debouncedQ, fmts, themes, cats, page])
-
-  const { data, isLoading, isError, isFetching } = useJokeSearch(params)
-  const totalCount = data?.count ?? 0
-
-  // Accumulate results across pages (page 1 replaces, later pages append,
-  // deduped by id).
-  const [matches, setMatches] = useState<Joke[]>([])
-  useEffect(() => {
-    if (!data) return
-    setMatches((prev) => {
-      if (page === 1) return data.results
-      const seen = new Set(prev.map((j) => j.id))
-      return [...prev, ...data.results.filter((j) => !seen.has(j.id))]
+  const params: JokeSearchParams = {
+    ...selection,
+    page_size: 30,
+    ...(committedQuery ? { q: committedQuery } : { ordering: '-created_at' }),
+    ...Object.fromEntries(FILTER_KEYS.filter((key) => filters[key].length).map((key) => [key, filters[key].join(',')])),
+    ...(searchParams.get('age_rating') ? { age_rating: searchParams.get('age_rating')! } : {}),
+    ...(searchParams.get('vibe') ? { vibe: searchParams.get('vibe')! } : {}),
+  }
+  const search = useInfiniteJokeSearch(params)
+  const matches = useMemo(() => {
+    const seen = new Set<number>()
+    return (search.data?.pages.flatMap((page) => page.results) ?? []).filter((joke) => {
+      if (seen.has(joke.id)) return false
+      seen.add(joke.id)
+      return true
     })
-  }, [data, page])
-  const hasMore = matches.length < totalCount
+  }, [search.data])
+  const totalCount = search.data?.pages[0]?.count ?? 0
+  const formats = useFormats()
+  const categories = useTones()
+  const themes = useContextTags()
 
-  const fmtLabel =
-    fmts.size === 0
-      ? 'any kind of'
-      : fmts.size === 1
-      ? FORMATS.find((f) => f.id === [...fmts][0])?.label.toLowerCase()
-      : `${fmts.size} formats`
-  const themeLabel =
-    themes.size === 0
-      ? 'anything'
-      : themes.size === 1
-      ? THEMES.find((t) => t.id === [...themes][0])?.label.toLowerCase()
-      : `${themes.size} themes`
-  const catLabel =
-    cats.size === 0
-      ? 'any vibe'
-      : cats.size === 1
-      ? CATEGORIES.find((c) => c.id === [...cats][0])?.label.toLowerCase()
-      : `${cats.size} vibes`
+  function toggleFilter(key: FilterKey, slug: string) {
+    const next = new URLSearchParams(searchParams)
+    const values = new Set(filters[key])
+    if (values.has(slug)) values.delete(slug)
+    else values.add(slug)
+    if (values.size) next.set(key, [...values].sort().join(','))
+    else next.delete(key)
+    if (key === 'categories') next.delete('tones')
+    if (key === 'themes') next.delete('context_tags')
+    // Commit any pending text at the same time so selecting a filter cannot
+    // erase what the reader just typed.
+    if (input.trim()) next.set('q', input.trim())
+    else next.delete('q')
+    next.delete('page')
+    updateSearchUrl(next, input)
+  }
 
-  const closePanel = () => setOpenPanel(null)
+  function clearSearch() {
+    const next = new URLSearchParams(searchParams)
+    for (const key of ['q', ...FILTER_KEYS, 'tones', 'context_tags', 'age_rating', 'vibe', 'page']) next.delete(key)
+    updateSearchUrl(next, '')
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    commitQuery(input, false)
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
-      <Seo
-        title="Search Jokes · JokesFor"
-        description="Search JokesFor's full joke library by format, theme, and tone to find exactly the laugh you need."
-        canonicalPath="/search"
-      />
+    <div className="joke-search-page">
+      <Seo title="Search Jokes · JokesFor" description="Find jokes by their words, punchlines, categories and themes. Search the JokesFor library in one place." canonicalPath="/search" />
       <FlowAppShell active="search">
-        <div style={{ padding: '40px 0', position: 'relative' }}>
-          <span className="eyebrow-mono">Search · Build the moment</span>
-          <h2
-            style={{
-              marginTop: 8,
-              fontFamily: 'var(--font-display)',
-              fontWeight: 900,
-              fontSize: 'clamp(2.25rem, 4.5vw, 3rem)',
-              letterSpacing: '-0.02em',
-              color: '#1A1A1A',
-              maxWidth: 1100,
-            }}
-          >
-            What's the <em className="wink">moment</em>?
-          </h2>
-          <p style={{ marginTop: 8, fontSize: 18, color: '#52525B', maxWidth: 580 }}>
-            Skip the keyword guessing. Compose the moment as a sentence — JokesFor matches the rhythm.
-          </p>
+        <div className="joke-search-content">
+          <h1>Find your next laugh.</h1>
+          <p className="joke-search-intro">A joke you remember. A punchline you almost forgot. A topic you love.</p>
 
-          {/* Sentence Builder */}
-          <div
-            style={{
-              marginTop: 36,
-              padding: 'clamp(28px, 4vw, 40px) clamp(24px, 4vw, 36px)',
-              background: '#fff',
-              border: '1px solid #E9E8E7',
-              borderRadius: 24,
-              boxShadow: '0 8px 30px rgba(15,14,18,0.05)',
-            }}
-          >
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 900,
-                fontSize: 'clamp(1.75rem, 4vw, 2.875rem)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.25,
-                color: '#1A1A1A',
-                textWrap: 'balance' as const,
-              }}
-            >
-              Show me{' '}
-              <SBPillContainer>
-                <SBPill
-                  open={openPanel === 'fmt'}
-                  onClick={() => setOpenPanel(openPanel === 'fmt' ? null : 'fmt')}
-                  label={fmtLabel ?? 'any kind of'}
-                  color="#1A1A1A"
-                  isSet={fmts.size > 0}
+          <form role="search" onSubmit={submit} className="joke-search-form">
+            <label htmlFor="joke-search-input">Search jokes</label>
+            <div className="joke-search-input-row">
+              <div className="joke-search-input-wrap">
+                <SearchIcon size={22} aria-hidden="true" />
+                <input
+                  id="joke-search-input"
+                  type="search"
+                  name="q"
+                  value={input}
+                  onChange={(event) => setDraft({ key: location.key, value: event.target.value, pendingSearch: null })}
+                  maxLength={200}
+                  placeholder="Try coffee, dad jokes, or a few words you remember"
+                  aria-describedby="joke-search-help"
+                  autoComplete="off"
                 />
-                {openPanel === 'fmt' && (
-                  <SBPanel
-                    items={FORMATS}
-                    selected={fmts}
-                    onToggle={(id) => toggleSet(setFmts, id as FlowJokeFormat)}
-                    color="#1A1A1A"
-                    onClose={closePanel}
-                    onClear={() => setFmts(new Set())}
-                  />
-                )}
-              </SBPillContainer>{' '}
-              jokes about{' '}
-              <SBPillContainer>
-                <SBPill
-                  open={openPanel === 'theme'}
-                  onClick={() => setOpenPanel(openPanel === 'theme' ? null : 'theme')}
-                  label={themeLabel ?? 'anything'}
-                  color="#6A1CF6"
-                  isSet={themes.size > 0}
-                />
-                {openPanel === 'theme' && (
-                  <SBPanel
-                    items={THEMES}
-                    selected={themes}
-                    onToggle={(id) => toggleSet(setThemes, id)}
-                    color="#6A1CF6"
-                    onClose={closePanel}
-                    onClear={() => setThemes(new Set())}
-                  />
-                )}
-              </SBPillContainer>{' '}
-              that feel{' '}
-              <SBPillContainer>
-                <SBPill
-                  open={openPanel === 'cat'}
-                  onClick={() => setOpenPanel(openPanel === 'cat' ? null : 'cat')}
-                  label={catLabel ?? 'any vibe'}
-                  color="#CAFD00"
-                  isSet={cats.size > 0}
-                />
-                {openPanel === 'cat' && (
-                  <SBPanel
-                    items={CATEGORIES}
-                    selected={cats}
-                    onToggle={(id) => toggleSet(setCats, id)}
-                    color="#CAFD00"
-                    onClose={closePanel}
-                    onClear={() => setCats(new Set())}
-                  />
-                )}
-              </SBPillContainer>
-              .
-            </div>
-
-            {/* Optional keyword refine */}
-            <div
-              style={{
-                marginTop: 24,
-                paddingTop: 20,
-                borderTop: '1px solid #E9E8E7',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: '#F2E9FF',
-                  color: '#6A1CF6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <SearchIcon size={16} />
+                {input && <button type="button" className="joke-search-clear" aria-label="Clear search text" onClick={() => commitQuery('', true)}><X size={18} aria-hidden="true" /></button>}
               </div>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Refine with a keyword (optional) — e.g. coffee, mondays, mother-in-law…"
-                style={{
-                  flex: 1,
-                  height: 36,
-                  border: 0,
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  outline: 'none',
-                  background: 'transparent',
-                  color: '#1A1A1A',
-                }}
-              />
-              {q && (
-                <button
-                  type="button"
-                  onClick={() => setQ('')}
-                  className="btn-flow-ghost"
-                  style={{ height: 32, padding: '0 12px', fontSize: 11 }}
-                >
-                  Clear
-                </button>
-              )}
+              <button type="submit" className="btn-flow-primary joke-search-submit">Search</button>
             </div>
-          </div>
+            <p id="joke-search-help">Search joke text, setups, punchlines, categories and themes. Use quotes for an exact phrase.</p>
+          </form>
 
-          {/* Quick-prompt chips */}
-          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className="eyebrow-mono">Or try</span>
-            {QUICK_PROMPTS.map((qp) => (
-              <button
-                key={qp.label}
-                type="button"
-                onClick={() => {
-                  setFmts(new Set(qp.fmts as FlowJokeFormat[]))
-                  setThemes(new Set(qp.themes))
-                  setCats(new Set(qp.cats))
-                  setQ('')
-                }}
-                style={{
-                  cursor: 'pointer',
-                  height: isMobile ? 44 : 32,
-                  padding: isMobile ? '0 16px' : '0 14px',
-                  fontSize: 12,
-                  borderRadius: 9999,
-                  border: '1px solid #E9E8E7',
-                  background: '#fff',
-                  color: '#1A1A1A',
-                  fontFamily: 'inherit',
-                  fontWeight: 600,
-                }}
-              >
-                {qp.label}
-              </button>
-            ))}
-          </div>
+          <details className="joke-search-filters" open={activeFilters > 0 || undefined}>
+            <summary>Refine your search{activeFilters > 0 ? ` (${activeFilters})` : ''}</summary>
+            <div className="joke-search-filter-grid">
+              <FilterGroup label="Formats" options={(formats.data ?? []).map((format) => ({ slug: FLOW_FORMAT_TO_BACKEND_SLUG[format.slug] ?? format.slug, name: format.name }))} selected={filters.joke_format} onToggle={(slug) => toggleFilter('joke_format', slug)} isError={formats.isError} />
+              <FilterGroup label="Categories" options={categories.data ?? []} selected={filters.categories} onToggle={(slug) => toggleFilter('categories', slug)} isError={categories.isError} />
+              <FilterGroup label="Themes" options={themes.data ?? []} selected={filters.themes} onToggle={(slug) => toggleFilter('themes', slug)} isError={themes.isError} />
+            </div>
+            {(activeFilters > 0 || committedQuery) && <button type="button" className="btn-flow-ghost" onClick={clearSearch}>Reset search</button>}
+          </details>
 
-          {/* Results header */}
-          <div style={{ marginTop: 36, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span className="eyebrow-mono">
-              {totalCount} match{totalCount === 1 ? '' : 'es'}
-            </span>
-            <span className="eyebrow-mono">Sort: {debouncedQ ? 'relevance' : 'newest'} ↓</span>
-          </div>
-
-          {isLoading ? (
-            <div style={{ marginTop: 14, columnCount: masonryCols, columnGap: 18 }} aria-busy="true">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    breakInside: 'avoid',
-                    marginBottom: 18,
-                    height: 160 + (i % 3) * 40,
-                    background: '#F2F0F0',
-                    borderRadius: 18,
-                  }}
-                />
-              ))}
-            </div>
-          ) : isError ? (
-            <div
-              style={{
-                marginTop: 14,
-                padding: '48px 32px',
-                border: '1px dashed #E9E8E7',
-                borderRadius: 18,
-                textAlign: 'center',
-                background: '#fff',
-              }}
-            >
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 28, color: '#1A1A1A', letterSpacing: '-0.02em' }}>
-                Couldn't run that search.
-              </div>
-              <p style={{ marginTop: 8, fontSize: 16, color: '#52525B' }}>Try again in a moment.</p>
-            </div>
-          ) : matches.length > 0 ? (
-            <>
-            <div style={{ marginTop: 14, columnCount: masonryCols, columnGap: 18 }}>
-              {matches.map((joke) => {
-                const flow = jokeToFlowData(joke)
-                return flow && (
-                  <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    {/* Link to the real detail so a click opens the correct joke and
-                        logs a real view (?source=search). */}
-                    <Link to={`/jokes/${joke.id}?source=search`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <FlowJokeCard joke={flow} source="search" />
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-            {hasMore && (
-              <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  className="btn-flow-ghost"
-                  style={{ height: 44, padding: '0 24px' }}
-                  disabled={isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {isFetching ? 'Loading…' : `Load more · ${matches.length} of ${totalCount}`}
-                </button>
-              </div>
-            )}
-            </>
-          ) : (
-            <div
-              style={{
-                marginTop: 14,
-                padding: '56px 32px',
-                border: '1px dashed #E9E8E7',
-                borderRadius: 18,
-                textAlign: 'center',
-                background: '#fff',
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 32,
-                  letterSpacing: '-0.02em',
-                  color: '#1A1A1A',
-                }}
-              >
-                No jokes for that exact <em className="wink">sentence.</em>
-              </div>
-              <p style={{ marginTop: 8, fontSize: 18, color: '#52525B' }}>
-                Loosen one of the pills, or surrender — we'll surprise you.
+          <section className="joke-search-results" aria-label="Search results" aria-busy={search.isFetching}>
+            <div className="joke-search-result-heading">
+              <p role="status" aria-live="polite">
+                {search.isPending ? 'Searching…' : search.isError && !search.data ? 'Search unavailable' : `${totalCount} match${totalCount === 1 ? '' : 'es'}`}
+                {search.isFetching && !search.isPending && !search.isFetchingNextPage && <span> · Updating…</span>}
               </p>
-              <div style={{ marginTop: 18, display: 'flex', gap: 8, justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFmts(new Set())
-                    setCats(new Set())
-                  }}
-                  className="btn-flow-primary"
-                  style={{ height: 42 }}
-                >
-                  Loosen filters
-                </button>
-                <button type="button" className="btn-flow-ghost" style={{ height: 42 }}>
-                  <Dice5 size={14} /> Surprise me
-                </button>
-              </div>
+              {search.data && <span>{committedQuery ? 'Most relevant first' : 'Newest first'}</span>}
             </div>
-          )}
+
+            {search.isPending ? (
+              <div className="joke-search-grid" style={{ columnCount: columns }} aria-label="Loading jokes">
+                {Array.from({ length: 6 }, (_, index) => <div key={index} className="joke-search-skeleton" style={{ height: 170 + index % 3 * 35 }} />)}
+              </div>
+            ) : search.isError && !search.data ? (
+              <div className="joke-search-state" role="alert"><h2>Search could not finish</h2><p>{searchError(search.error)}</p><button type="button" className="btn-flow-primary" onClick={() => { void search.refetch() }}>Try again</button></div>
+            ) : matches.length ? (
+              <>
+                <div className="joke-search-grid" style={{ columnCount: columns }}>
+                  {matches.map((joke) => {
+                    const flow = jokeToFlowData(joke)
+                    return flow && <div key={joke.id} className="joke-search-result"><Link to={`/jokes/${joke.id}?source=search`} className="joke-search-card-link"><FlowJokeCard joke={flow} source="search" /></Link></div>
+                  })}
+                </div>
+                {search.isFetchNextPageError && <p role="alert" className="joke-search-more-error">We could not load more jokes. Your current results are still here.</p>}
+                {search.isRefetchError && !search.isFetchNextPageError && <p role="alert" className="joke-search-more-error">These results could not be refreshed. <button type="button" onClick={() => { void search.refetch() }}>Try again</button></p>}
+                {search.hasNextPage && <div className="joke-search-more"><button type="button" className="btn-flow-ghost" disabled={search.isFetching} onClick={() => { void search.fetchNextPage() }}>{search.isFetchingNextPage ? 'Loading more…' : search.isFetchNextPageError ? 'Try loading more again' : `Load more · ${matches.length} of ${totalCount}`}</button></div>}
+              </>
+            ) : (
+              <div className="joke-search-state"><h2>No jokes found</h2><p>Try a different word, a shorter phrase, or fewer filters.</p><button type="button" className="btn-flow-primary" onClick={clearSearch}>Clear search and filters</button></div>
+            )}
+          </section>
         </div>
       </FlowAppShell>
     </div>
   )
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Sentence Builder pill + dropdown panel
-// ──────────────────────────────────────────────────────────────────────────
-
-function SBPillContainer({ children }: { children: ReactNode }) {
-  return <span style={{ position: 'relative', display: 'inline-block' }}>{children}</span>
-}
-
-interface SBPillProps {
-  open: boolean
-  onClick: () => void
+function FilterGroup({ label, options, selected, onToggle, isError }: {
   label: string
-  color: string
-  isSet: boolean
+  options: { slug: string; name: string }[]
+  selected: string[]
+  onToggle: (slug: string) => void
+  isError: boolean
+}) {
+  // Preserve removable choices from bookmarked URLs even if a catalog changes.
+  const available = [...options, ...selected.filter((slug) => !options.some((option) => option.slug === slug)).map((slug) => ({ slug, name: slug }))]
+  return <fieldset><legend>{label}</legend><div className="joke-search-filter-options">{available.map((option) => <label key={option.slug}><input type="checkbox" checked={selected.includes(option.slug)} onChange={() => onToggle(option.slug)} /><span>{option.name}</span></label>)}</div>{isError && <p>Could not load {label.toLowerCase()}. Text search is still available.</p>}</fieldset>
 }
-
-function SBPill({ open, onClick, label, color, isSet }: SBPillProps) {
-  const fg = isSet ? (color === '#CAFD00' ? '#3A4A00' : '#fff') : color
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '4px 14px',
-        borderRadius: 9999,
-        background: isSet ? color : 'transparent',
-        color: fg,
-        border: isSet ? `2px solid ${color}` : `2px dashed ${color}`,
-        fontFamily: 'var(--font-display)',
-        fontWeight: 800,
-        fontSize: 'inherit',
-        lineHeight: 'inherit',
-        letterSpacing: 'inherit',
-        cursor: 'pointer',
-      }}
-    >
-      {label}
-      <span style={{ fontSize: '55%', transform: open ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }}>▾</span>
-    </button>
-  )
-}
-
-interface SBPanelProps<T extends string> {
-  items: { id: T; label: string }[]
-  selected: Set<T>
-  onToggle: (id: T) => void
-  color: string
-  onClose: () => void
-  onClear: () => void
-}
-
-function SBPanel<T extends string>({ items, selected, onToggle, color, onClose, onClear }: SBPanelProps<T>) {
-  const { isMobile } = useBreakpoint()
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    const t = setTimeout(() => document.addEventListener('mousedown', handleClick), 0)
-    return () => {
-      clearTimeout(t)
-      document.removeEventListener('mousedown', handleClick)
-    }
-  }, [onClose])
-
-  const fgFor = (active: boolean) => (active ? (color === '#CAFD00' ? '#3A4A00' : '#fff') : '#1A1A1A')
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        marginTop: 14,
-        zIndex: 10,
-        background: '#fff',
-        border: '1px solid #E9E8E7',
-        borderRadius: 18,
-        padding: 18,
-        boxShadow: '0 12px 40px rgba(15,14,18,0.16)',
-        // On phones, cap to the viewport so the panel never forces horizontal
-        // scroll (the pill can sit far right in the sentence).
-        minWidth: isMobile ? 0 : 380,
-        width: isMobile ? 'min(320px, calc(100vw - 32px))' : undefined,
-        maxWidth: isMobile ? 'calc(100vw - 32px)' : 520,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span className="eyebrow-mono">Pick one or many</span>
-        <button
-          type="button"
-          onClick={onClear}
-          style={{
-            background: 0,
-            border: 0,
-            cursor: 'pointer',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: '#52525B',
-          }}
-        >
-          Clear
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {items.map((it) => {
-          const active = selected.has(it.id)
-          return (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => onToggle(it.id)}
-              aria-pressed={active}
-              style={{
-                cursor: 'pointer',
-                height: isMobile ? 44 : 32,
-                padding: isMobile ? '0 16px' : '0 12px',
-                fontSize: 13,
-                borderRadius: 9999,
-                background: active ? color : '#fff',
-                color: fgFor(active),
-                border: `1px solid ${active ? color : '#E9E8E7'}`,
-                fontFamily: 'inherit',
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {it.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────
-
-function toggleSet<T>(setter: (updater: (prev: Set<T>) => Set<T>) => void, value: T) {
-  setter((prev) => {
-    const next = new Set(prev)
-    if (next.has(value)) next.delete(value)
-    else next.add(value)
-    return next
-  })
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Static data — same as ExplorePage; consolidate if a third consumer appears.
-// ──────────────────────────────────────────────────────────────────────────
-
-const FORMATS: { id: FlowJokeFormat; label: string }[] = [
-  { id: 'oneliner', label: 'One-liner' },
-  { id: 'setup', label: 'Setup → Punchline' },
-  { id: 'knock', label: 'Knock-knock' },
-  { id: 'story', label: 'Story' },
-  { id: 'anti', label: 'Anti-joke' },
-  { id: 'observ', label: 'Observational' },
-]
-
-const THEMES = [
-  { id: 'work', label: 'Work' },
-  { id: 'family', label: 'Family' },
-  { id: 'food', label: 'Food' },
-  { id: 'tech', label: 'Tech' },
-  { id: 'school', label: 'School' },
-  { id: 'dating', label: 'Dating' },
-  { id: 'animals', label: 'Animals' },
-  { id: 'science', label: 'Science' },
-  { id: 'travel', label: 'Travel' },
-  { id: 'money', label: 'Money' },
-  { id: 'weather', label: 'Weather' },
-  { id: 'mondays', label: 'Mondays' },
-]
-
-// `id` is the exact backend tone slug sent as `tones`. Verified against
-// /jokes/?tones=… — `office`/`kid` returned 0 rows; real slugs are
-// `office-proper` and `kid-safe`.
-const CATEGORIES = [
-  { id: 'wholesome', label: 'Wholesome' },
-  { id: 'office-proper', label: 'Office-proper' },
-  { id: 'dad', label: 'Dad' },
-  { id: 'kid-safe', label: 'Kid-safe' },
-  { id: 'nerd', label: 'Nerd' },
-  { id: 'surreal', label: 'Surreal' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'edgy', label: 'Edgy' },
-]
-
-const QUICK_PROMPTS: { label: string; fmts: string[]; themes: string[]; cats: string[] }[] = [
-  { label: 'First day at work', fmts: [], themes: ['work'], cats: ['wholesome'] },
-  { label: 'Wedding toast', fmts: [], themes: ['dating'], cats: ['wholesome'] },
-  { label: 'Dad-joke ammo', fmts: ['oneliner'], themes: ['family'], cats: ['dad'] },
-  { label: 'Group-chat unhinged', fmts: [], themes: [], cats: ['edgy'] },
-  { label: 'Office Slack-safe', fmts: ['oneliner', 'observ'], themes: ['work'], cats: ['office-proper'] },
-]
