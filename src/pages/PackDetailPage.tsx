@@ -41,7 +41,7 @@ export function PackDetailPage() {
             >
               Pack <em className="wink">not found.</em>
             </h2>
-            <p style={{ marginTop: 8, color: '#52525B' }}>It may have expired or been unpublished.</p>
+            <p style={{ marginTop: 8, color: '#52525B' }}>This pack may be unavailable or have no jokes for your selected language, country and culture. Adjust the joke languages above to explore more.</p>
             <Link
               to="/library"
               className="btn-flow-primary"

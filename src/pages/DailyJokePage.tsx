@@ -19,8 +19,8 @@ import { Seo, jokeShareUrl } from '@/lib/seo'
  *   2. History grid — 7-day archive style tiles
  */
 export function DailyJokePage() {
-  const { data: today, isLoading: loadingToday } = useTodaysJoke()
-  const { data: history, isLoading: loadingHistory } = useDailyJokeHistory()
+  const { data: today, isLoading: loadingToday, error: todayError, refetch: retryToday } = useTodaysJoke()
+  const { data: history, isLoading: loadingHistory, isError: historyError } = useDailyJokeHistory()
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
@@ -71,7 +71,11 @@ export function DailyJokePage() {
 
           {/* Hero JOTD */}
           <div style={{ marginTop: 32 }}>
-            {loadingToday ? <JotdSkeleton /> : <JotdHero jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} media={today?.joke?.media} date={today?.date} />}
+            {loadingToday ? <JotdSkeleton /> : !today?.joke ? <div role="status" style={{ padding: 24, border: '1px solid #E9E8E7', borderRadius: 18 }}>
+              <p>{(todayError as { response?: { status?: number } })?.response?.status === 404 ? 'No daily joke matches this language, country and culture yet.' : 'The daily joke could not be loaded.'}</p>
+              <p style={{ color: '#52525B', marginTop: 8 }}>Adjust the joke languages above or explore the available collection.</p>
+              <button type="button" onClick={() => void retryToday()} style={{ minHeight: 44, marginRight: 16 }}>Try again</button><Link to="/explore">Explore jokes</Link>
+            </div> : <JotdHero key={today.joke.id} language={today.joke.language?.code} jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} media={today?.joke?.media} date={today?.date} />}
           </div>
 
           {/* History */}
@@ -119,12 +123,12 @@ export function DailyJokePage() {
                 }}
               >
                 {history.results.slice(0, 12).map((entry, i) => (
-                  <HistoryTile key={entry.date ?? i} text={entry.joke?.text} date={entry.date} index={i} />
+                  <HistoryTile key={entry.date ?? i} language={entry.joke?.language?.code} text={entry.joke?.text} date={entry.date} index={i} />
                 ))}
               </div>
             ) : (
               <p style={{ marginTop: 24, fontSize: 14, color: '#6B7280' }}>
-                No history yet. Come back tomorrow for the next one.
+                {historyError ? 'History could not be loaded. Try again later.' : 'No history for this selection yet. Come back tomorrow for the next one.'}
               </p>
             )}
           </section>
@@ -140,6 +144,7 @@ export function DailyJokePage() {
 
 interface JotdHeroProps {
   jokeId?: number
+  language?: string
   setup?: string | null
   punchline?: string | null
   text?: string
@@ -147,7 +152,7 @@ interface JotdHeroProps {
   date?: string
 }
 
-function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps) {
+function JotdHero({ jokeId, language, setup, punchline, text, media, date }: JotdHeroProps) {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
@@ -183,6 +188,7 @@ function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps
   return (
     <article
       ref={dwellRef}
+      lang={language}
       style={{
         background: 'linear-gradient(160deg, #FFFFFF 0%, #FBFAF7 100%)',
         border: '1px solid #E9E8E7',
@@ -381,14 +387,14 @@ function JotdHero({ jokeId, setup, punchline, text, media, date }: JotdHeroProps
 // History tile
 // ──────────────────────────────────────────────────────────────────────────
 
-function HistoryTile({ text, date, index }: { text?: string; date?: string; index: number }) {
+function HistoryTile({ text, date, index, language }: { text?: string; date?: string; index: number; language?: string }) {
   const tints = ['transparent', 'rgba(202, 253, 0, 0.12)', '#F2E9FF', 'rgba(255, 201, 101, 0.18)']
   const bg = tints[index % tints.length]
   const dateline = date ? new Date(date) : null
   const day = dateline?.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() ?? '—'
 
   return (
-    <button
+    <button lang={language}
       type="button"
       style={{
         padding: 24,

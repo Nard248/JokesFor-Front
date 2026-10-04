@@ -1,3 +1,5 @@
+import type { ContentSelection } from '@/features/discovery/selection'
+import { matchesContentSelection } from '@/features/discovery/matches'
 import type { Joke, JokeSearchParams, PaginatedResponse, Collection, SavedJoke, CreatorInsights, InsightsPeriod, FollowStatus, CreatorProfile, BillingPlan, MySubscription, BillingEntitlements, CheckoutSessionResponse, PortalSessionResponse, TipCheckoutInput, TipCheckoutResponse, TipsSummary, Tip } from './api'
 import { TIP_TIERS } from './api'
 import {
@@ -36,46 +38,75 @@ import type {
   UserPreferences,
 } from './mock-data'
 
-function delay(ms = 400): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms + Math.random() * 400))
+function delay(ms = 400, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Search cancelled', 'AbortError'))
+      return
+    }
+    const abort = () => {
+      clearTimeout(timer)
+      reject(new DOMException('Search cancelled', 'AbortError'))
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, ms + Math.random() * 400)
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+
+const searchSlugs = (value?: string) => (value ?? '').toLowerCase().split(',').map((slug) => slug.trim()).filter(Boolean)
+
+/** Lightweight preview matching; production relevance is computed by PostgreSQL. */
+function matchesSearchText(joke: Joke, query: string): boolean {
+  const taxa = [...(joke.categories ?? joke.tones), ...(joke.themes ?? joke.context_tags), ...joke.culture_tags]
+  const text = [
+    joke.text, joke.setup, joke.punchline, ...(joke.lines ?? []),
+    ...taxa.flatMap((taxon) => [taxon.name, taxon.slug.replace(/[-_]/g, ' ')]),
+    joke.format.name, joke.format.slug.replace(/[-_]/g, ' '), joke.language.name, joke.language.code,
+    joke.cultural_note, ...(joke.countries ?? []).flatMap((country) => [country.name, country.native_name, country.code]),
+  ].filter(Boolean).join(' ').toLowerCase()
+  // Respect plain words, quoted phrases, OR and excluded words in preview mode.
+  // This intentionally does not attempt to reproduce PostgreSQL's stemming.
+  const groups: string[][] = [[]]
+  for (const token of query.match(/-?"[^"]+"|\S+/g) ?? []) {
+    if (token === 'OR') groups.push([])
+    else groups[groups.length - 1].push(token)
+  }
+  return groups.some((group) => group.length > 0 && group.every((token) => {
+    const excluded = token.startsWith('-')
+    const term = (excluded ? token.slice(1) : token).replace(/^"|"$/g, '').toLowerCase()
+    return term ? excluded ? !text.includes(term) : text.includes(term) : true
+  }))
 }
 
 export const mockJokesApi = {
-  search: async (params: JokeSearchParams): Promise<PaginatedResponse<Joke>> => {
-    await delay()
-    let filtered = [...mockJokes]
+  search: async (params: JokeSearchParams, signal?: AbortSignal): Promise<PaginatedResponse<Joke>> => {
+    await delay(400, signal)
+    let filtered = mockJokes.filter((joke) => matchesContentSelection(joke, params))
 
-    if (params.q) {
-      const q = params.q.toLowerCase()
-      filtered = filtered.filter(
-        (j) =>
-          j.text.toLowerCase().includes(q) ||
-          j.setup?.toLowerCase().includes(q) ||
-          j.punchline?.toLowerCase().includes(q) ||
-          j.tones.some((t) => t.name.toLowerCase().includes(q)) ||
-          j.context_tags.some((t) => t.name.toLowerCase().includes(q))
-      )
-      // If text search returns too few results, pad with all jokes
-      if (filtered.length < 3) {
-        const filteredIds = new Set(filtered.map((j) => j.id))
-        const remaining = mockJokes.filter((j) => !filteredIds.has(j.id))
-        filtered = [...filtered, ...remaining]
-      }
+    if (params.q?.trim()) {
+      filtered = filtered.filter((joke) => matchesSearchText(joke, params.q!.trim()))
     }
-    if (params.tones) {
-      const toneSlug = params.tones.toLowerCase()
-      filtered = filtered.filter((j) => j.tones.some((t) => t.slug === toneSlug))
+    const categories = searchSlugs(params.categories ?? params.tones)
+    if (categories.length) {
+      filtered = filtered.filter((joke) => (joke.categories ?? joke.tones).some((taxon) => categories.includes(taxon.slug)))
     }
     if (params.age_rating) {
       const arSlug = params.age_rating.toLowerCase()
       filtered = filtered.filter((j) => j.age_rating.slug === arSlug)
     }
-    if (params.context_tags) {
-      const ctSlug = params.context_tags.toLowerCase()
-      filtered = filtered.filter((j) => j.context_tags.some((t) => t.slug === ctSlug))
+    const themes = searchSlugs(params.themes ?? params.context_tags)
+    if (themes.length) {
+      filtered = filtered.filter((joke) => (joke.themes ?? joke.context_tags).some((taxon) => themes.includes(taxon.slug)))
     }
-
-    return paginateMock(filtered, params.page || 1)
+    const formats = searchSlugs(params.joke_format)
+    if (formats.length) filtered = filtered.filter((joke) => formats.includes(joke.format.slug))
+    if (params.ordering === '-created_at' || !params.q?.trim()) {
+      filtered.sort((left, right) => right.created_at.localeCompare(left.created_at) || right.id - left.id)
+    }
+    return paginateMock(filtered, params.page || 1, params.page_size || 10)
   },
 
   getById: async (id: number): Promise<Joke> => {
@@ -85,9 +116,11 @@ export const mockJokesApi = {
     return joke
   },
 
-  getRandom: async (): Promise<Joke> => {
+  getRandom: async (params?: Partial<ContentSelection>): Promise<Joke> => {
     await delay(200)
-    return mockJokes[Math.floor(Math.random() * mockJokes.length)]
+    const eligible = mockJokes.filter((joke) => matchesContentSelection(joke, params))
+    if (!eligible.length) throw new Error('No jokes match this language, country and culture.')
+    return eligible[Math.floor(Math.random() * eligible.length)]
   },
 
   rate: async (_jokeId: number, _rating: 1 | -1): Promise<void> => {
@@ -101,14 +134,15 @@ export const mockJokesApi = {
 }
 
 export const mockDailyJokeApi = {
-  getToday: async (): Promise<{ joke: Joke; date: string }> => {
+  getToday: async (params?: Partial<ContentSelection>): Promise<{ joke: Joke; date: string }> => {
     await delay(300)
+    if (!matchesContentSelection(mockDailyJoke.joke, params)) throw new Error('No daily joke matches this selection.')
     return mockDailyJoke
   },
 
-  getHistory: async (): Promise<PaginatedResponse<{ joke: Joke; date: string }>> => {
+  getHistory: async (params?: Partial<ContentSelection>): Promise<PaginatedResponse<{ joke: Joke; date: string }>> => {
     await delay()
-    return paginateMock(mockDailyJokeHistory)
+    return paginateMock(mockDailyJokeHistory.filter((entry) => matchesContentSelection(entry.joke, params)))
   },
 }
 

@@ -30,7 +30,7 @@ export function TrendingPage() {
   const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
   const [period, setPeriod] = useState<'24h' | 'week' | 'month'>('week')
 
-  const { data: trendingJokes } = useTrendingJokes(period)
+  const { data: trendingJokes, isLoading: trendingLoading, isError: trendingError, refetch: retryTrending } = useTrendingJokes(period)
   const { data: trendingTags } = useTrendingTags()
   const { data: risingTopics } = useRisingTopics()
   const { data: jokesters } = useTopJokesters(5)
@@ -101,7 +101,7 @@ export function TrendingPage() {
                 </>
               }
             />
-            {trendingJokes && trendingJokes.length > 0 ? (
+            {trendingLoading ? <p role="status" style={{ marginTop: 18 }}>Loading jokes for this selection…</p> : trendingError ? <p role="alert" style={{ marginTop: 18 }}>Trending jokes could not be loaded. <button type="button" onClick={() => void retryTrending()} style={{ minHeight: 44 }}>Try again</button></p> : trendingJokes && trendingJokes.length > 0 ? (
               <div style={{ marginTop: 18, columnCount: masonryCols, columnGap: 18 }}>
                 {trendingJokes.slice(0, 9).map((tj, i) => {
                   const flow = trendingToFlowData(tj, i)
@@ -394,7 +394,7 @@ function SectionEmpty() {
       }}
     >
       <TrendingUp size={28} color="#6B7280" />
-      <p style={{ fontSize: 14, color: '#6B7280' }}>Nothing trending yet for this period.</p>
+      <p style={{ fontSize: 14, color: '#6B7280' }}>Nothing trending yet for this selection and period.</p>
     </div>
   )
 }
@@ -413,6 +413,7 @@ function trendingToFlowData(
       format?: { slug: string; name: string }
       tones?: { name: string }[]
       media?: JokeMediaItem[]
+      language?: { code: string; name: string }
     }
     likes: number
     shares: number
@@ -437,6 +438,8 @@ function trendingToFlowData(
     text: tj.joke?.text,
     media: tj.joke?.media ?? undefined,
     catLabel: tj.joke?.tones?.[0]?.name,
+    language: tj.joke?.language?.code,
+    localeLabel: tj.joke?.language?.code !== 'en' ? tj.joke?.language?.name : undefined,
     saves: String(tj.shares ?? '—'),
     laughs: String(tj.likes ?? '—'),
   }
