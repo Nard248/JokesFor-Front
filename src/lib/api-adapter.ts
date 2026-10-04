@@ -72,10 +72,11 @@ export const dailyJokeAdapter = {
       ? mockDailyJokeApi.getToday(params)
       : dailyJokeApi.getToday(params).then((r) => r.data),
 
-  getHistory: (params?: Partial<ContentSelection>): Promise<PaginatedResponse<{ joke: Joke; date: string }>> =>
+  /** `/daily-jokes/history/` is a bare list; tolerate a paginated envelope too. */
+  getHistory: (params?: Partial<ContentSelection>): Promise<Array<{ joke: Joke; date: string }>> =>
     USE_MOCKS
       ? mockDailyJokeApi.getHistory(params)
-      : dailyJokeApi.getHistory(params).then((r) => r.data),
+      : dailyJokeApi.getHistory(params).then((r) => Array.isArray(r.data) ? r.data : r.data?.results ?? []),
 }
 
 // ── Collections Adapter ──

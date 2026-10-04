@@ -3,6 +3,9 @@ import { Link } from 'react-router'
 import { History, ArrowRight, Bookmark, BookmarkCheck, Share2, Sparkles, Music } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { useTodaysJoke, useDailyJokeHistory } from '@/features/daily-joke'
+import { useAuth } from '@/features/auth'
+import { useContentSelection } from '@/features/discovery/context'
+import { selectionParams } from '@/features/discovery/selection'
 import { useSaveJoke } from '@/features/saved-jokes'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
@@ -21,6 +24,8 @@ import { Seo, jokeShareUrl } from '@/lib/seo'
 export function DailyJokePage() {
   const { data: today, isLoading: loadingToday, error: todayError, refetch: retryToday } = useTodaysJoke()
   const { data: history, isLoading: loadingHistory, isError: historyError } = useDailyJokeHistory()
+  const { isAuthenticated } = useAuth()
+  const hasSelection = Object.keys(selectionParams(useContentSelection())).length > 0
 
   return (
     <div style={{ minHeight: '100vh', background: '#FBFAF7' }}>
@@ -113,7 +118,11 @@ export function DailyJokePage() {
             </div>
             {loadingHistory ? (
               <HistorySkeleton />
-            ) : history?.results && history.results.length > 0 ? (
+            ) : !isAuthenticated ? (
+              <p style={{ marginTop: 24, fontSize: 14, color: '#6B7280' }}>
+                <Link to="/login" style={{ color: '#6A1CF6' }}>Sign in</Link> to see every daily joke you've been sent.
+              </p>
+            ) : history && history.length > 0 ? (
               <div
                 style={{
                   marginTop: 18,
@@ -122,13 +131,17 @@ export function DailyJokePage() {
                   gap: 16,
                 }}
               >
-                {history.results.slice(0, 12).map((entry, i) => (
+                {history.slice(0, 12).map((entry, i) => (
                   <HistoryTile key={entry.date ?? i} language={entry.joke?.language?.code} text={entry.joke?.text} date={entry.date} index={i} />
                 ))}
               </div>
             ) : (
               <p style={{ marginTop: 24, fontSize: 14, color: '#6B7280' }}>
-                {historyError ? 'History could not be loaded. Try again later.' : 'No history for this selection yet. Come back tomorrow for the next one.'}
+                {historyError
+                  ? 'History could not be loaded. Try again later.'
+                  : hasSelection
+                    ? 'No history for this selection yet. Adjust the joke languages above to see more.'
+                    : 'No history yet. Come back tomorrow for the next one.'}
               </p>
             )}
           </section>

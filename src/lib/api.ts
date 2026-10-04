@@ -261,8 +261,9 @@ export const dailyJokeApi = {
     // the mock/older fixtures without it still type-check.
     api.get<{ joke: Joke; date: string; issue_label?: string }>('/daily-jokes/today/', { params }),
 
+  // The backend returns a bare (unpaginated) list; auth required.
   getHistory: (params?: Partial<ContentSelection>) =>
-    api.get<PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/', { params }),
+    api.get<Array<{ joke: Joke; date: string }> | PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/', { params }),
 }
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -50,7 +50,9 @@ export function FlowCanvasPage() {
   const saveJoke = useSaveJoke()
 
   // Real-API data sources for the Today hub.
-  const { data: today, isLoading: loadingToday, isError: todayError } = useTodayAugmented()
+  const { data: today, isLoading: loadingToday, isError: todayError, error: todayErrorDetail } = useTodayAugmented()
+  // Only a 404 means the selection matched nothing; anything else is a load failure.
+  const todayUnmatched = (todayErrorDetail as { response?: { status?: number } } | null)?.response?.status === 404
   const revealed = !!today?.joke?.id && revealedJokeId === today.joke.id
   const saved = !!today?.joke?.id && savedJokeId === today.joke.id
   const { data: streak } = useStreak()
@@ -155,7 +157,9 @@ export function FlowCanvasPage() {
                   {(today?.joke?.categories?.[0]?.name ?? today?.joke?.tones?.[0]?.name) || ''}
                 </span>
               </header>
-              {todayError && <p role="status" style={{ marginTop: 24 }}>No daily joke is available for this selection. Adjust the joke languages above or <Link to="/explore">explore the collection</Link>.</p>}
+              {todayError && (todayUnmatched
+                ? <p role="status" style={{ marginTop: 24 }}>No daily joke is available for this selection. Adjust the joke languages above or <Link to="/explore">explore the collection</Link>.</p>
+                : <p role="status" style={{ marginTop: 24 }}>Today's joke could not be loaded. Try again later or <Link to="/explore">explore the collection</Link>.</p>)}
               {!todayError && <JotdBody
                 joke={today?.joke}
                 revealed={revealed}
@@ -272,7 +276,7 @@ export function FlowCanvasPage() {
           </div>
 
           {/* ── 7-day archive · newspaper strip ────────────────── */}
-          <SevenDayArchive history={history?.results} isMobile={isMobile} />
+          <SevenDayArchive history={history} isMobile={isMobile} />
 
           {/* ── Top jokesters + Weekly special ─────────────────── */}
           <TopJokestersAndSpecial featuredPack={featuredPack} jokesters={jokesters} isMobile={isMobile} />

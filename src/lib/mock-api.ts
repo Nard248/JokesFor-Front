@@ -140,9 +140,9 @@ export const mockDailyJokeApi = {
     return mockDailyJoke
   },
 
-  getHistory: async (params?: Partial<ContentSelection>): Promise<PaginatedResponse<{ joke: Joke; date: string }>> => {
+  getHistory: async (params?: Partial<ContentSelection>): Promise<Array<{ joke: Joke; date: string }>> => {
     await delay()
-    return paginateMock(mockDailyJokeHistory.filter((entry) => matchesContentSelection(entry.joke, params)))
+    return mockDailyJokeHistory.filter((entry) => matchesContentSelection(entry.joke, params))
   },
 }
 
