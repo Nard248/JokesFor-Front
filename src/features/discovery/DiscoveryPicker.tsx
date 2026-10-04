@@ -4,7 +4,7 @@ import { ChevronDown, Globe2 } from 'lucide-react'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDiscoveryCatalog } from './api'
 import { useBrowseSelection } from './context'
-import { EMPTY_SELECTION, selectionUrl, type ContentSelection } from './selection'
+import { ALL_LANGUAGES, EMPTY_SELECTION, selectionUrl, type ContentSelection } from './selection'
 import { useDiscoveryStore } from './store'
 
 const nativeLanguages: Record<string, string> = { en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', hy: 'Հայերեն', it: 'Italiano', nb: 'Norsk bokmål' }
@@ -15,7 +15,9 @@ export function DiscoveryPicker() {
   const selection = useBrowseSelection()
   const id = useId()
   const { isMobile } = useBreakpoint()
-  const summary = [selection.language ? nativeLanguages[selection.language] ?? selection.language : 'All languages', selection.country, selection.culture_tags ? 'Culture selected' : ''].filter(Boolean).join(' · ')
+  const languageSummary = selection.language === ALL_LANGUAGES ? 'All languages'
+    : selection.language ? nativeLanguages[selection.language] ?? selection.language : 'Your language'
+  const summary = [languageSummary, selection.country, selection.culture_tags ? 'Culture selected' : ''].filter(Boolean).join(' · ')
   return (
     <div style={{ borderBottom: '1px solid #E9E8E7', background: '#FBFAF7', padding: isMobile ? '0 16px' : '0 32px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -61,8 +63,10 @@ export function DiscoveryOptions() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 600 }}>Joke language
             <select aria-label="Joke language" value={selection.language} onChange={(event) => update({ ...selection, language: event.target.value })} style={{ ...controlStyle, marginTop: 6 }}>
-              <option value="">All languages</option>
-              {selection.language && !data.languages.some((item) => item.code === selection.language) && <option value={selection.language}>{selection.language} (unavailable)</option>}
+              {/* Empty = the server applies your default language; "all" explicitly selects every language. */}
+              <option value="">Your language</option>
+              <option value={ALL_LANGUAGES}>All languages</option>
+              {selection.language && selection.language !== ALL_LANGUAGES && !data.languages.some((item) => item.code === selection.language) && <option value={selection.language}>{selection.language} (unavailable)</option>}
               {data.languages.map((item) => <option key={item.code} value={item.code} lang={item.code}>{label(item)}</option>)}
             </select>
           </label>
