@@ -14,13 +14,17 @@ test('the real locale catalogue exposes five native languages and strict interse
     ['es', 'ES', 'spain-everyday'], ['fr', 'FR', 'france-everyday'], ['de', 'DE', 'germany-everyday'],
     ['hy', 'AM', 'armenia-everyday'], ['it', 'IT', 'italy-everyday'],
   ]) {
-    const response = await apiGet<{ results: { language: { code: string }; countries: { code: string }[]; culture_tags: { slug: string }[] }[] }>(page, `/jokes/?language=${language}&country=${country}&culture_tags=${culture}`)
+    const response = await apiGet<{ count: number; results: { language: { code: string }; countries: { code: string }[]; culture_tags: { slug: string }[] }[] }>(page, `/jokes/?language=${language}&country=${country}&culture_tags=${culture}`)
+    // A missing corpus or a filter that matches nothing must fail, not pass vacuously.
+    expect(response.count, `${language}/${country}/${culture} collection`).toBeGreaterThan(0)
+    expect(response.results.length).toBeGreaterThan(0)
     for (const joke of response.results) {
       expect(joke.language.code).toBe(language)
       expect(joke.countries.some((item) => item.code === country)).toBe(true)
       expect(joke.culture_tags.some((item) => item.slug === culture)).toBe(true)
     }
   }
+  // The negative case only means something next to the non-empty hy collection above.
   const empty = await apiGet<{ count: number }>(page, '/jokes/?language=hy&country=ZZ')
   expect(empty.count).toBe(0)
 })
