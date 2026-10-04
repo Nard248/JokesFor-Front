@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const initializeApp = vi.fn(() => ({ name: '[DEFAULT]' }))
 const getAnalytics = vi.fn(() => ({ kind: 'analytics' }))
@@ -7,9 +7,15 @@ const isSupported = vi.fn(async () => true)
 vi.mock('firebase/app', () => ({ initializeApp }))
 vi.mock('firebase/analytics', () => ({ getAnalytics, isSupported }))
 
+// Hermetic: never depend on the developer's or CI's real Firebase env.
 beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
+  vi.stubEnv('VITE_FIREBASE_MEASUREMENT_ID', 'G-TEST')
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
 })
 
 describe('firebase module — boot-time side effects', () => {
@@ -35,12 +41,10 @@ describe('initAnalytics()', () => {
   })
 
   it('returns null when measurementId is absent', async () => {
-    // Override VITE_ env so measurementId is undefined in this run
-    const originalEnv = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-    // Can't truly override import.meta.env easily in vitest without vi.stubEnv,
-    // so we test via the isSupported false path instead (below).
-    // This test verifies the null-when-not-supported path.
-    expect(originalEnv).toBeDefined() // just confirm env exists; real no-measurementId test is below
+    vi.stubEnv('VITE_FIREBASE_MEASUREMENT_ID', '')
+    const mod = await import('./firebase')
+    expect(await mod.initAnalytics()).toBeNull()
+    expect(getAnalytics).not.toHaveBeenCalled()
   })
 
   it('returns null when isSupported() resolves false', async () => {
