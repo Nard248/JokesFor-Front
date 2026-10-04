@@ -171,6 +171,27 @@ describe('CommunitiesPage', () => {
     expect(screen.queryByRole('button', { name: 'Yours' })).not.toBeInTheDocument()
   })
 
+  it('tells sharing but not-yet-established accounts when they will count', () => {
+    const data = directory([community({})], false)
+    data.viewer = { counted: false, shares_analytics: true, communities: [] }
+    data.methodology = { ...data.methodology, established_account_days: 7, established_min_jokes: 3 }
+    directoryState.data = data
+    renderAt('/communities')
+    expect(screen.getByText(/once your account is 7 days old and you’ve laughed at 3 or more different jokes/)).toBeInTheDocument()
+    expect(screen.queryByText(/Turn on audience analytics/)).not.toBeInTheDocument()
+  })
+
+  it('states the real count protections in the methodology dialog', () => {
+    const data = directory([community({})])
+    data.methodology = { ...data.methodology, noise_epsilon: 1, established_account_days: 7, established_min_jokes: 3 }
+    directoryState.data = data
+    renderAt('/communities')
+    fireEvent.click(screen.getByRole('button', { name: /How communities form/ }))
+    const note = screen.getByTestId('cm-privacy-note')
+    expect(note).toHaveTextContent('small random adjustment that stays the same all day')
+    expect(note).toHaveTextContent('at least 7 days old, with laughs on 3 or more different jokes')
+  })
+
   it('explains that non-sharing accounts are not counted', () => {
     directoryState.data = directory([community({})], false)
     renderAt('/communities')
