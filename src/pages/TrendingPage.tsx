@@ -103,7 +103,7 @@ export function TrendingPage() {
             {trendingLoading ? <p role="status" style={{ marginTop: 18 }}>Loading jokes for this selection…</p> : trendingError ? <p role="alert" style={{ marginTop: 18 }}>Trending jokes could not be loaded. <button type="button" onClick={() => void retryTrending()} style={{ minHeight: 44 }}>Try again</button></p> : trendingJokes && trendingJokes.length > 0 ? (
               <div style={{ marginTop: 18, columnCount: masonryCols, columnGap: 18 }}>
                 {trendingJokes.slice(0, 9).map((tj, i) => {
-                  const flow = trendingToFlowData(tj, i)
+                  const flow = trendingToFlowData(tj)
                   return flow && (
                     <div key={tj.joke?.id ?? i} style={{ breakInside: 'avoid', marginBottom: 18 }}>
                       <FlowJokeCard joke={flow} source="feed" />

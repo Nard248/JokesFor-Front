@@ -201,18 +201,42 @@ describe('provenance mapping (language / origin / editorial status)', () => {
   })
 
   it('favoriteToFlowData maps provenance from the nested joke', () => {
-    const flow = favoriteToFlowData({ joke: nested }, 0)!
+    const flow = favoriteToFlowData({ joke: nested })!
     expect(flow.language).toBe('es')
     expect(flow.provenance?.origin?.flag).toBe('\u{1F1EA}\u{1F1F8}')
     expect(flow.provenance?.aiGenerated).toBe(true)
   })
 
   it('trendingToFlowData maps provenance and keeps English trending jokes badge-free', () => {
-    const flow = trendingToFlowData({ joke: nested, likes: 1, shares: 2 }, 0)!
+    const flow = trendingToFlowData({ joke: nested, likes: 1, shares: 2 })!
     expect(flow.language).toBe('es')
     expect(flow.provenance?.languageLabel).toBe('Español')
     expect(flow.provenance?.aiGenerated).toBe(true)
-    const en = trendingToFlowData({ joke: { ...nested, language: { code: 'en', name: 'English' }, origin_country: null, editorial_status: 'legacy' }, likes: 0, shares: 0 }, 1)!
+    const en = trendingToFlowData({ joke: { ...nested, language: { code: 'en', name: 'English' }, origin_country: null, editorial_status: 'legacy' }, likes: 0, shares: 0 })!
     expect(en.provenance).toEqual({})
+  })
+})
+
+describe('nested adapters use the joke id as the card id', () => {
+  const joke = { id: 42, text: 'x', setup: null, punchline: null, format: { slug: 'oneliner' } }
+
+  it('savedJokeToFlowData ignores the saved-row id', () => {
+    expect(savedJokeToFlowData({ id: 900, joke })!.id).toBe(42)
+  })
+
+  it('favoriteToFlowData uses the joke id', () => {
+    expect(favoriteToFlowData({ joke })!.id).toBe(42)
+  })
+
+  it('trendingToFlowData uses the joke id', () => {
+    expect(trendingToFlowData({ joke, likes: 0, shares: 0 })!.id).toBe(42)
+  })
+
+  it('rows without a numeric joke id are skipped, never given a substitute id', () => {
+    const noId = { ...joke, id: undefined as unknown as number }
+    expect(savedJokeToFlowData({ id: 900, joke: noId })).toBeNull()
+    expect(favoriteToFlowData({ joke: noId })).toBeNull()
+    expect(trendingToFlowData({ joke: noId, likes: 0, shares: 0 })).toBeNull()
+    expect(savedJokeToFlowData({ id: 900, joke: null as unknown as typeof joke })).toBeNull()
   })
 })

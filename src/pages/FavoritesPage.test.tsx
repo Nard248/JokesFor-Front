@@ -87,6 +87,13 @@ describe('FavoritesPage — pagination', () => {
     expect(screen.getByText('joke-33')).toBeDefined()
   })
 
+  it('an equal-but-new response object each render does not loop', () => {
+    mockUseFavorites.mockImplementation(() => favPage([makeFav(31), makeFav(32)]))
+    renderPage()
+    expect(screen.getByText('joke-31')).toBeDefined()
+    expect(screen.getByText('joke-32')).toBeDefined()
+  })
+
   it('a tone change after "Load more" restarts at page 1 and replaces the list', () => {
     const p1 = favPage([makeFav(31), makeFav(32)], 3, 'x')
     const p2 = favPage([makeFav(33)], 3, null)
@@ -111,7 +118,6 @@ describe('favoriteToFlowData — real DB format slugs', () => {
   it('resolves a favorited setup-punchline (real slug `setup`) to the setup skin', () => {
     const flow = favoriteToFlowData(
       { joke: { id: 5, text: '', setup: 'Q?', punchline: 'A!', format: { slug: 'setup' } } },
-      0,
     )
     expect(flow).not.toBeNull()
     expect(flow!.fmt).toBe('setup')

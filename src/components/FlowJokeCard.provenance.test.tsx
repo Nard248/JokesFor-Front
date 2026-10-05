@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { FlowJokeData } from './FlowJokeCard'
 
@@ -11,7 +11,8 @@ vi.mock('@/features/reactions', () => ({
   useReactions: () => ({ data: undefined }),
   useReactToJoke: () => ({ mutate: vi.fn() }),
 }))
-vi.mock('@/features/saved-jokes', () => ({ useSaveJoke: () => ({ mutate: vi.fn() }) }))
+const saveMutate = vi.fn()
+vi.mock('@/features/saved-jokes', () => ({ useSaveJoke: () => ({ mutate: saveMutate }) }))
 vi.mock('@/features/telemetry', () => ({
   useImpression: () => ({ current: null }),
   useDwell: () => ({ current: null }),
@@ -77,5 +78,19 @@ describe('FlowJokeCard — provenance badges', () => {
     renderCard({ id: 1, fmt: 'oneliner', text: 'Plain.' })
     expect(screen.getByText('Plain.')).toBeInTheDocument()
     expect(screen.queryByTestId('joke-provenance')).toBeNull()
+  })
+})
+
+describe('FlowJokeCard — save needs a real joke id', () => {
+  it('saves with the numeric joke id', () => {
+    renderCard({ id: 42, fmt: 'oneliner', text: 'Real.' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(saveMutate).toHaveBeenCalledWith({ jokeId: 42 }, expect.anything())
+  })
+
+  it('does not call the API for a preview/mock card with a string id', () => {
+    renderCard({ id: 'home-1', fmt: 'oneliner', text: 'Mock.' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(saveMutate).not.toHaveBeenCalled()
   })
 })

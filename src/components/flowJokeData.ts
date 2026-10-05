@@ -113,9 +113,19 @@ export function jokeToFlowData(joke: Joke): FlowJokeData | null {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Adapters for the nested `{ joke }` shapes (saved jokes, favorites).
+// Adapters for the nested `{ joke }` shapes (saved jokes, favorites, trending).
 // Format inference is lossy (legacy Joke has format.slug).
+//
+// The card id is ALWAYS the joke's own id: FlowJokeCard sends it to save,
+// reactions and telemetry. Never substitute a wrapper-row id (a SavedJoke's
+// `id` is the saved row) or a list index — a row without a real joke id is
+// skipped instead of being attributed to some other joke.
 // ──────────────────────────────────────────────────────────────────────────
+
+function nestedJokeId(joke: { id?: unknown } | null | undefined): number | null {
+  const id = joke?.id
+  return typeof id === 'number' && Number.isFinite(id) ? id : null
+}
 
 /** The joke fields the saved/favorite adapters read. */
 export interface NestedJoke extends ProvenanceFields {
@@ -127,12 +137,13 @@ export interface NestedJoke extends ProvenanceFields {
   media?: JokeMediaItem[]
 }
 
-/** SavedJoke (Library, collection detail) → FlowJokeData. */
+/** SavedJoke (Library, collection detail) → FlowJokeData, keyed by the joke id (not the saved row's). */
 export function savedJokeToFlowData(saved: { id: number; joke: NestedJoke }): FlowJokeData | null {
+  const jokeId = nestedJokeId(saved.joke)
   const fmt = formatSlugToFlow(saved.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
+  if (jokeId === null || fmt === null) return null // no joke / unknown format → skip, don't garble
   return {
-    id: saved.id,
+    id: jokeId,
     fmt,
     setup: saved.joke?.setup ?? undefined,
     punch: saved.joke?.punchline ?? undefined,
@@ -142,12 +153,13 @@ export function savedJokeToFlowData(saved: { id: number; joke: NestedJoke }): Fl
   }
 }
 
-/** Favorite → FlowJokeData; `idx` is the fallback id for a joke-less row. */
-export function favoriteToFlowData(fav: { joke: NestedJoke }, idx: number): FlowJokeData | null {
+/** Favorite → FlowJokeData, keyed by the joke id. */
+export function favoriteToFlowData(fav: { joke: NestedJoke }): FlowJokeData | null {
+  const jokeId = nestedJokeId(fav.joke)
   const fmt = formatSlugToFlow(fav.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
+  if (jokeId === null || fmt === null) return null // no joke / unknown format → skip, don't garble
   return {
-    id: fav.joke?.id ?? idx,
+    id: jokeId,
     fmt,
     setup: fav.joke?.setup ?? undefined,
     punch: fav.joke?.punchline ?? undefined,
@@ -175,8 +187,9 @@ export function trendingToFlowData(
     likes: number
     shares: number
   },
-  fallbackId: number,
 ): FlowJokeData | null {
+  const jokeId = nestedJokeId(tj.joke)
+  if (jokeId === null) return null // no real joke id → skip rather than misattribute
   const slug = (tj.joke?.format?.slug ?? '').toLowerCase()
   let fmt = formatSlugToFlow(slug)
   if (fmt === null) {
@@ -188,7 +201,7 @@ export function trendingToFlowData(
   }
 
   return {
-    id: tj.joke?.id ?? fallbackId,
+    id: jokeId,
     fmt,
     setup: tj.joke?.setup ?? undefined,
     punch: tj.joke?.punchline ?? undefined,

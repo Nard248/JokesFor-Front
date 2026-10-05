@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard } from '@/components/FlowJokeCard'
-import { savedJokeToFlowData, type FlowJokeData } from '@/components/flowJokeData'
+import { savedJokeToFlowData } from '@/components/flowJokeData'
 import { useCollections, useCollectionJokes } from '@/features/collections'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
@@ -30,8 +30,14 @@ export function CollectionDetailPage() {
 
   const title = collection?.name ?? 'Collection'
 
+  // The card carries the joke id (save/reactions/telemetry); the saved-row id
+  // is kept alongside as the React key.
   const flowJokes = useMemo(
-    () => (data?.results ?? []).map(savedJokeToFlowData).filter((j): j is FlowJokeData => j !== null),
+    () =>
+      (data?.results ?? []).flatMap((saved) => {
+        const flow = savedJokeToFlowData(saved)
+        return flow ? [{ savedId: saved.id, flow }] : []
+      }),
     [data],
   )
 
@@ -93,9 +99,9 @@ export function CollectionDetailPage() {
               </StateCard>
             ) : (
               <div style={{ columnCount: masonryCols, columnGap: 18 }}>
-                {flowJokes.map((joke) => (
-                  <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={joke} source="other" />
+                {flowJokes.map(({ savedId, flow }) => (
+                  <div key={savedId} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                    <FlowJokeCard joke={flow} source="other" />
                   </div>
                 ))}
               </div>

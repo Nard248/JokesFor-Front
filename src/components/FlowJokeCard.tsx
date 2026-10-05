@@ -69,8 +69,10 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
     // Don't let a tap on Save bubble to an enclosing detail Link.
     e.stopPropagation()
     if (saved) return // save-only here; unsave lives in the Library
+    // Previews/mock cards carry string ids — there is no real joke to save.
+    if (numericId === undefined) return
     setSaved(true)
-    saveJoke.mutate({ jokeId: Number(joke.id) }, { onError: () => setSaved(false) })
+    saveJoke.mutate({ jokeId: numericId }, { onError: () => setSaved(false) })
   }
 
   const handleReveal = () => {

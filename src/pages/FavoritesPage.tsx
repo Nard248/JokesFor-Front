@@ -43,19 +43,21 @@ export function FavoritesPage() {
   const total = favoritesData?.count ?? 0
 
   // Accumulate favorites across pages (page 1 replaces, later pages append,
-  // deduped by the underlying joke id). Folded in during render whenever a
-  // new response arrives, so there is no extra effect-driven render.
-  const [accumulated, setAccumulated] = useState<{ source: typeof favoritesData; items: RawFavorite[] }>({
-    source: undefined,
-    items: [],
-  })
-  if (favoritesData && favoritesData !== accumulated.source) {
+  // deduped by the underlying joke id). Folded in during render when a new
+  // response arrives (no effect-driven extra render). The response is
+  // identified by tone + page + its joke ids, not by object identity, so an
+  // equal-but-new data object can never trigger a re-render loop.
+  const [accumulated, setAccumulated] = useState<{ key: string; items: RawFavorite[] }>({ key: '', items: [] })
+  if (favoritesData) {
     const results = favoritesData.results as unknown as RawFavorite[]
-    const seen = new Set(accumulated.items.map((f) => f.joke?.id))
-    setAccumulated({
-      source: favoritesData,
-      items: page === 1 ? results : [...accumulated.items, ...results.filter((f) => !seen.has(f.joke?.id))],
-    })
+    const key = `${tone ?? ''}|${page}|${results.map((f) => f.joke?.id).join(',')}`
+    if (key !== accumulated.key) {
+      const seen = new Set(accumulated.items.map((f) => f.joke?.id))
+      setAccumulated({
+        key,
+        items: page === 1 ? results : [...accumulated.items, ...results.filter((f) => !seen.has(f.joke?.id))],
+      })
+    }
   }
   const favorites = accumulated.items
   const hasMore = favorites.length < total
@@ -63,7 +65,7 @@ export function FavoritesPage() {
   const flowFavorites = useMemo(
     () =>
       favorites
-        .map((f, idx) => favoriteToFlowData(f, idx))
+        .map((f) => favoriteToFlowData(f))
         .filter((j): j is FlowJokeData => j !== null),
     [favorites],
   )
