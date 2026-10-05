@@ -12,7 +12,15 @@ vi.mock('@/lib/api', () => ({
   },
 }))
 
+// The verify flow refreshes the CSRF token; keep that off the network so jsdom
+// never attempts a real request to the API host.
+vi.mock('@/lib/axios', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/axios')>()),
+  fetchCsrfToken: vi.fn().mockResolvedValue('csrf-test'),
+}))
+
 import { authApi } from '@/lib/api'
+import { fetchCsrfToken } from '@/lib/axios'
 import { useVerifyEmail } from './api'
 import { useAuthStore } from './store'
 
@@ -37,6 +45,7 @@ test('verify success establishes auth via refresh token + setAuth', async () => 
   await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
   expect(useAuthStore.getState().accessToken).toBe('tok123')
   expect(useAuthStore.getState().user?.email).toBe('a@b.com')
+  expect(fetchCsrfToken).toHaveBeenCalledTimes(1)
 })
 
 test('verify still establishes auth when the refresh hiccups (verified, lazy token)', async () => {
