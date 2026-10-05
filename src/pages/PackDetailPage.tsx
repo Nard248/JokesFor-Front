@@ -28,7 +28,7 @@ export function PackDetailPage() {
           description="This joke pack may have expired or been unpublished."
           canonicalPath={`/packs/${slug ?? ''}`}
         />
-        <FlowAppShell active="library">
+        <FlowAppShell active="library" showContentSelection>
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
             <h2
               style={{
@@ -41,7 +41,7 @@ export function PackDetailPage() {
             >
               Pack <em className="wink">not found.</em>
             </h2>
-            <p style={{ marginTop: 8, color: '#52525B' }}>It may have expired or been unpublished.</p>
+            <p style={{ marginTop: 8, color: '#52525B' }}>This pack may be unavailable or have no jokes for your selected language, country and culture. Adjust the joke languages above to explore more.</p>
             <Link
               to="/library"
               className="btn-flow-primary"
@@ -63,7 +63,7 @@ export function PackDetailPage() {
           description="A curated pack of jokes on JokesFor."
           canonicalPath={`/packs/${slug ?? ''}`}
         />
-        <FlowAppShell active="library">
+        <FlowAppShell active="library" showContentSelection>
           <div style={{ padding: '40px clamp(24px, 4vw, 56px)' }}>
             <PackSkeleton />
           </div>
@@ -95,7 +95,7 @@ export function PackDetailPage() {
         )}
         canonicalPath={`/packs/${pack.slug}`}
       />
-      <FlowAppShell active="library">
+      <FlowAppShell active="library" showContentSelection>
         <div style={{ padding: '40px clamp(24px, 4vw, 56px)', maxWidth: 1100, margin: '0 auto' }}>
           <button
             type="button"

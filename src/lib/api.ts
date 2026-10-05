@@ -1,3 +1,4 @@
+import type { ContentSelection } from '@/features/discovery/selection'
 import { api } from './axios'
 
 // Auth types
@@ -197,6 +198,9 @@ export interface Joke {
   /** P1 synonym for `context_tags`. Optional in type for legacy fixtures. */
   themes?: JokeTaxon[]
   culture_tags: JokeTaxon[]
+  countries?: { id?: number; code: string; name: string; native_name: string }[]
+  cultural_note?: string
+  editorial_status?: string
   language: { id: number; name: string; code: string }
   source: string
   share_image_url: string | null
@@ -223,6 +227,7 @@ export interface JokeSearchParams {
   themes?: string
   culture_tags?: string
   language?: string
+  country?: string
   page?: number
   page_size?: number
   /** P2 — filter by vibe slug; resolves to format/theme/category constraints server-side. */
@@ -233,14 +238,14 @@ export interface JokeSearchParams {
 
 // Jokes API
 export const jokesApi = {
-  search: (params: JokeSearchParams) =>
-    api.get<PaginatedResponse<Joke>>('/jokes/', { params }),
+  search: (params: JokeSearchParams, signal?: AbortSignal) =>
+    api.get<PaginatedResponse<Joke>>('/jokes/', { params, signal }),
 
   getById: (id: number) =>
     api.get<Joke>(`/jokes/${id}/`),
 
-  getRandom: () =>
-    api.get<Joke>('/jokes/random/'),
+  getRandom: (params?: Partial<ContentSelection>) =>
+    api.get<Joke>('/jokes/random/', { params }),
 
   rate: (jokeId: number, rating: 1 | -1) =>
     api.post(`/jokes/${jokeId}/rate/`, { rating }),
@@ -251,13 +256,14 @@ export const jokesApi = {
 
 // Daily joke API
 export const dailyJokeApi = {
-  getToday: () =>
+  getToday: (params?: Partial<ContentSelection>) =>
     // `issue_label` ("Vol. I · No. 042") is returned by the backend; optional so
     // the mock/older fixtures without it still type-check.
-    api.get<{ joke: Joke; date: string; issue_label?: string }>('/daily-jokes/today/'),
+    api.get<{ joke: Joke; date: string; issue_label?: string }>('/daily-jokes/today/', { params }),
 
-  getHistory: () =>
-    api.get<PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/'),
+  // The backend returns a bare (unpaginated) list; auth required.
+  getHistory: (params?: Partial<ContentSelection>) =>
+    api.get<Array<{ joke: Joke; date: string }> | PaginatedResponse<{ joke: Joke; date: string }>>('/daily-jokes/history/', { params }),
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -528,8 +534,8 @@ export interface RisingTagDTO {
 }
 
 export const trendingApi = {
-  jokes: (period?: string) =>
-    api.get<PaginatedResponse<TrendingJokeDTO>>('/jokes/trending/', { params: { period } }),
+  jokes: (period?: string, selection?: Partial<ContentSelection>) =>
+    api.get<PaginatedResponse<TrendingJokeDTO>>('/jokes/trending/', { params: { period, ...selection } }),
 
   tags: () => api.get<{ results: TrendingTagDTO[] }>('/tags/trending/'),
 
@@ -609,7 +615,7 @@ export const mysteryBoxApi = {
   status: () => api.get<MysteryBoxStatus>('/mystery-box/status/'),
 
   /** 200 with joke OR 429 (cap reached) OR 404 (pool exhausted). */
-  roll: () => api.post<MysteryBoxRollResponse>('/mystery-box/roll/'),
+  roll: (params?: Partial<ContentSelection>) => api.post<MysteryBoxRollResponse>('/mystery-box/roll/', undefined, { params }),
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -741,19 +747,19 @@ export interface JokePackDetail extends JokePack {
 }
 
 export const packsApi = {
-  list: () => api.get<PaginatedResponse<JokePack>>('/packs/'),
+  list: (params?: Partial<ContentSelection>) => api.get<PaginatedResponse<JokePack>>('/packs/', { params }),
 
-  get: (slug: string) => api.get<JokePackDetail>(`/packs/${slug}/`),
+  get: (slug: string, params?: Partial<ContentSelection>) => api.get<JokePackDetail>(`/packs/${slug}/`, { params }),
 
   /** Single featured pack for Today's Weekly Special. 404 if none. */
-  featured: () => api.get<JokePackDetail>('/packs/featured/'),
+  featured: (params?: Partial<ContentSelection>) => api.get<JokePackDetail>('/packs/featured/', { params }),
 
   /** Record progress at entry N. Last entry sets completed_at. */
   recordProgress: (slug: string, entryOrder: number) =>
     api.post<PackProgress>(`/packs/${slug}/progress/`, { entry_order: entryOrder }),
 
   /** Packs the user has started but not completed (Continue mid-sip surface). */
-  inProgress: () => api.get<JokePack[]>('/users/me/packs/in-progress/'),
+  inProgress: (params?: Partial<ContentSelection>) => api.get<JokePack[]>('/users/me/packs/in-progress/', { params }),
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -820,10 +826,10 @@ export const insightsApi = {
     api.get<TasteProfile>('/users/me/taste-profile/', { params: { period } }),
 
   /** Replaces existing daily-jokes/today/ shape with the augmented one. */
-  todayAugmented: () => api.get<DailyJokeToday>('/daily-jokes/today/'),
+  todayAugmented: (params?: Partial<ContentSelection>) => api.get<DailyJokeToday>('/daily-jokes/today/', { params }),
 
   /** Lazy-generates tomorrow's row inline if it doesn't exist yet. */
-  tomorrow: () => api.get<TomorrowTeaser>('/daily-jokes/tomorrow/'),
+  tomorrow: (params?: Partial<ContentSelection>) => api.get<TomorrowTeaser>('/daily-jokes/tomorrow/', { params }),
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1030,6 +1036,9 @@ export type NotificationVerb =
   | 'joke_removed'
   | 'joke_rejected'
   | 'appeal_resolved'
+  /** A theme community activated. `actor`/`joke` are null; `data` carries
+   * `{community: slug, name, emoji, role: 'member' | 'creator'}`. */
+  | 'community_formed'
 
 export interface NotificationActor {
   id: number

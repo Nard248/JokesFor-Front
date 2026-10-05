@@ -146,13 +146,50 @@ describe('CommunitiesPage', () => {
     expect(items.some((text) => text.includes('Space'))).toBe(false)
   })
 
+  it('offers signed-in viewers a "Write a <Theme> joke" CTA that carries the theme', () => {
+    renderAt('/communities/space')
+    expect(screen.getByRole('link', { name: 'Write a Space joke' })).toHaveAttribute('href', '/create/new?theme=space')
+  })
+
+  it('explains in the methodology dialog that counts are approximate and privacy-protected', () => {
+    renderAt('/communities')
+    expect(screen.getByText('Counts are approximate (privacy-protected).')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /How communities form/ }))
+    const note = screen.getByTestId('cm-privacy-note')
+    expect(note).toHaveTextContent('Counts are approximate (privacy-protected).')
+    // No claim the backend does not implement (no noise, no account-age rule).
+    expect(note).not.toHaveTextContent(/noise|established/i)
+  })
+
   it('asks anonymous visitors to sign in instead of offering membership', () => {
     auth.isAuthenticated = false
     directoryState.data = directory([community({ viewer: null })])
     renderAt('/communities/work')
     expect(screen.getByText(/Sign in to see which communities/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sign in to join' })).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('link', { name: /Write a .* joke/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Yours' })).not.toBeInTheDocument()
+  })
+
+  it('tells sharing but not-yet-established accounts when they will count', () => {
+    const data = directory([community({})], false)
+    data.viewer = { counted: false, shares_analytics: true, communities: [] }
+    data.methodology = { ...data.methodology, established_account_days: 7, established_min_jokes: 3 }
+    directoryState.data = data
+    renderAt('/communities')
+    expect(screen.getByText(/once your account is 7 days old and you’ve laughed at 3 or more different jokes/)).toBeInTheDocument()
+    expect(screen.queryByText(/Turn on audience analytics/)).not.toBeInTheDocument()
+  })
+
+  it('states the real count protections in the methodology dialog', () => {
+    const data = directory([community({})])
+    data.methodology = { ...data.methodology, noise_epsilon: 1, established_account_days: 7, established_min_jokes: 3 }
+    directoryState.data = data
+    renderAt('/communities')
+    fireEvent.click(screen.getByRole('button', { name: /How communities form/ }))
+    const note = screen.getByTestId('cm-privacy-note')
+    expect(note).toHaveTextContent('small random adjustment that stays the same all day')
+    expect(note).toHaveTextContent('at least 7 days old, with laughs on 3 or more different jokes')
   })
 
   it('explains that non-sharing accounts are not counted', () => {

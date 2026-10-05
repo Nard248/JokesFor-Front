@@ -10,7 +10,7 @@ const realApi = {
   },
   // other api objects stubbed minimally so the module imports cleanly
   jokesApi: {},
-  dailyJokeApi: {},
+  dailyJokeApi: { getHistory: vi.fn() },
   collectionsApi: {},
   savedJokesApi: {},
   favoritesApi: { list: vi.fn(), add: vi.fn(), remove: vi.fn(), stats: vi.fn() },
@@ -717,5 +717,22 @@ describe('appealsAdapter', () => {
     expect(list).toEqual([created])
     expect(realApi.appealsApi.create).not.toHaveBeenCalled()
     expect(realApi.appealsApi.myAppeals).not.toHaveBeenCalled()
+  })
+})
+
+describe('dailyJokeAdapter.getHistory (real path)', () => {
+  const entry = { joke: { id: 1 }, date: '2026-07-12' }
+
+  it('returns the backend bare list as-is', async () => {
+    realApi.dailyJokeApi.getHistory.mockResolvedValue({ data: [entry] })
+    const { dailyJokeAdapter } = await loadAdapterReal()
+    expect(await dailyJokeAdapter.getHistory({ language: 'fr' })).toEqual([entry])
+    expect(realApi.dailyJokeApi.getHistory).toHaveBeenCalledWith({ language: 'fr' })
+  })
+
+  it('unwraps a paginated envelope if one is ever returned', async () => {
+    realApi.dailyJokeApi.getHistory.mockResolvedValue({ data: { count: 1, next: null, previous: null, results: [entry] } })
+    const { dailyJokeAdapter } = await loadAdapterReal()
+    expect(await dailyJokeAdapter.getHistory()).toEqual([entry])
   })
 })

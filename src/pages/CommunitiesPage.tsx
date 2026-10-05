@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Info, Search as SearchIcon, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Info, PenLine, Search as SearchIcon, Sparkles, X } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
 import { useAuth } from '@/features/auth'
@@ -13,6 +13,7 @@ import {
   type CommunityStatus,
 } from '@/features/communities'
 import { CommunityMap } from '@/features/communities/CommunityMap'
+import { newJokeHref } from '@/features/create/theme-param'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 /**
@@ -79,6 +80,21 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
+function privacyNote(m: CommunityDirectory['methodology']): string {
+  const parts = ['Counts are approximate (privacy-protected).']
+  if (m.noise_epsilon) {
+    parts.push(
+      `Each count includes a small random adjustment that stays the same all day, is rounded to ${m.minimum_display} and is hidden below ${m.minimum_display}.`,
+    )
+  }
+  if (m.established_account_days && m.established_min_jokes) {
+    parts.push(
+      `Only established accounts count: at least ${m.established_account_days} days old, with laughs on ${m.established_min_jokes} or more different jokes.`,
+    )
+  }
+  return parts.join(' ')
+}
+
 function MethodologyDialog({ directory, onClose }: { directory: CommunityDirectory; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
@@ -109,6 +125,9 @@ function MethodologyDialog({ directory, onClose }: { directory: CommunityDirecto
           </button>
         </div>
         <p className="mt-3 text-[15px] leading-relaxed text-[#3F3F46]">{m.description}</p>
+        <p className="mt-3 rounded-2xl bg-[#F2E9FF] p-3 text-sm leading-relaxed text-[#4B327A]" data-testid="cm-privacy-note">
+          {privacyNote(m)}
+        </p>
         <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           {[
             ['Signal half-life', `${m.half_life_days} days`],
@@ -259,6 +278,15 @@ function CommunityInspector({ slug, onBack }: { slug: string; onBack?: () => voi
             >
               {membership.isPending ? 'Saving…' : isMember ? 'Leave community' : 'Join community'}
             </button>
+          )}
+          {isAuthenticated && (
+            <Link
+              to={newJokeHref(community.slug)}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#E9E8E7] bg-white px-5 text-sm font-bold text-[#1A1A1A] hover:border-[#6A1CF6]"
+            >
+              <PenLine size={14} aria-hidden="true" />
+              Write a {community.name} joke
+            </Link>
           )}
           {membership.isError && (
             <span role="alert" className="self-center text-sm text-[#B42318]">
@@ -463,6 +491,9 @@ export function CommunitiesPage() {
                   }
                   label="In two or more"
                 />
+                <p className="col-span-2 text-xs text-[#6B7280]">
+                  Counts are approximate (privacy-protected){data.counts_date ? ' and update daily' : ''}.
+                </p>
               </div>
             )}
           </header>
@@ -480,8 +511,9 @@ export function CommunitiesPage() {
             <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#E9E8E7] bg-white p-4 text-sm text-[#3F3F46]">
               <Info size={18} className="text-[#6A1CF6]" />
               <span className="flex-1">
-                You can see your own affinity, but you aren’t counted in community totals. Turn on audience analytics to help
-                communities form. Adults only, and you can turn it off any time.
+                {data.viewer.shares_analytics && data.methodology.established_account_days
+                  ? `You can see your own affinity. You’ll count toward community totals once your account is ${data.methodology.established_account_days} days old and you’ve laughed at ${data.methodology.established_min_jokes} or more different jokes.`
+                  : 'You can see your own affinity, but you aren’t counted in community totals. Turn on audience analytics to help communities form. Adults only, and you can turn it off any time.'}
               </span>
               <Link
                 to="/settings"

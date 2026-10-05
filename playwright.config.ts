@@ -43,8 +43,8 @@ const backendEnv = {
   DB_NAME: process.env.E2E_DB_NAME ?? 'jokesfor',
   DB_USER: process.env.E2E_DB_USER ?? 'postgres',
   DB_PASSWORD: process.env.E2E_DB_PASSWORD ?? '6969',
-  DB_HOST: 'localhost',
-  DB_PORT: '5432',
+  DB_HOST: process.env.E2E_DB_HOST ?? 'localhost',
+  DB_PORT: process.env.E2E_DB_PORT ?? '5432',
   DEBUG: 'True',
   // File-based mail so specs can read the REAL rendered email (and its
   // verification code) off disk. This exercises the actual template and

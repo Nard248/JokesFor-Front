@@ -21,7 +21,12 @@ vi.mock('@/features/saved-jokes', () => ({ useSaveJoke: () => ({ mutate: vi.fn()
 vi.mock('@/features/telemetry', () => ({ recordShare: vi.fn(), useDwell: () => ({ current: null }) }))
 vi.mock('@/lib/telemetry', () => ({ trackReveal: vi.fn() }))
 
+const mockUseAuth = vi.fn()
+vi.mock('@/features/auth', () => ({ useAuth: () => mockUseAuth() }))
+
 import { DailyJokePage } from './DailyJokePage'
+import { EMPTY_SELECTION } from '@/features/discovery/selection'
+import { useDiscoveryStore } from '@/features/discovery/store'
 
 const TODAY = {
   joke: { id: 5, text: 'A one-liner about mornings.', setup: null, punchline: null },
@@ -67,12 +72,11 @@ const TODAY_AUDIO = {
   date: '2026-07-13',
   issue_label: 'Vol. I · No. 045',
 }
-const HISTORY = {
-  results: [
-    { joke: { id: 1, text: 'History joke one.' }, date: '2026-07-12' },
-    { joke: { id: 2, text: 'History joke two.' }, date: '2026-07-11' },
-  ],
-}
+// `/daily-jokes/history/` returns a bare list (no pagination envelope).
+const HISTORY = [
+  { joke: { id: 1, text: 'History joke one.' }, date: '2026-07-12' },
+  { joke: { id: 2, text: 'History joke two.' }, date: '2026-07-11' },
+]
 
 function renderPage() {
   return render(
@@ -88,6 +92,45 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockUseTodaysJoke.mockReturnValue({ data: TODAY, isLoading: false })
   mockUseHistory.mockReturnValue({ data: HISTORY, isLoading: false })
+  mockUseAuth.mockReturnValue({ isAuthenticated: true })
+  useDiscoveryStore.getState().setSelection(EMPTY_SELECTION)
+})
+
+describe('DailyJokePage — history', () => {
+  it('renders history tiles from the bare-list response', () => {
+    renderPage()
+    expect(screen.getByText('History joke one.', { exact: false })).toBeDefined()
+    expect(screen.getByText('History joke two.', { exact: false })).toBeDefined()
+  })
+
+  it('asks an anonymous reader to sign in instead of blaming the selection', () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false })
+    mockUseHistory.mockReturnValue({ data: undefined, isLoading: false, isError: false })
+    renderPage()
+    expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('href')).toBe('/login')
+    expect(screen.queryByText(/could not be loaded/)).toBeNull()
+    expect(screen.queryByText(/this selection/)).toBeNull()
+  })
+
+  it('uses selection-specific copy only when a selection filters an empty history', () => {
+    mockUseHistory.mockReturnValue({ data: [], isLoading: false, isError: false })
+    useDiscoveryStore.getState().setSelection({ ...EMPTY_SELECTION, language: 'fr' })
+    renderPage()
+    expect(screen.getByText(/No history for this selection yet/)).toBeDefined()
+  })
+
+  it('uses neutral copy for an empty, unfiltered history', () => {
+    mockUseHistory.mockReturnValue({ data: [], isLoading: false, isError: false })
+    renderPage()
+    expect(screen.getByText(/No history yet/)).toBeDefined()
+    expect(screen.queryByText(/this selection/)).toBeNull()
+  })
+
+  it('reports a load failure as a failure', () => {
+    mockUseHistory.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+    renderPage()
+    expect(screen.getByText(/History could not be loaded/)).toBeDefined()
+  })
 })
 
 describe('DailyJokePage', () => {

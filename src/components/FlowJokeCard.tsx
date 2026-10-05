@@ -45,6 +45,8 @@ export interface FlowJokeData {
   media?: JokeMediaItem[] // image (wave 2: video/audio)
 
   // Tagging / metadata (mock-friendly; map from real Joke when wired).
+  language?: string
+  localeLabel?: string
   themeLabel?: string
   catLabel?: string
 
@@ -121,6 +123,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
   return (
     <article
       ref={impressionRef}
+      lang={joke.language}
       className={className}
       style={{
         background: skin.bg,
@@ -134,7 +137,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
       }}
     >
       {/* Header: format badge + theme · category */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <header lang="en" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span className={`tag-flow ${tagToneFor(joke.fmt)}`}>{FORMAT_LABEL[joke.fmt]}</span>
         {(joke.themeLabel || joke.catLabel) && (
           <span
@@ -155,6 +158,8 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
           </span>
         )}
       </header>
+
+      {joke.localeLabel && <p lang="en" style={{ margin: '10px 0 0', fontSize: 12, color: mutedFg }}>{joke.localeLabel}</p>}
 
       {/* Body: format-specific — delegates to JokeRenderer (interactive reader defaults). */}
       <JokeRenderer
@@ -181,7 +186,7 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
       {/* Footer: actions. Engagement stat literals were removed — the card has
           no real per-joke laugh/save counts yet, so showing them would be fake.
           The reaction row above shows the real counts. */}
-      <footer
+      <footer lang="en"
         style={{
           display: 'flex',
           justifyContent: 'flex-end',
@@ -388,6 +393,8 @@ export function jokeToFlowData(joke: Joke): FlowJokeData | null {
     media: joke.media ?? undefined,
     themeLabel,
     catLabel,
+    language: joke.language?.code,
+    localeLabel: joke.language?.code && joke.language.code !== 'en' ? [joke.language.name, ...(joke.countries ?? []).map((country) => country.native_name || country.name)].filter(Boolean).join(' · ') : undefined,
     // GRACEFUL DEGRADATION: only lock when the backend explicitly says so.
     // A missing `is_locked` (backend not deployed) reads as unlocked.
     isLocked: joke.is_locked === true,

@@ -1,9 +1,11 @@
+import { useContentSelection } from '@/features/discovery/context'
+import { selectionParams, type ContentSelection } from '@/features/discovery/selection'
 import { useQuery } from '@tanstack/react-query'
 import { trendingAdapter } from '@/lib/api-adapter'
 
 export const trendingKeys = {
   all: ['trending'] as const,
-  jokes: (period: string) => [...trendingKeys.all, 'jokes', period] as const,
+  jokes: (period: string, params?: Partial<ContentSelection>) => [...trendingKeys.all, 'jokes', period, params] as const,
   tags: () => [...trendingKeys.all, 'tags'] as const,
   risingTopics: () => [...trendingKeys.all, 'rising'] as const,
   topJokesters: () => [...trendingKeys.all, 'jokesters'] as const,
@@ -11,9 +13,10 @@ export const trendingKeys = {
 }
 
 export function useTrendingJokes(period: string = 'week') {
+  const params = selectionParams(useContentSelection())
   return useQuery({
-    queryKey: trendingKeys.jokes(period),
-    queryFn: () => trendingAdapter.getJokes(period),
+    queryKey: trendingKeys.jokes(period, params),
+    queryFn: () => trendingAdapter.getJokes(period, params),
     staleTime: 1000 * 60 * 5,
   })
 }

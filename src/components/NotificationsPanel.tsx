@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
-import { Bell, Check, Sparkles, UserPlus, ShieldAlert } from 'lucide-react'
+import { Bell, Check, Sparkles, UserPlus, ShieldAlert, Users } from 'lucide-react'
 import { useNotifications, useMarkAllRead } from '@/features/notifications'
+import { communityFormedCopy, communityFormedHref } from '@/features/notifications/copy'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { AppealButton } from '@/components/AppealButton'
 import type { NotificationDTO } from '@/lib/api'
@@ -22,6 +23,8 @@ type PanelItem = {
   sub: string
   tone: 'purple' | 'lime' | 'amber'
   appeal?: AppealAction
+  /** In-app destination shown as a text link under the item (e.g. a community). */
+  link?: { to: string; label: string }
 }
 
 /** slug/verb string -> "Title Case" for the reason shown in the removal notice. */
@@ -82,6 +85,14 @@ function mapNotification(n: NotificationDTO): PanelItem {
         tone: reversed ? 'lime' : 'purple',
       }
     }
+    case 'community_formed':
+      return {
+        icon: <Users size={15} />,
+        title: communityFormedCopy(data),
+        sub: '',
+        tone: 'lime',
+        link: { to: communityFormedHref(data), label: 'View community' },
+      }
     default:
       return { icon: <Sparkles size={15} />, title: 'Notification', sub: '', tone: 'purple' }
   }
@@ -90,7 +101,7 @@ function mapNotification(n: NotificationDTO): PanelItem {
 /**
  * NotificationsPanel — dropdown shown when the user clicks the bell in
  * FlowAppShell. Wired to the real in-app inbox (`/notifications/`): new
- * followers, joke publishes, and moderation takedowns.
+ * followers, joke publishes, moderation takedowns, and newly formed communities.
  */
 export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -236,7 +247,20 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#1A1A1A' }}>
                   {it.title}
                 </div>
-                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2, lineHeight: 1.4 }}>{it.sub}</div>
+                {it.sub && (
+                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2, lineHeight: 1.4 }}>{it.sub}</div>
+                )}
+                {it.link && (
+                  <div style={{ marginTop: 6 }}>
+                    <Link
+                      to={it.link.to}
+                      onClick={onClose}
+                      style={{ fontSize: 12, fontWeight: 700, color: '#6A1CF6', textDecoration: 'none' }}
+                    >
+                      {it.link.label}
+                    </Link>
+                  </div>
+                )}
                 {it.appeal && (
                   <div style={{ marginTop: 6 }}>
                     {it.appeal.kind === 'joke' && (
@@ -289,8 +313,8 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
             You're all <em className="wink">caught up.</em>
           </div>
           <p style={{ marginTop: 6, fontSize: 12, color: '#6B7280', maxWidth: 240, marginLeft: 'auto', marginRight: 'auto' }}>
-            We'll ping you here when someone follows you, or when one of your jokes is
-            published or removed.
+            We'll ping you here when someone follows you, when one of your jokes is
+            published or removed, or when a community you're part of forms.
           </p>
         </div>
       )}

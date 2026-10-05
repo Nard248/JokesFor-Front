@@ -140,6 +140,63 @@ describe('NotificationsPanel', () => {
     expect(screen.getByText('Your appeal was approved')).toBeTruthy()
   })
 
+  describe('community_formed', () => {
+    it('member: role-specific copy and a link to the community', () => {
+      notifications = [
+        {
+          id: 10, verb: 'community_formed', read: false, created_at: 'x', actor: null, joke: null,
+          data: { community: 'space', name: 'Space', emoji: '🚀', role: 'member' },
+        },
+      ]
+      renderPanel()
+      expect(screen.getByText("🚀 The Space community just formed — you're one of its first members.")).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'View community' }).getAttribute('href')).toBe('/communities/space')
+      expect(screen.queryByTestId('appeal-cta')).toBeNull()
+    })
+
+    it('creator: tells the creator their jokes have a new audience', () => {
+      notifications = [
+        {
+          id: 11, verb: 'community_formed', read: false, created_at: 'x', actor: null, joke: null,
+          data: { community: 'puns', name: 'Puns', emoji: '🥁', role: 'creator' },
+        },
+      ]
+      renderPanel()
+      expect(screen.getByText('🥁 The Puns community just formed. Your Puns jokes have a new audience.')).toBeTruthy()
+      expect(screen.getByRole('link', { name: 'View community' }).getAttribute('href')).toBe('/communities/puns')
+    })
+
+    it('clicking the community link closes the panel', () => {
+      const onClose = vi.fn()
+      notifications = [
+        {
+          id: 12, verb: 'community_formed', read: false, created_at: 'x', actor: null, joke: null,
+          data: { community: 'space', name: 'Space', emoji: '🚀', role: 'member' },
+        },
+      ]
+      render(
+        <MemoryRouter>
+          <NotificationsPanel onClose={onClose} />
+        </MemoryRouter>,
+      )
+      fireEvent.click(screen.getByRole('link', { name: 'View community' }))
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('graceful — a partial payload falls back to the slug or generic copy (never "undefined")', () => {
+      notifications = [
+        { id: 13, verb: 'community_formed', read: false, created_at: 'x', actor: null, joke: null, data: { community: 'office-life' } },
+        { id: 14, verb: 'community_formed', read: false, created_at: 'x', actor: null, joke: null },
+      ]
+      renderPanel()
+      expect(screen.getByText("The Office Life community just formed — you're one of its first members.")).toBeTruthy()
+      expect(screen.getByText('A new community just formed.')).toBeTruthy()
+      const hrefs = screen.getAllByRole('link', { name: 'View community' }).map((l) => l.getAttribute('href'))
+      expect(hrefs).toEqual(['/communities/office-life', '/communities'])
+      expect(document.body.textContent).not.toContain('undefined')
+    })
+  })
+
   it('the local-dev mock seed notifications (joke_removed/joke_rejected/appeal_resolved) all render richer copy + CTAs', async () => {
     // Exercises the real notificationsAdapter mock seed (api-adapter.ts) end
     // to end through the panel's own mapping/rendering, not a hand-rolled

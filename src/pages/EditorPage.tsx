@@ -1,8 +1,10 @@
+import { useDiscoveryCatalog } from '@/features/discovery/api'
 /**
  * EditorPage — the integration hub for content creation.
  *
  * Two modes:
  *  - New mode:      /create/new/:formatSlug   → no draftId yet, creates on first keystroke
+ *                   (optional ?theme=<slug> preselects that theme in the new draft)
  *  - Existing mode: /create/:draftId           → loads existing draft, then enters editor
  *
  * Architecture (hook-safe):
@@ -12,8 +14,8 @@
  *  Both inner editors render EditorInner which unconditionally calls all hooks.
  *  EditorInner is keyed by `draftId ?? formatSlug` so it remounts cleanly on navigation.
  */
-import React, { Suspense, useEffect, useState } from 'react'
-import { useParams, useNavigate, Link, useBlocker } from 'react-router'
+import React, { Suspense, useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate, useSearchParams, Link, useBlocker } from 'react-router'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -42,6 +44,7 @@ import {
   SubmitConfirmModal,
   ChangeFormatModal,
   DeleteDraftModal,
+  readThemeParam,
 } from '@/features/create'
 import type { FormatSlug, ContentDraft, EditorDraft } from '@/features/create'
 import { track } from '@/features/create/analytics'
@@ -59,6 +62,7 @@ function toEditorDraft(d: ContentDraft): EditorDraft {
     themes: d.themes,
     categories: d.categories,
     cultures: d.cultures,
+    countries: d.countries ?? [],
     ageRating: d.ageRating,
     language: d.language,
     source: d.source,
@@ -73,9 +77,11 @@ interface EditorInnerProps {
   draftId: number | null
   formatSlug: FormatSlug
   initial?: EditorDraft
+  /** ?theme= slug to preselect in a brand-new draft (see the seed effect). */
+  seedTheme?: string | null
 }
 
-function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
+function EditorInner({ draftId, formatSlug, initial, seedTheme = null }: EditorInnerProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { isMobile } = useBreakpoint()
@@ -100,7 +106,23 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
   const { data: tones = [] } = useTones()
   const { data: cultureTags = [] } = useCultureTags()
   const { data: ageRatings = [] } = useAgeRatings()
-  useLanguages() // pre-fetch for potential future use
+  const { data: languages = [] } = useLanguages()
+  const { data: discovery } = useDiscoveryCatalog()
+
+  // ── Preselected theme (new drafts only) ─────────────────────────────────────
+  // A ?theme= slug stays out of the draft until the theme catalog has loaded
+  // AND contains it, then is added once. A stale/hand-edited slug, or a catalog
+  // request that is still loading or failed, never reaches the draft — so
+  // autosave can't PATCH an unknown slug the Themes picker could not remove.
+  const seedAppliedRef = useRef(false)
+  useEffect(() => {
+    if (draftId !== null || !seedTheme || seedAppliedRef.current) return
+    if (!contextTags.some((tag) => tag.slug === seedTheme)) return
+    seedAppliedRef.current = true
+    if (!draft.themes.includes(seedTheme)) {
+      dispatch({ type: 'setTags', field: 'themes', value: [...draft.themes, seedTheme] })
+    }
+  }, [draftId, seedTheme, contextTags, draft.themes, dispatch])
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const deleteDraft = useDeleteDraft()
@@ -253,6 +275,13 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
               <Editor draft={draft} dispatch={dispatch} errors={errors} />
             </Suspense>
 
+            <label style={{ display: 'grid', gap: 6, marginTop: 24, fontSize: 14, fontWeight: 600 }}>Joke language
+              <select value={draft.language} onChange={(event) => dispatch({ type: 'setMeta', field: 'language', value: event.target.value })} style={{ minHeight: 44, padding: '8px 12px', border: '1px solid #D4D4D8', borderRadius: 10, background: '#fff', font: 'inherit' }}>
+                {!languages.some((item) => item.code === draft.language) && <option value={draft.language}>{draft.language}</option>}
+                {languages.map((item) => <option key={item.code} value={item.code} lang={item.code}>{discovery?.languages.find((language) => language.code === item.code)?.native_name || item.native_name || item.name}</option>)}
+              </select>
+            </label>
+
             {/* Tag section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 24 }}>
               <TagPicker
@@ -273,6 +302,12 @@ function EditorInner({ draftId, formatSlug, initial }: EditorInnerProps) {
                 selected={draft.cultures}
                 onChange={(v) => dispatch({ type: 'setTags', field: 'cultures', value: v })}
               />
+              {discovery && <TagPicker
+                label="Countries"
+                options={discovery.countries.map((country, index) => ({ id: index, slug: country.code, name: country.native_name || country.name }))}
+                selected={draft.countries ?? []}
+                onChange={(value) => dispatch({ type: 'setTags', field: 'countries', value })}
+              />}
               <AgeRatingRadio
                 options={ageRatings}
                 value={draft.ageRating}
@@ -312,7 +347,13 @@ interface NewEditorProps {
 }
 
 function NewEditor({ formatSlug }: NewEditorProps) {
-  return <EditorInner key={formatSlug} draftId={null} formatSlug={formatSlug} />
+  // "Write a <Theme> joke" carries ?theme=<slug> (a community slug is its
+  // theme slug). EditorInner adds it to the new draft's Themes once the catalog
+  // confirms it; existing drafts never read the param, so their themes are
+  // never overridden.
+  const [searchParams] = useSearchParams()
+  const theme = readThemeParam(searchParams)
+  return <EditorInner key={formatSlug} draftId={null} formatSlug={formatSlug} seedTheme={theme} />
 }
 
 // ── ExistingEditor ────────────────────────────────────────────────────────────

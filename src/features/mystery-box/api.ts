@@ -1,3 +1,5 @@
+import { useContentSelection } from '@/features/discovery/context'
+import { selectionParams } from '@/features/discovery/selection'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { mysteryBoxApi, type MysteryBoxStatus } from '@/lib/api'
 
@@ -17,9 +19,10 @@ export function useMysteryBoxStatus() {
 
 /** POST /mystery-box/roll/ — get a random eligible joke. Ordinary abuse throttles still apply. */
 export function useRollMysteryBox() {
+  const params = selectionParams(useContentSelection())
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => mysteryBoxApi.roll().then((r) => r.data),
+    mutationFn: () => mysteryBoxApi.roll(params).then((r) => r.data),
     onSuccess: (data) => {
       queryClient.setQueryData<MysteryBoxStatus>(mysteryBoxKeys.status(), (previous) => ({
         rolls_used_today: (previous?.rolls_used_today ?? 0) + 1,
