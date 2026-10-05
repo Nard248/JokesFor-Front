@@ -73,7 +73,7 @@ vi.mock('@/lib/firebase', () => ({
   isAnalyticsInitialized: vi.fn(() => false),
 }))
 
-import { routes } from '@/app/routes'
+import { routes } from '@/app/routeConfig'
 
 const DRAFT_NOTICE = 'DRAFT — pending counsel review'
 
