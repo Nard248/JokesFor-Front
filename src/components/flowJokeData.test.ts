@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { jokeToFlowData } from './FlowJokeCard'
+import { favoriteToFlowData, jokeToFlowData, savedJokeToFlowData, trendingToFlowData } from './flowJokeData'
 import type { Joke } from '@/lib/api'
 
 /**
@@ -129,5 +129,90 @@ describe('jokeToFlowData — tolerant DTO mapping', () => {
     } as unknown as Joke
 
     expect(jokeToFlowData(raw)).toBeNull()
+  })
+})
+
+describe('provenance mapping (language / origin / editorial status)', () => {
+  const base = {
+    id: 7,
+    text: 'Chiste',
+    setup: '¿Qué le dijo una pared a otra?',
+    punchline: 'Nos vemos en la esquina.',
+    format: { id: 1, name: 'Setup', slug: 'setup' },
+    age_rating: { id: 1, name: 'All ages', slug: 'all', min_age: 0 },
+    tones: [],
+    context_tags: [],
+    culture_tags: [],
+    language: { id: 2, name: 'Spanish', code: 'es', native_name: 'Español' },
+    origin_country: { code: 'MX', name: 'Mexico', native_name: 'México' },
+    editorial_status: 'ai_screened',
+    source: 'editorial',
+    share_image_url: null,
+    created_at: '2026-10-01T00:00:00Z',
+  } as unknown as Joke
+
+  it('jokeToFlowData carries the lang code and all three badges', () => {
+    const flow = jokeToFlowData(base)!
+    expect(flow.language).toBe('es')
+    expect(flow.provenance).toEqual({
+      languageCode: 'es',
+      languageName: 'Spanish',
+      languageLabel: 'Español',
+      origin: { code: 'MX', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}' },
+      aiGenerated: true,
+    })
+  })
+
+  it('an English, human-written joke without origin gets no badges', () => {
+    const flow = jokeToFlowData({
+      ...base,
+      language: { id: 1, name: 'English', code: 'en' },
+      origin_country: null,
+      editorial_status: 'native_reviewed',
+    } as Joke)!
+    expect(flow.language).toBe('en')
+    expect(flow.provenance).toEqual({})
+  })
+
+  it('degrades gracefully when the backend omits the new fields', () => {
+    const { origin_country: _o, editorial_status: _e, language: _l, ...legacy } = base
+    const flow = jokeToFlowData(legacy as Joke)!
+    expect(flow.language).toBeUndefined()
+    expect(flow.provenance).toEqual({})
+  })
+
+  const nested = {
+    id: 7,
+    text: 'Chiste',
+    setup: null,
+    punchline: null,
+    format: { slug: 'oneliner' },
+    language: { code: 'es', name: 'Spanish', native_name: 'Español' },
+    origin_country: { code: 'ES', name: 'Spain', native_name: 'España' },
+    editorial_status: 'ai_screened',
+  }
+
+  it('savedJokeToFlowData maps provenance from the nested joke', () => {
+    const flow = savedJokeToFlowData({ id: 3, joke: nested })!
+    expect(flow.language).toBe('es')
+    expect(flow.provenance?.languageLabel).toBe('Español')
+    expect(flow.provenance?.origin?.name).toBe('Spain')
+    expect(flow.provenance?.aiGenerated).toBe(true)
+  })
+
+  it('favoriteToFlowData maps provenance from the nested joke', () => {
+    const flow = favoriteToFlowData({ joke: nested }, 0)!
+    expect(flow.language).toBe('es')
+    expect(flow.provenance?.origin?.flag).toBe('\u{1F1EA}\u{1F1F8}')
+    expect(flow.provenance?.aiGenerated).toBe(true)
+  })
+
+  it('trendingToFlowData maps provenance and keeps English trending jokes badge-free', () => {
+    const flow = trendingToFlowData({ joke: nested, likes: 1, shares: 2 }, 0)!
+    expect(flow.language).toBe('es')
+    expect(flow.provenance?.languageLabel).toBe('Español')
+    expect(flow.provenance?.aiGenerated).toBe(true)
+    const en = trendingToFlowData({ joke: { ...nested, language: { code: 'en', name: 'English' }, origin_country: null, editorial_status: 'legacy' }, likes: 0, shares: 0 }, 1)!
+    expect(en.provenance).toEqual({})
   })
 })

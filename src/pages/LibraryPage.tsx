@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Search, Plus, ArrowRight, Bookmark } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
-import { formatSlugToFlow } from '@/components/JokeRenderer'
-import type { JokeMediaItem } from '@/lib/api'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { savedJokeToFlowData } from '@/components/flowJokeData'
 import { useCollections } from '@/features/collections'
 import { useSavedJokes } from '@/features/saved-jokes'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
@@ -407,32 +406,4 @@ function SavesEmpty({ searching }: { searching: boolean }) {
       </Link>
     </div>
   )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Adapter — translates a real-API SavedJoke into FlowJokeData.
-// Format inference is lossy (legacy Joke has format.slug; we map to FlowJokeFormat).
-// ──────────────────────────────────────────────────────────────────────────
-
-export function savedJokeToFlowData(saved: {
-  id: number
-  joke: {
-    id: number
-    text: string
-    setup: string | null
-    punchline: string | null
-    format?: { slug: string }
-    media?: JokeMediaItem[]
-  }
-}): FlowJokeData | null {
-  const fmt = formatSlugToFlow(saved.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
-  return {
-    id: saved.id,
-    fmt,
-    setup: saved.joke?.setup ?? undefined,
-    punch: saved.joke?.punchline ?? undefined,
-    text: saved.joke?.text ?? undefined,
-    media: saved.joke?.media ?? undefined,
-  }
 }

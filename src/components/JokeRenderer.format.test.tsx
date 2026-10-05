@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { formatSlugToFlow, SKIN, FORMAT_LABEL, FLOW_FORMAT_TO_BACKEND_SLUG, tagToneFor } from './JokeRenderer'
-import { jokeToFlowData } from './FlowJokeCard'
+import { formatSlugToFlow, SKIN, FORMAT_LABEL, FLOW_FORMAT_TO_BACKEND_SLUG, tagToneFor } from './jokeFormats'
+import { jokeToFlowData } from './flowJokeData'
 import type { Joke } from '@/lib/api'
 
 function makeJoke(overrides: Partial<Joke> = {}): Joke {

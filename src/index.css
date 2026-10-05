@@ -193,6 +193,18 @@ img, svg, video {
 .tag-flow.lime  { background: #CAFD00; color: #3A4A00; }
 .tag-flow.amber { background: #FFC965; color: #5F4200; }
 .tag-flow.dark  { background: #1A1A1A; color: #fff; }
+/* Provenance badges (language / origin / AI-generated): quiet outline tags
+   that inherit the card's text colour so they sit on every skin. Native
+   language names keep their case and spacing — letter-spacing breaks joined
+   scripts (Arabic) and caps mangle some (Turkish i). */
+.tag-flow.meta {
+  background: transparent;
+  color: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  font-weight: 500;
+  gap: 5px;
+}
+.tag-flow.meta [lang] { letter-spacing: normal; text-transform: none; font-size: 11px; }
 
 /* Streak chip — lime daily-ritual gamification chip with flame dot. */
 .streak-chip {

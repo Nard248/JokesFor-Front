@@ -2,13 +2,8 @@ import { useState } from 'react'
 import { Link, Navigate } from 'react-router'
 import { ArrowRight, Sunrise, Eye, Bookmark, Check } from 'lucide-react'
 import { useAuth } from '@/features/auth'
-import {
-  JokeRenderer,
-  SKIN,
-  FORMAT_LABEL,
-  tagToneFor,
-} from '@/components/JokeRenderer'
-import type { FlowJokeFormat } from '@/components/JokeRenderer'
+import { JokeRenderer } from '@/components/JokeRenderer'
+import { SKIN, FORMAT_LABEL, tagToneFor, type FlowJokeFormat } from '@/components/jokeFormats'
 import { Seo, siteJsonLd } from '@/lib/seo'
 
 /**

@@ -2,22 +2,12 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router'
 import { Heart, ArrowRight, Calendar, TrendingUp } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
-import { formatSlugToFlow } from '@/components/JokeRenderer'
-import type { JokeMediaItem } from '@/lib/api'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { favoriteToFlowData, type FlowJokeData, type NestedJoke } from '@/components/flowJokeData'
 import { useFavorites, useFavoriteStats } from '@/features/favorites'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
-type RawFavorite = {
-  joke: {
-    id: number
-    text: string
-    setup: string | null
-    punchline: string | null
-    format?: { slug: string }
-    media?: JokeMediaItem[]
-  }
-}
+type RawFavorite = { joke: NestedJoke }
 
 /**
  * FavoritesPage — redesigned for iteration 4.
@@ -368,24 +358,6 @@ function FavoritesSkeleton({ cols = 3 }: { cols?: number }) {
       ))}
     </div>
   )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Adapter — translate mock FavoriteJoke shape to FlowJokeData.
-// FavoriteJoke from mock-data.ts has the joke text/setup/punchline + tones/etc.
-// ──────────────────────────────────────────────────────────────────────────
-
-export function favoriteToFlowData(fav: RawFavorite, idx: number): FlowJokeData | null {
-  const fmt = formatSlugToFlow(fav.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
-  return {
-    id: fav.joke?.id ?? idx,
-    fmt,
-    setup: fav.joke?.setup ?? undefined,
-    punch: fav.joke?.punchline ?? undefined,
-    text: fav.joke?.text ?? undefined,
-    media: fav.joke?.media ?? undefined,
-  }
 }
 
 // `slug` is the exact backend tone slug sent as the `tones` filter; `label`

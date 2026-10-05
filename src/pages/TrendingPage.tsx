@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Flame, TrendingUp, ArrowRight } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
-import { formatSlugToFlow } from '@/components/JokeRenderer'
-import type { JokeMediaItem } from '@/lib/api'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { trendingToFlowData } from '@/components/flowJokeData'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import {
   useTrendingJokes,
@@ -397,50 +396,4 @@ function SectionEmpty() {
       <p style={{ fontSize: 14, color: '#6B7280' }}>Nothing trending yet for this selection and period.</p>
     </div>
   )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Adapter — TrendingJoke (mock-data) → FlowJokeData
-// ──────────────────────────────────────────────────────────────────────────
-
-function trendingToFlowData(
-  tj: {
-    joke: {
-      id: number
-      text: string
-      setup: string | null
-      punchline: string | null
-      format?: { slug: string; name: string }
-      tones?: { name: string }[]
-      media?: JokeMediaItem[]
-      language?: { code: string; name: string }
-    }
-    likes: number
-    shares: number
-  },
-  fallbackId: number,
-): FlowJokeData | null {
-  const slug = (tj.joke?.format?.slug ?? '').toLowerCase()
-  let fmt = formatSlugToFlow(slug)
-  if (fmt === null) {
-    if (slug === '') {
-      // slugless: fall back by shape as before
-      fmt = tj.joke?.setup && tj.joke?.punchline ? 'setup' : tj.joke?.text ? 'oneliner' : null
-    }
-    if (fmt === null) return null // unknown format → hide, don't garble
-  }
-
-  return {
-    id: tj.joke?.id ?? fallbackId,
-    fmt,
-    setup: tj.joke?.setup ?? undefined,
-    punch: tj.joke?.punchline ?? undefined,
-    text: tj.joke?.text,
-    media: tj.joke?.media ?? undefined,
-    catLabel: tj.joke?.tones?.[0]?.name,
-    language: tj.joke?.language?.code,
-    localeLabel: tj.joke?.language?.code !== 'en' ? tj.joke?.language?.name : undefined,
-    saves: String(tj.shares ?? '—'),
-    laughs: String(tj.likes ?? '—'),
-  }
 }

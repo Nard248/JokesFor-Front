@@ -19,7 +19,8 @@ vi.mock('@/features/favorites', () => ({
   useFavoriteStats: () => ({ data: { totalCount: 3, topTone: 'Dad', thisWeekCount: 1 } }),
 }))
 
-import { FavoritesPage, favoriteToFlowData } from './FavoritesPage'
+import { FavoritesPage } from './FavoritesPage'
+import { favoriteToFlowData } from '@/components/flowJokeData'
 
 type Fav = { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }
 

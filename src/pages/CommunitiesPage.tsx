@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, Info, PenLine, Search as SearchIcon, Sparkles, X } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { jokeToFlowData } from '@/components/flowJokeData'
 import { useAuth } from '@/features/auth'
 import {
   useCommunityDetail,
