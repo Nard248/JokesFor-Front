@@ -4,8 +4,8 @@ const initializeApp = vi.fn(() => ({ name: '[DEFAULT]' }))
 const getAnalytics = vi.fn(() => ({ kind: 'analytics' }))
 const isSupported = vi.fn(async () => true)
 
-vi.mock('firebase/app', () => ({ initializeApp }))
-vi.mock('firebase/analytics', () => ({ getAnalytics, isSupported }))
+vi.mock('@firebase/app', () => ({ initializeApp }))
+vi.mock('@firebase/analytics', () => ({ getAnalytics, isSupported }))
 
 // Hermetic: never depend on the developer's or CI's real Firebase env.
 beforeEach(() => {

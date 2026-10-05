@@ -1,5 +1,5 @@
-import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics'
+import { initializeApp, type FirebaseApp } from '@firebase/app'
+import { getAnalytics, isSupported, type Analytics } from '@firebase/analytics'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
