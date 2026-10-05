@@ -24,7 +24,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/toast-provider'
 
 vi.mock('@/features/discovery/api', () => ({
   useDiscoveryCatalog: () => ({ data: { languages: [], countries: [{ code: 'ES', name: 'Spain', native_name: 'España', language_codes: ['es'] }] } }),

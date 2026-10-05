@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { usePublicIdentity, useUpdateIdentity } from '@/features/profile'
 
 /** Pull a human-readable message out of a DRF 400 ({handle: ['...']}) or fall back. */
@@ -33,21 +33,19 @@ export function PublicIdentityEditor() {
   const { data: identity, isLoading } = usePublicIdentity()
   const update = useUpdateIdentity()
 
-  const [displayName, setDisplayName] = useState('')
-  const [handle, setHandle] = useState('')
-  const [dirty, setDirty] = useState(false)
-
-  // Seed local inputs from the loaded identity (once, until the user edits).
-  useEffect(() => {
-    if (identity && !dirty) {
-      setDisplayName(identity.display_name)
-      setHandle(identity.handle ?? '')
-    }
-  }, [identity, dirty])
+  // Local edits only; until the user types, the inputs show the server values
+  // directly (no effect-driven seeding). Cleared once a save succeeds, so the
+  // inputs fall back to the freshly cached identity.
+  const [draft, setDraft] = useState<{ displayName: string; handle: string } | null>(null)
+  const displayName = draft?.displayName ?? identity?.display_name ?? ''
+  const handle = draft?.handle ?? identity?.handle ?? ''
+  const dirty = draft !== null
 
   const onSave = () => {
-    setDirty(false)
-    update.mutate({ display_name: displayName.trim(), handle: handle.trim() })
+    update.mutate(
+      { display_name: displayName.trim(), handle: handle.trim() },
+      { onSuccess: () => setDraft(null) },
+    )
   }
 
   const cleanHandle = handle.trim().replace(/^@/, '').toLowerCase()
@@ -71,7 +69,7 @@ export function PublicIdentityEditor() {
             value={displayName}
             placeholder="e.g. Pun Queen"
             maxLength={50}
-            onChange={(e) => { setDisplayName(e.target.value); setDirty(true) }}
+            onChange={(e) => setDraft({ displayName: e.target.value, handle })}
           />
         </label>
         <label style={labelStyle}>
@@ -82,7 +80,7 @@ export function PublicIdentityEditor() {
             value={handle}
             placeholder="e.g. punqueen"
             maxLength={30}
-            onChange={(e) => { setHandle(e.target.value); setDirty(true) }}
+            onChange={(e) => setDraft({ displayName, handle: e.target.value })}
           />
         </label>
       </div>

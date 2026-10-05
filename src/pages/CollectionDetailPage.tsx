@@ -27,13 +27,12 @@ export function CollectionDetailPage() {
   const collection = collectionsData?.results.find((c) => c.id === collectionId)
 
   const { data, isLoading, isError, refetch } = useCollectionJokes(collectionId)
-  const saves = data?.results ?? []
 
   const title = collection?.name ?? 'Collection'
 
   const flowJokes = useMemo(
-    () => saves.map(savedJokeToFlowData).filter((j): j is FlowJokeData => j !== null),
-    [saves],
+    () => (data?.results ?? []).map(savedJokeToFlowData).filter((j): j is FlowJokeData => j !== null),
+    [data],
   )
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Bell, Check, X } from 'lucide-react'
 import { useUpdatePreferences } from '@/features/preferences'
@@ -26,20 +26,17 @@ export function FlowPage() {
   const { data: myVibes } = useMyVibes()
 
   const [step, setStep] = useState(1)
-  const [vibes, setVibes] = useState<Set<string>>(new Set())
+  // null until the reader toggles a vibe; until then their saved selection
+  // (resume case, from /users/me/vibes/) is what's shown and submitted.
+  const [pickedVibes, setPickedVibes] = useState<Set<string> | null>(null)
+  const savedVibes = useMemo(() => new Set((myVibes ?? []).map((mv) => mv.vibe.slug)), [myVibes])
+  const vibes = pickedVibes ?? savedVibes
   const [formats, setFormats] = useState<Set<string>>(new Set(['setup', 'oneliner', 'observ']))
   const [ritualTime, setRitualTime] = useState('09:00')
   const [ritualDays, setRitualDays] = useState<Set<string>>(new Set(['mon', 'tue', 'wed', 'thu', 'fri']))
   // streakSaver — set true by default; UI toggle in StepRitual is purely visual today (TODO wire).
   const [streakSaver] = useState(true)
   const [vibesError, setVibesError] = useState<string | null>(null)
-
-  // Pre-select user's existing vibes when /users/me/vibes/ resolves.
-  useEffect(() => {
-    if (myVibes && myVibes.length > 0) {
-      setVibes(new Set(myVibes.map((mv) => mv.vibe.slug)))
-    }
-  }, [myVibes])
 
   const skip = () => navigate('/flow-canvas', { replace: true })
 
@@ -142,8 +139,8 @@ export function FlowPage() {
             vibes={vibes}
             error={vibesError}
             onToggle={(id) =>
-              setVibes((prev) => {
-                const next = new Set(prev)
+              setPickedVibes((prev) => {
+                const next = new Set(prev ?? savedVibes)
                 if (next.has(id)) next.delete(id)
                 else next.add(id)
                 return next

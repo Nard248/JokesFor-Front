@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ToastProvider, useToast } from './toast'
+import { useToast } from './toast'
+import { ToastProvider } from './toast-provider'
 
 function Trigger() {
   const { toast } = useToast()

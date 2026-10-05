@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Heart, ArrowRight, Calendar, TrendingUp } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
@@ -24,12 +24,15 @@ type RawFavorite = { joke: NestedJoke }
 export function FavoritesPage() {
   const { isMobile, isTablet } = useBreakpoint()
   const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
-  const [tone, setTone] = useState<string | null>(null)
+  const [tone, setToneState] = useState<string | null>(null)
 
   // Current page — bumped by "Load more". Reset to 1 when the tone filter
   // changes so a new tone starts a fresh paginated listing.
   const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [tone])
+  const setTone = (next: string | null) => {
+    setToneState(next)
+    setPage(1)
+  }
 
   const { data: favoritesData, isLoading, isError, isFetching } = useFavorites({
     tones: tone ?? undefined,
@@ -40,17 +43,21 @@ export function FavoritesPage() {
   const total = favoritesData?.count ?? 0
 
   // Accumulate favorites across pages (page 1 replaces, later pages append,
-  // deduped by the underlying joke id).
-  const [favorites, setFavorites] = useState<RawFavorite[]>([])
-  useEffect(() => {
-    if (!favoritesData) return
+  // deduped by the underlying joke id). Folded in during render whenever a
+  // new response arrives, so there is no extra effect-driven render.
+  const [accumulated, setAccumulated] = useState<{ source: typeof favoritesData; items: RawFavorite[] }>({
+    source: undefined,
+    items: [],
+  })
+  if (favoritesData && favoritesData !== accumulated.source) {
     const results = favoritesData.results as unknown as RawFavorite[]
-    setFavorites((prev) => {
-      if (page === 1) return results
-      const seen = new Set(prev.map((f) => f.joke?.id))
-      return [...prev, ...results.filter((f) => !seen.has(f.joke?.id))]
+    const seen = new Set(accumulated.items.map((f) => f.joke?.id))
+    setAccumulated({
+      source: favoritesData,
+      items: page === 1 ? results : [...accumulated.items, ...results.filter((f) => !seen.has(f.joke?.id))],
     })
-  }, [favoritesData, page])
+  }
+  const favorites = accumulated.items
   const hasMore = favorites.length < total
 
   const flowFavorites = useMemo(

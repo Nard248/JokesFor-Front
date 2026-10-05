@@ -24,8 +24,10 @@ export function LibraryPage() {
   const { data: collectionsData } = useCollections()
   const { data: savedJokesData } = useSavedJokes()
 
-  const collections = collectionsData?.results ?? []
-  const savedJokes = savedJokesData?.results ?? []
+  // Memoised so the empty-array fallback keeps a stable identity for the
+  // filter memos below.
+  const collections = useMemo(() => collectionsData?.results ?? [], [collectionsData])
+  const savedJokes = useMemo(() => savedJokesData?.results ?? [], [savedJokesData])
 
   const filteredCollections = useMemo(() => {
     if (!query.trim()) return collections

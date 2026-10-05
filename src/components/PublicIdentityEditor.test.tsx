@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const mockMutate = vi.fn()
@@ -58,7 +58,23 @@ describe('PublicIdentityEditor', () => {
     fireEvent.change(screen.getByTestId('identity-display-name'), { target: { value: '  Cee  ' } })
     fireEvent.change(screen.getByTestId('identity-handle'), { target: { value: '  CoolCee  ' } })
     fireEvent.click(screen.getByTestId('identity-save'))
-    expect(mockMutate).toHaveBeenCalledWith({ display_name: 'Cee', handle: 'CoolCee' })
+    expect(mockMutate).toHaveBeenCalledWith(
+      { display_name: 'Cee', handle: 'CoolCee' },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+  })
+
+  it('keeps the edits until the save succeeds, then shows the saved identity', () => {
+    render(<PublicIdentityEditor />, { wrapper: makeWrapper() })
+    const name = screen.getByTestId('identity-display-name') as HTMLInputElement
+    fireEvent.change(name, { target: { value: 'Draft name' } })
+    fireEvent.click(screen.getByTestId('identity-save'))
+    // Pending / failed save: the user's text is not thrown away.
+    expect(name.value).toBe('Draft name')
+    // Success: the draft is dropped and the inputs show the cached identity.
+    const [, options] = mockMutate.mock.calls[0] as [unknown, { onSuccess: () => void }]
+    act(() => options.onSuccess())
+    expect(name.value).toBe('Pun Queen')
   })
 
   it('renders the backend validation error (e.g. handle taken)', () => {

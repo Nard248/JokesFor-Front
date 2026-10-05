@@ -35,10 +35,15 @@ export function SearchFilters({ filters, onChange, className }: SearchFiltersPro
   const [localQuery, setLocalQuery] = useState(filters.q || '')
   const [ageDropdownOpen, setAgeDropdownOpen] = useState(false)
 
-  // Sync local query with external filters
-  useEffect(() => {
-    setLocalQuery(filters.q || '')
-  }, [filters.q])
+  // Sync local query with external filters: when the parent's `q` changes
+  // (e.g. "clear filters"), adopt it during render rather than in an effect,
+  // so there is no extra render with the stale value.
+  const externalQuery = filters.q || ''
+  const [syncedQuery, setSyncedQuery] = useState(externalQuery)
+  if (externalQuery !== syncedQuery) {
+    setSyncedQuery(externalQuery)
+    setLocalQuery(externalQuery)
+  }
 
   // Debounced search
   useEffect(() => {
