@@ -1,7 +1,7 @@
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import { reactRefresh } from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -15,7 +15,9 @@ export default defineConfig([
       js.configs.recommended,
       tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
+      // Ships only-export-components at 'error' with the Vite options
+      // (allowConstantExport, allowCompoundComponents).
+      reactRefresh.configs.vite(),
     ],
     languageOptions: {
       ecmaVersion: 2020,
@@ -31,11 +33,11 @@ export default defineConfig([
       // Ratchet complete: every rule the presets ship at 'warn' is clean
       // (0 warnings) and is promoted to 'error' so a regression fails CI
       // instead of scrolling past as a warning.
-      // - only-export-components: keep components and plain exports in
-      //   separate modules (see jokeFormats.ts, flowJokeData.ts,
-      //   routeConfig.tsx, ui/toast.ts) so React Fast Refresh works.
+      // (react-refresh/only-export-components is already 'error' via the
+      // vite preset above: keep components and plain exports in separate
+      // modules — see jokeFormats.ts, flowJokeData.ts, routeConfig.tsx,
+      // ui/toast.ts — so React Fast Refresh works.)
       // - set-state-in-effect: derive state during render instead.
-      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
       'react-hooks/set-state-in-effect': 'error',
       'react-hooks/exhaustive-deps': 'error',
       'react-hooks/incompatible-library': 'error',
