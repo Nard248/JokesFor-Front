@@ -19,7 +19,8 @@ vi.mock('@/features/favorites', () => ({
   useFavoriteStats: () => ({ data: { totalCount: 3, topTone: 'Dad', thisWeekCount: 1 } }),
 }))
 
-import { FavoritesPage, favoriteToFlowData } from './FavoritesPage'
+import { FavoritesPage } from './FavoritesPage'
+import { favoriteToFlowData } from '@/components/flowJokeData'
 
 type Fav = { joke: { id: number; text: string; setup: string | null; punchline: string | null; format?: { slug: string } } }
 
@@ -85,13 +86,38 @@ describe('FavoritesPage — pagination', () => {
     expect(screen.getByText('joke-31')).toBeDefined()
     expect(screen.getByText('joke-33')).toBeDefined()
   })
+
+  it('an equal-but-new response object each render does not loop', () => {
+    mockUseFavorites.mockImplementation(() => favPage([makeFav(31), makeFav(32)]))
+    renderPage()
+    expect(screen.getByText('joke-31')).toBeDefined()
+    expect(screen.getByText('joke-32')).toBeDefined()
+  })
+
+  it('a tone change after "Load more" restarts at page 1 and replaces the list', () => {
+    const p1 = favPage([makeFav(31), makeFav(32)], 3, 'x')
+    const p2 = favPage([makeFav(33)], 3, null)
+    const dad = favPage([makeFav(41)], 1, null)
+    mockUseFavorites.mockImplementation((params: { tones?: string; page?: number }) =>
+      params.tones === 'dad' ? dad : (params.page ?? 1) >= 2 ? p2 : p1,
+    )
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: /load more/i }))
+    expect(screen.getByText('joke-33')).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dad' }))
+    expect(lastParams()).toEqual({ tones: 'dad', page: 1 })
+    expect(screen.getByText('joke-41')).toBeDefined()
+    expect(screen.queryByText('joke-31')).toBeNull()
+    expect(screen.queryByText('joke-33')).toBeNull()
+  })
 })
 
 describe('favoriteToFlowData — real DB format slugs', () => {
   it('resolves a favorited setup-punchline (real slug `setup`) to the setup skin', () => {
     const flow = favoriteToFlowData(
       { joke: { id: 5, text: '', setup: 'Q?', punchline: 'A!', format: { slug: 'setup' } } },
-      0,
     )
     expect(flow).not.toBeNull()
     expect(flow!.fmt).toBe('setup')

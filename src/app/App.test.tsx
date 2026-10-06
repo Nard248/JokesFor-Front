@@ -120,7 +120,7 @@ vi.mock('axios', () => {
 })
 
 // ── Toast provider stub ───────────────────────────────────────────────────────
-vi.mock('@/components/ui/toast', () => ({
+vi.mock('@/components/ui/toast-provider', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 

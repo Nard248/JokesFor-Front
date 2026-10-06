@@ -86,7 +86,7 @@ vi.mock('@/components/Layout', () => ({
   Layout: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-import { routes } from './routes'
+import { routes } from './routeConfig'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })

@@ -1,23 +1,13 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { Heart, ArrowRight, Calendar, TrendingUp } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
-import { formatSlugToFlow } from '@/components/JokeRenderer'
-import type { JokeMediaItem } from '@/lib/api'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { favoriteToFlowData, type FlowJokeData, type NestedJoke } from '@/components/flowJokeData'
 import { useFavorites, useFavoriteStats } from '@/features/favorites'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
-type RawFavorite = {
-  joke: {
-    id: number
-    text: string
-    setup: string | null
-    punchline: string | null
-    format?: { slug: string }
-    media?: JokeMediaItem[]
-  }
-}
+type RawFavorite = { joke: NestedJoke }
 
 /**
  * FavoritesPage — redesigned for iteration 4.
@@ -34,12 +24,15 @@ type RawFavorite = {
 export function FavoritesPage() {
   const { isMobile, isTablet } = useBreakpoint()
   const masonryCols = isMobile ? 1 : isTablet ? 2 : 3
-  const [tone, setTone] = useState<string | null>(null)
+  const [tone, setToneState] = useState<string | null>(null)
 
   // Current page — bumped by "Load more". Reset to 1 when the tone filter
   // changes so a new tone starts a fresh paginated listing.
   const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [tone])
+  const setTone = (next: string | null) => {
+    setToneState(next)
+    setPage(1)
+  }
 
   const { data: favoritesData, isLoading, isError, isFetching } = useFavorites({
     tones: tone ?? undefined,
@@ -50,23 +43,29 @@ export function FavoritesPage() {
   const total = favoritesData?.count ?? 0
 
   // Accumulate favorites across pages (page 1 replaces, later pages append,
-  // deduped by the underlying joke id).
-  const [favorites, setFavorites] = useState<RawFavorite[]>([])
-  useEffect(() => {
-    if (!favoritesData) return
+  // deduped by the underlying joke id). Folded in during render when a new
+  // response arrives (no effect-driven extra render). The response is
+  // identified by tone + page + its joke ids, not by object identity, so an
+  // equal-but-new data object can never trigger a re-render loop.
+  const [accumulated, setAccumulated] = useState<{ key: string; items: RawFavorite[] }>({ key: '', items: [] })
+  if (favoritesData) {
     const results = favoritesData.results as unknown as RawFavorite[]
-    setFavorites((prev) => {
-      if (page === 1) return results
-      const seen = new Set(prev.map((f) => f.joke?.id))
-      return [...prev, ...results.filter((f) => !seen.has(f.joke?.id))]
-    })
-  }, [favoritesData, page])
+    const key = `${tone ?? ''}|${page}|${results.map((f) => f.joke?.id).join(',')}`
+    if (key !== accumulated.key) {
+      const seen = new Set(accumulated.items.map((f) => f.joke?.id))
+      setAccumulated({
+        key,
+        items: page === 1 ? results : [...accumulated.items, ...results.filter((f) => !seen.has(f.joke?.id))],
+      })
+    }
+  }
+  const favorites = accumulated.items
   const hasMore = favorites.length < total
 
   const flowFavorites = useMemo(
     () =>
       favorites
-        .map((f, idx) => favoriteToFlowData(f, idx))
+        .map((f) => favoriteToFlowData(f))
         .filter((j): j is FlowJokeData => j !== null),
     [favorites],
   )
@@ -368,24 +367,6 @@ function FavoritesSkeleton({ cols = 3 }: { cols?: number }) {
       ))}
     </div>
   )
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Adapter — translate mock FavoriteJoke shape to FlowJokeData.
-// FavoriteJoke from mock-data.ts has the joke text/setup/punchline + tones/etc.
-// ──────────────────────────────────────────────────────────────────────────
-
-export function favoriteToFlowData(fav: RawFavorite, idx: number): FlowJokeData | null {
-  const fmt = formatSlugToFlow(fav.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
-  return {
-    id: fav.joke?.id ?? idx,
-    fmt,
-    setup: fav.joke?.setup ?? undefined,
-    punch: fav.joke?.punchline ?? undefined,
-    text: fav.joke?.text ?? undefined,
-    media: fav.joke?.media ?? undefined,
-  }
 }
 
 // `slug` is the exact backend tone slug sent as the `tones` filter; `label`

@@ -1,6 +1,6 @@
 import { Link, useParams, useNavigate } from 'react-router'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FORMAT_LABEL, formatSlugToFlow } from '@/components/JokeRenderer'
+import { FORMAT_LABEL, formatSlugToFlow } from '@/components/jokeFormats'
 import { Skeleton } from '@/components/ui/skeleton'
 import { JokeCard } from '@/components/JokeCard'
 import { BlockButton } from '@/components/BlockButton'

@@ -52,29 +52,23 @@ export function GoogleCallbackPage() {
   const googleError = searchParams.get('error')
 
   const googleAuth = useGoogleAuth()
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // A Google-side error or a missing code is known from the URL alone, so it
+  // is derived during render; only the async exchange result needs state.
+  const urlError = googleError
+    ? googleError === 'access_denied'
+      ? 'Sign-in cancelled. You can try again any time.'
+      : `Google rejected the sign-in: ${googleError}`
+    : !code
+      ? 'No authorization code received from Google.'
+      : null
+  const [exchangeError, setExchangeError] = useState<string | null>(null)
+  const errorMessage = urlError ?? exchangeError
 
   useEffect(() => {
     // Prevent double-exchange in StrictMode (auth codes are single-use)
     if (exchanged.current) return
-
-    if (googleError) {
-      exchanged.current = true
-      setErrorMessage(
-        googleError === 'access_denied'
-          ? 'Sign-in cancelled. You can try again any time.'
-          : `Google rejected the sign-in: ${googleError}`,
-      )
-      return
-    }
-
-    if (!code) {
-      exchanged.current = true
-      setErrorMessage('No authorization code received from Google.')
-      return
-    }
-
     exchanged.current = true
+    if (!code || googleError) return // nothing to exchange; urlError is shown
 
     // Read + clear the stashed DOB exactly once. Present ⇒ signup (send it);
     // absent ⇒ login (send nothing). Consuming here also satisfies "clear the
@@ -112,10 +106,10 @@ export function GoogleCallbackPage() {
         }
         // Under-13 — same message/contract as the email signup path.
         if (data?.date_of_birth?.[0]) {
-          setErrorMessage(data.date_of_birth[0])
+          setExchangeError(data.date_of_birth[0])
           return
         }
-        setErrorMessage(
+        setExchangeError(
           data?.detail ||
             data?.non_field_errors?.[0] ||
             'Sign-in failed. Please try again.',

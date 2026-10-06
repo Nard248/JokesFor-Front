@@ -3,7 +3,10 @@ import { useParams, useSearchParams, Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Bookmark, BookmarkCheck, Share2, Copy, Sparkles, Dice5 } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { jokeToFlowData } from '@/components/flowJokeData'
+import { JokeProvenanceBadges } from '@/components/JokeProvenanceBadges'
+import { jokeProvenance } from '@/lib/jokeProvenance'
 import { jokeDetailApi, type JokeSource, type Joke } from '@/lib/api'
 import { useReactions, useReactToJoke } from '@/features/reactions'
 import { useStreak } from '@/features/streak'
@@ -176,7 +179,10 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
   const heroDwellId = (joke.media?.length ?? 0) > 0 ? undefined : joke.id
   const dwellRef = useDwell<HTMLElement>(heroDwellId, source)
   const locked = joke.is_locked === true
-  const flowData = jokeToFlowData(joke)
+  // The hero shows the provenance badges itself; the nested card must not repeat them.
+  const converted = jokeToFlowData(joke)
+  const flowData = converted ? { ...converted, provenance: undefined } : null
+  const provenance = jokeProvenance(joke)
 
   const themes = joke.themes ?? joke.context_tags ?? []
   const categories = joke.categories ?? joke.tones ?? []
@@ -247,8 +253,8 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
         }}
       />
       <div style={{ position: 'relative' }}>
-        {/* Pills row */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+        {/* Pills row (English taxonomy names inside a possibly non-English article) */}
+        <div lang="en" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
           {themes.map((t) => (
             <span key={t.slug} className="tag-flow">
               {t.name}
@@ -262,6 +268,8 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
           {joke.age_rating && (
             <span className="tag-flow amber">{joke.age_rating.name}</span>
           )}
+          {/* display: contents → the badges flow in this same pill row */}
+          <JokeProvenanceBadges provenance={provenance} style={{ display: 'contents' }} />
         </div>
 
         {/* Body */}
@@ -272,7 +280,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
           <div data-testid="detail-locked">
             {joke.setup && (
               <>
-                <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+                <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
                   Setup
                 </span>
                 <div
@@ -289,7 +297,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
                 </div>
               </>
             )}
-            <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 24, display: 'block' }}>
+            <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 24, display: 'block' }}>
               Punchline
             </span>
             <div
@@ -307,7 +315,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
             >
               ████ ███████ ██ ████
             </div>
-            <p style={{ marginTop: 18, fontSize: 15, color: '#52525B', maxWidth: 460 }}>
+            <p lang="en" style={{ marginTop: 18, fontSize: 15, color: '#52525B', maxWidth: 460 }}>
               This joke is unavailable.
             </p>
           </div>
@@ -316,7 +324,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
           flowData ? <FlowJokeCard joke={flowData} big source={source} /> : null
         ) : joke.setup && joke.punchline ? (
           <>
-            <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+            <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
               Setup
             </span>
             <div
@@ -331,7 +339,7 @@ function JokeHero({ joke, source }: { joke: Joke; source: TelemetrySource }) {
             >
               {joke.setup}
             </div>
-            <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 24, display: 'block' }}>
+            <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 24, display: 'block' }}>
               Punchline
             </span>
             <div
@@ -503,7 +511,7 @@ function WhyYouGotThis() {
         borderRadius: 22,
       }}
     >
-      <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+      <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
         Why you got this one
       </span>
       <h3

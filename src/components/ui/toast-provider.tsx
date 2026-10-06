@@ -1,17 +1,7 @@
 import * as React from 'react'
+import { ToastContext, type ToastInput, type ToastVariant } from './toast'
 
-type ToastVariant = 'default' | 'success' | 'error'
-interface ToastInput { message: string; variant?: ToastVariant; durationMs?: number }
 interface ToastItem extends Required<Omit<ToastInput, 'durationMs'>> { id: number; durationMs: number }
-
-interface ToastContextValue { toast: (input: ToastInput) => void }
-const ToastContext = React.createContext<ToastContextValue | null>(null)
-
-export function useToast(): ToastContextValue {
-  const ctx = React.useContext(ToastContext)
-  if (!ctx) throw new Error('useToast must be used within a ToastProvider')
-  return ctx
-}
 
 const BG: Record<ToastVariant, string> = { default: '#1A1A1A', success: '#3A4A00', error: '#7f1d1d' }
 const FG: Record<ToastVariant, string> = { default: '#fff', success: '#CAFD00', error: '#fff' }

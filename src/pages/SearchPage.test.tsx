@@ -11,6 +11,8 @@ import { SearchPage } from './SearchPage'
 vi.mock('@/components/FlowAppShell', () => ({ FlowAppShell: ({ children }: { children: ReactNode }) => <div>{children}</div> }))
 vi.mock('@/components/FlowJokeCard', () => ({
   FlowJokeCard: ({ joke }: { joke: Joke }) => <div>joke-{joke.id}</div>,
+}))
+vi.mock('@/components/flowJokeData', () => ({
   jokeToFlowData: (joke: Joke) => joke,
 }))
 vi.mock('@/lib/api-adapter', () => ({ jokesAdapter: { search: vi.fn() } }))

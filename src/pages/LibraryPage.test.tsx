@@ -25,7 +25,8 @@ vi.mock('@/features/saved-jokes', () => ({
   useSavedJokes: () => mockUseSavedJokes(),
 }))
 
-import { LibraryPage, savedJokeToFlowData } from './LibraryPage'
+import { LibraryPage } from './LibraryPage'
+import { savedJokeToFlowData } from '@/components/flowJokeData'
 
 function collectionsPage(items: { id: number; name: string; joke_count: number; is_default: boolean }[]) {
   return { data: { count: items.length, next: null, previous: null, results: items } }

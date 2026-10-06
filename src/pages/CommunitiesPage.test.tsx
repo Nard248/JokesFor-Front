@@ -9,6 +9,8 @@ vi.mock('@/components/FlowAppShell', () => ({
 }))
 vi.mock('@/components/FlowJokeCard', () => ({
   FlowJokeCard: ({ joke }: { joke: { id: number } }) => <div data-testid="joke-card">joke-{joke.id}</div>,
+}))
+vi.mock('@/components/flowJokeData', () => ({
   jokeToFlowData: (j: unknown) => j,
 }))
 

@@ -42,8 +42,13 @@ test.describe('taxonomy catalogues', () => {
       )
 
       if (Array.isArray(body)) {
-        // Unpaginated — the whole point. Nothing further to prove.
-        expect(body.length).toBeGreaterThan(0)
+        // Unpaginated — the whole point. Non-empty so the check is not
+        // vacuous: seed_e2e seeds every catalogue, so an empty one means a
+        // missing seed or a broken endpoint, not a passing contract.
+        expect(
+          body.length,
+          `/${name}/ returned an empty catalogue; seed_e2e must seed at least one row`,
+        ).toBeGreaterThan(0)
         return
       }
       // Anything else means an error envelope (throttled, auth, 404). Say so

@@ -2,9 +2,8 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, type FlowJokeData } from '@/components/FlowJokeCard'
-import { formatSlugToFlow } from '@/components/JokeRenderer'
-import type { JokeMediaItem } from '@/lib/api'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { savedJokeToFlowData } from '@/components/flowJokeData'
 import { useCollections, useCollectionJokes } from '@/features/collections'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
@@ -28,13 +27,18 @@ export function CollectionDetailPage() {
   const collection = collectionsData?.results.find((c) => c.id === collectionId)
 
   const { data, isLoading, isError, refetch } = useCollectionJokes(collectionId)
-  const saves = data?.results ?? []
 
   const title = collection?.name ?? 'Collection'
 
+  // The card carries the joke id (save/reactions/telemetry); the saved-row id
+  // is kept alongside as the React key.
   const flowJokes = useMemo(
-    () => saves.map(savedJokeToFlowData).filter((j): j is FlowJokeData => j !== null),
-    [saves],
+    () =>
+      (data?.results ?? []).flatMap((saved) => {
+        const flow = savedJokeToFlowData(saved)
+        return flow ? [{ savedId: saved.id, flow }] : []
+      }),
+    [data],
   )
 
   return (
@@ -95,9 +99,9 @@ export function CollectionDetailPage() {
               </StateCard>
             ) : (
               <div style={{ columnCount: masonryCols, columnGap: 18 }}>
-                {flowJokes.map((joke) => (
-                  <div key={joke.id} style={{ breakInside: 'avoid', marginBottom: 18 }}>
-                    <FlowJokeCard joke={joke} source="other" />
+                {flowJokes.map(({ savedId, flow }) => (
+                  <div key={savedId} style={{ breakInside: 'avoid', marginBottom: 18 }}>
+                    <FlowJokeCard joke={flow} source="other" />
                   </div>
                 ))}
               </div>
@@ -129,29 +133,3 @@ function StateCard({ children }: { children: React.ReactNode }) {
   )
 }
 
-/**
- * Translate a real-API SavedJoke into FlowJokeData. Mirrors LibraryPage's
- * mapper (format inference is lossy — legacy Joke has format.slug).
- */
-function savedJokeToFlowData(saved: {
-  id: number
-  joke: {
-    id: number
-    text: string
-    setup: string | null
-    punchline: string | null
-    format?: { slug: string }
-    media?: JokeMediaItem[]
-  }
-}): FlowJokeData | null {
-  const fmt = formatSlugToFlow(saved.joke?.format?.slug)
-  if (fmt === null) return null // unknown format → skip render, don't garble
-  return {
-    id: saved.id,
-    fmt,
-    setup: saved.joke?.setup ?? undefined,
-    punch: saved.joke?.punchline ?? undefined,
-    text: saved.joke?.text ?? undefined,
-    media: saved.joke?.media ?? undefined,
-  }
-}

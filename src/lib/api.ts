@@ -1,4 +1,5 @@
 import type { ContentSelection } from '@/features/discovery/selection'
+import type { EditorialStatus, OriginCountry } from './jokeProvenance'
 import { api } from './axios'
 
 // Auth types
@@ -200,8 +201,11 @@ export interface Joke {
   culture_tags: JokeTaxon[]
   countries?: { id?: number; code: string; name: string; native_name: string }[]
   cultural_note?: string
-  editorial_status?: string
-  language: { id: number; name: string; code: string }
+  /** 'legacy' | 'generated' | 'ai_screened' | 'native_reviewed' — `generated` is never served. */
+  editorial_status?: EditorialStatus | (string & {})
+  /** The joke's nationality/origin (NOT what it is about). Absent on older payloads. */
+  origin_country?: OriginCountry | null
+  language: { id: number; name: string; code: string; native_name?: string }
   source: string
   share_image_url: string | null
   /** Rich-media attachments (image/video/audio jokes). Absent for text-only formats. */

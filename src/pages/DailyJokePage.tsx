@@ -10,6 +10,8 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { recordShare, useDwell } from '@/features/telemetry'
 import { trackReveal } from '@/lib/telemetry'
 import type { JokeMediaItem } from '@/lib/api'
+import { jokeProvenance, type JokeProvenance } from '@/lib/jokeProvenance'
+import { JokeProvenanceBadges } from '@/components/JokeProvenanceBadges'
 import { Seo, jokeShareUrl } from '@/lib/seo'
 
 /**
@@ -80,7 +82,7 @@ export function DailyJokePage() {
               <p>{(todayError as { response?: { status?: number } })?.response?.status === 404 ? 'No daily joke matches this language, country and culture yet.' : 'The daily joke could not be loaded.'}</p>
               <p style={{ color: '#52525B', marginTop: 8 }}>Adjust the joke languages above or explore the available collection.</p>
               <button type="button" onClick={() => void retryToday()} style={{ minHeight: 44, marginRight: 16 }}>Try again</button><Link to="/explore">Explore jokes</Link>
-            </div> : <JotdHero key={today.joke.id} language={today.joke.language?.code} jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} media={today?.joke?.media} date={today?.date} />}
+            </div> : <JotdHero key={today.joke.id} language={today.joke.language?.code} provenance={jokeProvenance(today.joke)} jokeId={today?.joke?.id} text={today?.joke?.text} setup={today?.joke?.setup} punchline={today?.joke?.punchline} media={today?.joke?.media} date={today?.date} />}
           </div>
 
           {/* History */}
@@ -158,6 +160,7 @@ export function DailyJokePage() {
 interface JotdHeroProps {
   jokeId?: number
   language?: string
+  provenance?: JokeProvenance
   setup?: string | null
   punchline?: string | null
   text?: string
@@ -165,7 +168,7 @@ interface JotdHeroProps {
   date?: string
 }
 
-function JotdHero({ jokeId, language, setup, punchline, text, media, date }: JotdHeroProps) {
+function JotdHero({ jokeId, language, provenance, setup, punchline, text, media, date }: JotdHeroProps) {
   const [revealed, setRevealed] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveJoke = useSaveJoke()
@@ -223,14 +226,15 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
           background: 'radial-gradient(circle, #F2E9FF, transparent 70%)',
         }}
       />
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', flexWrap: 'wrap', gap: 8 }}>
+      <header lang="en" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', flexWrap: 'wrap', gap: 8 }}>
         <span className="tag-flow">{dateline}</span>
         <span className="eyebrow-mono">{hasMedia ? 'Image' : isSetupPunch ? 'Setup → Punchline' : 'One-liner'}</span>
       </header>
+      <JokeProvenanceBadges provenance={provenance} style={{ marginTop: 12, position: 'relative' }} />
 
       {hasMedia ? (
         <div style={{ marginTop: 32, position: 'relative' }}>
-          <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+          <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
             Setup
           </span>
           <div
@@ -246,7 +250,7 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
           >
             {setup}
           </div>
-          <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+          <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
             Punchline
           </span>
           {/* Kind-aware: video shows its poster stub (never the raw mp4 url);
@@ -298,7 +302,7 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
         </div>
       ) : isSetupPunch ? (
         <div style={{ marginTop: 32, position: 'relative' }}>
-          <span className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
+          <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6' }}>
             Setup
           </span>
           <div
@@ -314,7 +318,7 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
           >
             {setup}
           </div>
-          <span className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
+          <span lang="en" className="eyebrow-mono" style={{ color: '#6A1CF6', marginTop: 32, display: 'block' }}>
             Punchline
           </span>
           <div
@@ -335,6 +339,7 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
           </div>
           {!revealed && (
             <button
+              lang="en"
               type="button"
               onClick={handleReveal}
               className="btn-flow-reward"
@@ -361,7 +366,7 @@ function JotdHero({ jokeId, language, setup, punchline, text, media, date }: Jot
         </div>
       )}
 
-      <footer
+      <footer lang="en"
         style={{
           marginTop: 32,
           paddingTop: 24,

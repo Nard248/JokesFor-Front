@@ -181,3 +181,29 @@ describe('DailyJokePage', () => {
     expect(screen.getByTestId('daily-audio-placeholder')).toBeInTheDocument()
   })
 })
+
+describe('DailyJokePage — provenance badges', () => {
+  it('shows language, origin and AI-generated badges on the daily hero', () => {
+    mockUseTodaysJoke.mockReturnValue({
+      data: {
+        ...TODAY,
+        joke: {
+          ...TODAY.joke,
+          language: { id: 3, code: 'hy', name: 'Armenian', native_name: 'Հայերեն' },
+          origin_country: { code: 'AM', name: 'Armenia', native_name: 'Հայաստան' },
+          editorial_status: 'ai_screened',
+        },
+      },
+      isLoading: false,
+    })
+    renderPage()
+    expect(screen.getByText('Հայերեն')).toHaveAttribute('lang', 'hy')
+    expect(screen.getByTestId('joke-origin-badge')).toHaveTextContent('Armenia')
+    expect(screen.getByTestId('joke-ai-badge')).toBeInTheDocument()
+  })
+
+  it('shows no badges for the plain English daily joke', () => {
+    renderPage()
+    expect(screen.queryByTestId('joke-provenance')).toBeNull()
+  })
+})

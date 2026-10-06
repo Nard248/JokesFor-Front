@@ -28,19 +28,18 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      // Ratchet: eslint-plugin-react-hooks v7's "recommended" preset folded in
-      // a large set of new React-Compiler-oriented rules. These two have
-      // pre-existing violations across the codebase (never caught — nothing
-      // ran `eslint .` in CI before now). Demoted to warn so they stay
-      // visible without blocking the new CI gate on day one; re-promote to
-      // 'error' after a dedicated cleanup pass.
-      // - only-export-components is pure fast-refresh DX noise, expected in
-      //   a shadcn/ui + route-config codebase (files exporting both a
-      //   component and a constant/variant helper).
-      // - set-state-in-effect can flag real bugs, so it stays a visible
-      //   warning rather than being silenced outright.
-      'react-refresh/only-export-components': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
+      // Ratchet complete: every rule the presets ship at 'warn' is clean
+      // (0 warnings) and is promoted to 'error' so a regression fails CI
+      // instead of scrolling past as a warning.
+      // - only-export-components: keep components and plain exports in
+      //   separate modules (see jokeFormats.ts, flowJokeData.ts,
+      //   routeConfig.tsx, ui/toast.ts) so React Fast Refresh works.
+      // - set-state-in-effect: derive state during render instead.
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/incompatible-library': 'error',
+      'react-hooks/unsupported-syntax': 'error',
     },
   },
 ])

@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { FlowAppShell } from '@/components/FlowAppShell'
-import { FlowJokeCard, jokeToFlowData } from '@/components/FlowJokeCard'
+import { FlowJokeCard } from '@/components/FlowJokeCard'
+import { jokeToFlowData } from '@/components/flowJokeData'
 import { usePack, useRecordPackProgress } from '@/features/packs'
 import { Seo, truncate } from '@/lib/seo'
 

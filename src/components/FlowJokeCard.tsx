@@ -5,12 +5,16 @@ import { useSaveJoke } from '@/features/saved-jokes'
 import { useImpression, useDwell, recordShare } from '@/features/telemetry'
 import { useAuth } from '@/features/auth'
 import { trackReveal, type TelemetrySource } from '@/lib/telemetry'
-import { type Joke, type JokeMediaItem, type ReactionSlug } from '@/lib/api'
+import { type ReactionSlug } from '@/lib/api'
 import { jokeShareUrl } from '@/lib/seo'
-import { JokeRenderer, SKIN, FORMAT_LABEL, tagToneFor, formatSlugToFlow, type FlowJokeFormat } from './JokeRenderer'
+import { JokeRenderer } from './JokeRenderer'
+import { JokeProvenanceBadges } from './JokeProvenanceBadges'
+import { SKIN, FORMAT_LABEL, tagToneFor } from './jokeFormats'
+import type { FlowJokeData } from './flowJokeData'
 
-// Re-export the format type so existing importers don't break.
-export type { FlowJokeFormat } from './JokeRenderer'
+// Type-only re-exports so existing importers don't break.
+export type { FlowJokeFormat } from './jokeFormats'
+export type { FlowJokeData } from './flowJokeData'
 
 /**
  * FlowJokeCard — format-aware joke card for the redesign.
@@ -32,35 +36,6 @@ export type { FlowJokeFormat } from './JokeRenderer'
  * stays untouched for HomePage/SearchPage/etc. consumers. When the redesign
  * is approved, we'll consolidate.
  */
-
-export interface FlowJokeData {
-  id: number | string
-  fmt: FlowJokeFormat
-
-  // Format-specific text fields. Use what's relevant for the format.
-  setup?: string         // setup, anti
-  punch?: string         // setup, anti
-  text?: string          // oneliner, observ, story
-  lines?: string[]       // knock-knock alternating bubbles
-  media?: JokeMediaItem[] // image (wave 2: video/audio)
-
-  // Tagging / metadata (mock-friendly; map from real Joke when wired).
-  language?: string
-  localeLabel?: string
-  themeLabel?: string
-  catLabel?: string
-
-  // Engagement stats (display-only — strings to allow "4.1K" style).
-  laughs?: string | number
-  saves?: string | number
-
-  // Story extras
-  read?: string          // "2 min" / "30 sec"
-
-  /** Server-withheld payoff (`is_locked`). When true the card renders
-   * an unavailable state without exposing withheld content. */
-  isLocked?: boolean
-}
 
 interface FlowJokeCardProps {
   joke: FlowJokeData
@@ -94,8 +69,10 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
     // Don't let a tap on Save bubble to an enclosing detail Link.
     e.stopPropagation()
     if (saved) return // save-only here; unsave lives in the Library
+    // Previews/mock cards carry string ids — there is no real joke to save.
+    if (numericId === undefined) return
     setSaved(true)
-    saveJoke.mutate({ jokeId: Number(joke.id) }, { onError: () => setSaved(false) })
+    saveJoke.mutate({ jokeId: numericId }, { onError: () => setSaved(false) })
   }
 
   const handleReveal = () => {
@@ -159,7 +136,9 @@ export function FlowJokeCard({ joke, big = false, className, source }: FlowJokeC
         )}
       </header>
 
-      {joke.localeLabel && <p lang="en" style={{ margin: '10px 0 0', fontSize: 12, color: mutedFg }}>{joke.localeLabel}</p>}
+      {/* Language / origin / AI-generated badges (English chrome; the language
+          badge carries its own lang). Renders nothing for plain English jokes. */}
+      <JokeProvenanceBadges provenance={joke.provenance} style={{ marginTop: 10 }} />
 
       {/* Body: format-specific — delegates to JokeRenderer (interactive reader defaults). */}
       <JokeRenderer
@@ -277,6 +256,7 @@ function ReactionRow({ jokeId, isAnti, divider }: { jokeId: number; isAnti: bool
 
   return (
     <div
+      lang="en"
       style={{
         marginTop: 12,
         paddingTop: 10,
@@ -331,72 +311,4 @@ function formatCount(n: number): string {
   if (n < 1000) return String(n)
   if (n < 10_000) return `${(n / 1000).toFixed(1)}K`
   return `${Math.round(n / 1000)}K`
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Adapter: real Joke (with new schema) → FlowJokeData
-// Use this when you have a Joke from the backend and want to render it.
-// ──────────────────────────────────────────────────────────────────────────
-
-// The real lean list serializer (JokeListSerializer) emits `format`,
-// `tones`/`categories`, `context_tags`/`themes` as slug STRINGS, whereas the
-// detail serializer emits nested { id, name, slug } objects. These helpers
-// tolerate either shape so a card renders (and links to the right id) in both.
-function taxonSlug(value: unknown): string {
-  if (typeof value === 'string') return value
-  if (value && typeof value === 'object' && 'slug' in value) {
-    return String((value as { slug?: unknown }).slug ?? '')
-  }
-  return ''
-}
-
-function prettifySlug(slug: string): string {
-  return slug
-    .split(/[-_]/)
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(' ')
-}
-
-function taxonLabel(value: unknown): string | undefined {
-  if (typeof value === 'string') return value ? prettifySlug(value) : undefined
-  if (value && typeof value === 'object' && 'name' in value) {
-    const name = (value as { name?: unknown }).name
-    return typeof name === 'string' ? name : undefined
-  }
-  return undefined
-}
-
-export function jokeToFlowData(joke: Joke): FlowJokeData | null {
-  const slug = taxonSlug(joke.format).toLowerCase()
-  let fmt = formatSlugToFlow(slug)
-  if (fmt === null) {
-    // Slugless (mock fixtures / legacy rows without a format at all): fall
-    // back by shape, same as before the guard existed.
-    if (slug === '') {
-      fmt = joke.setup && joke.punchline ? 'setup' : joke.text ? 'oneliner' : null
-    }
-    if (fmt === null) return null // unknown format (future wave) → hide, don't garble
-  }
-
-  // Prefer new vocabulary (themes/categories), fall back to legacy
-  // (context_tags/tones). Each entry may be a slug string or a taxon object.
-  const themeLabel = taxonLabel(joke.themes?.[0]) ?? taxonLabel(joke.context_tags?.[0])
-  const catLabel = taxonLabel(joke.categories?.[0]) ?? taxonLabel(joke.tones?.[0])
-
-  return {
-    id: joke.id,
-    fmt,
-    setup: joke.setup ?? undefined,
-    punch: joke.punchline ?? undefined,
-    text: joke.text ?? undefined,
-    lines: joke.lines ?? undefined,
-    media: joke.media ?? undefined,
-    themeLabel,
-    catLabel,
-    language: joke.language?.code,
-    localeLabel: joke.language?.code && joke.language.code !== 'en' ? [joke.language.name, ...(joke.countries ?? []).map((country) => country.native_name || country.name)].filter(Boolean).join(' · ') : undefined,
-    // GRACEFUL DEGRADATION: only lock when the backend explicitly says so.
-    // A missing `is_locked` (backend not deployed) reads as unlocked.
-    isLocked: joke.is_locked === true,
-  }
 }

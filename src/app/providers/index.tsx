@@ -3,7 +3,7 @@ import { usePreferences } from '@/features/preferences'
 import { HelmetProvider } from 'react-helmet-async'
 import { QueryProvider } from './QueryProvider'
 import { AuthProvider } from './AuthProvider'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/toast-provider'
 
 interface ProvidersProps {
   children: ReactNode
