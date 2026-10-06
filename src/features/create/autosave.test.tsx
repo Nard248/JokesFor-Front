@@ -558,3 +558,57 @@ describe('useAutosave — error no auto-retry (Fix 2)', () => {
     expect(callCount).toBe(2)
   })
 })
+
+// ── Test 10: changes queued behind a failed PATCH stay pending ─────────────────
+
+describe('useAutosave — queued changes behind a failed PATCH', () => {
+  it('keeps hasPendingChanges true after the in-flight PATCH fails, then retry() flushes the queue', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    let rejectFirst!: () => void
+    ;(contentAdapter.patchDraft as ReturnType<typeof vi.fn>)
+      .mockImplementationOnce(
+        () => new Promise<object>((_resolve, reject) => { rejectFirst = () => reject(new Error('Network error')) })
+      )
+      .mockImplementation((id: number) => Promise.resolve(makeDraftResult(id)))
+
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useAutosave({ draftId: 42, formatSlug: 'oneliner' }),
+      { wrapper }
+    )
+
+    // Start the first PATCH
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'First' })
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900)
+    })
+    expect(result.current.saveState).toBe('saving')
+
+    // Edit while it is in flight — queued behind it
+    await act(async () => {
+      result.current.dispatch({ type: 'setField', field: 'text', value: 'Second' })
+    })
+
+    // The in-flight PATCH fails: the queued edit is still unsaved
+    await act(async () => {
+      rejectFirst()
+    })
+    await act(async () => {})
+    expect(result.current.saveState).toBe('error')
+    expect(result.current.hasPendingChanges).toBe(true)
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(1)
+
+    // retry() saves, then flushes the queued edit in a follow-up PATCH
+    await act(async () => {
+      result.current.retry()
+    })
+    await act(async () => {})
+    expect(contentAdapter.patchDraft).toHaveBeenCalledTimes(3)
+    expect((contentAdapter.patchDraft as ReturnType<typeof vi.fn>).mock.calls[2][1]).toMatchObject({ text: 'Second' })
+    expect(result.current.saveState).toBe('saved')
+    expect(result.current.hasPendingChanges).toBe(false)
+  })
+})
