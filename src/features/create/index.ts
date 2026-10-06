@@ -41,16 +41,10 @@ export { SubmitConfirmModal } from './components/SubmitConfirmModal'
 export { ChangeFormatModal } from './components/ChangeFormatModal'
 export { DeleteDraftModal } from './components/DeleteDraftModal'
 
-// Phase 4: Editors
-export { OneLinerEditor } from './editors/OneLinerEditor'
-export { ObservationalEditor } from './editors/ObservationalEditor'
-export { StoryEditor } from './editors/StoryEditor'
-export { SetupPunchlineEditor } from './editors/SetupPunchlineEditor'
-export { KnockEditor } from './editors/KnockEditor'
-export { ImageEditor } from './editors/ImageEditor'
-export { VideoEditor } from './editors/VideoEditor'
-export { AudioEditor } from './editors/AudioEditor'
-
 // Phase 4: Editor registry + format utilities
+// The per-format editors are reached only through EDITOR_BY_FORMAT's
+// React.lazy() imports, so each stays its own chunk. Do not re-export them
+// here: a static re-export pulls them into the main bundle (Rolldown does not
+// drop an unused barrel re-export the way Rollup did).
 export { EDITOR_BY_FORMAT, formatIcon, FORMAT_ICON, FORMAT_EXAMPLE } from './editors/index'
 export type { EditorProps } from './editors/types'
