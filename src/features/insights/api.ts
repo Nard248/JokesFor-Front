@@ -2,6 +2,7 @@ import { useContentSelection } from '@/features/discovery/context'
 import { selectionParams, type ContentSelection } from '@/features/discovery/selection'
 import { useQuery } from '@tanstack/react-query'
 import { insightsApi, type TastePeriod } from '@/lib/api'
+import { useAuthStore } from '@/features/auth/store'
 
 export const insightsKeys = {
   all: ['insights'] as const,
@@ -10,12 +11,16 @@ export const insightsKeys = {
   tomorrow: (params?: Partial<ContentSelection>) => [...insightsKeys.all, 'tomorrow', params] as const,
 }
 
-/** GET /users/me/taste-profile/?period=… — derived analytics. */
+/** GET /users/me/taste-profile/?period=… — derived analytics.
+ *  Only fires when the user is authenticated (the public joke detail page
+ *  renders this for anonymous visitors too; avoids 401 + refresh noise). */
 export function useTasteProfile(period: TastePeriod = 'month') {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery({
     queryKey: insightsKeys.taste(period),
     queryFn: () => insightsApi.tasteProfile(period).then((r) => r.data),
     staleTime: 1000 * 60 * 5,
+    enabled: isAuthenticated,
   })
 }
 
