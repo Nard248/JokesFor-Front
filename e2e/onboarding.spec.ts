@@ -13,7 +13,7 @@
  */
 import { expect, test } from '@playwright/test'
 
-import { apiGet, apiSend } from './fixtures/api'
+import { API, apiGet, apiSend } from './fixtures/api'
 import { declineCookies, loginAsNewUser } from './fixtures/auth'
 
 interface Preferences {
@@ -133,7 +133,7 @@ test.describe('the preferences contract', () => {
         body: JSON.stringify([{ theme: 'dark' }]),
       })
       return res.status
-    }, 'http://localhost:8011/api/v1')
+    }, API)
 
     expect(status, 'a JSON array body used to raise TypeError and 500').toBe(400)
   })

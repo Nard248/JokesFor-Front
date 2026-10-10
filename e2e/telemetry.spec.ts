@@ -16,7 +16,7 @@
 import { expect, test, type Response } from '@playwright/test'
 
 import { createVerifiedPersona, loginThroughUi } from './fixtures/auth'
-import { apiSend } from './fixtures/api'
+import { API, apiSend } from './fixtures/api'
 
 const CONSENT_KEY = 'jokesfor-consent'
 const TELEMETRY = /\/api\/v1\/telemetry\/events/
@@ -50,7 +50,7 @@ test.describe('telemetry delivery', () => {
     const first = await page.evaluate(async (api) => {
       const body = await fetch(`${api}/jokes/`, { credentials: 'include' }).then((r) => r.json())
       return body.results[0].id as number
-    }, 'http://localhost:8011/api/v1')
+    }, API)
 
     await page.goto(`/jokes/${first}`)
     await page.waitForTimeout(2000)
@@ -102,7 +102,7 @@ test.describe('telemetry delivery', () => {
     const first = await page.evaluate(async (api) => {
       const body = await fetch(`${api}/jokes/`, { credentials: 'include' }).then((r) => r.json())
       return body.results[0].id as number
-    }, 'http://localhost:8011/api/v1')
+    }, API)
 
     await page.goto(`/jokes/${first}`)
     await page.waitForTimeout(2000)

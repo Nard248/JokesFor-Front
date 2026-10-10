@@ -15,7 +15,10 @@
  */
 import type { APIRequestContext, Page } from '@playwright/test'
 
-export const API_ORIGIN = process.env.E2E_API_ORIGIN ?? 'http://localhost:8011'
+// Follows playwright.config.ts: E2E_BACKEND_PORT moves the API server, so the
+// specs must follow it too (E2E_API_ORIGIN still wins when set explicitly).
+export const API_ORIGIN =
+  process.env.E2E_API_ORIGIN ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8011'}`
 export const API = `${API_ORIGIN}/api/v1`
 
 export interface JokePayload {

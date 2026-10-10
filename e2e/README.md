@@ -37,8 +37,12 @@ npm run e2e:report       # open the last HTML report
 Playwright starts **both** servers itself, on ports that deliberately avoid the
 dev defaults (backend `:8011`, frontend `:5274`) so a run never collides with a
 dev server you already have open. Before serving, it runs `migrate`,
-`seed_achievements` and `seed_e2e`, so a run can never execute against a stale
-schema or an empty catalogue.
+`seed_achievements`, `seed_e2e` and `import_international_jokes --launch-set`
+(the same idempotent import the production deploy runs), so a run can never
+execute against a stale schema or an empty catalogue.
+
+To run on other ports or another database, set `E2E_BACKEND_PORT`,
+`E2E_FRONTEND_PORT` and `E2E_DB_NAME`; the specs follow `E2E_BACKEND_PORT`.
 
 ### Prerequisites
 
