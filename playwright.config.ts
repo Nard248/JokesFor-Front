@@ -112,11 +112,16 @@ export default defineConfig({
   webServer: [
     {
       // migrate + seed BEFORE serving — a suite must never run against a stale
-      // schema or an empty catalogue.
+      // schema or an empty catalogue. The international launch set is imported
+      // exactly as the production deploy does (Cloud Build ImportInternational);
+      // discovery.spec.ts asserts on that corpus. Idempotent: ~25s on an empty
+      // database, a few seconds when unchanged.
       command:
         `${PYTHON} manage.py migrate --noinput ` +
         `&& ${PYTHON} manage.py seed_achievements ` +
         `&& ${PYTHON} manage.py seed_e2e ` +
+        `&& ${PYTHON} manage.py import_international_jokes ` +
+        `--launch-set jokes/fixtures/international/launch_set.json ` +
         `&& ${PYTHON} manage.py runserver ${BACKEND_PORT} --noreload`,
       cwd: BACKEND_DIR,
       url: `${API_ORIGIN}/livez`,
